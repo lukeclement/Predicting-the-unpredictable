@@ -40,7 +40,11 @@ def transform_into_array(x, y, size=128):
         li = []
         for j in range(0,np.size(h[0])):
             temp = h[i][j]
-            colour = int((float(temp)/float(max_val))*255.0)
+            #colour = int((float(temp)/float(max_val))*255.0)
+            if temp >= 1:
+                colour = 1
+            else:
+                colour = 0
             li.append([colour])
         news.append(li)
     return news
@@ -54,7 +58,7 @@ def main():
     for file in files:
         x, y = read_file(file)
         step_number = int(file[file.find("s_")+2:-4])
-        np.save("Simulation_images/{}".format(step_number), transform_into_array(x, y, size=128))
+        np.save("Simulation_images/{}".format(step_number), transform_into_array(x, y, size=64))
     
 if __name__ == "__main__":
     main()
