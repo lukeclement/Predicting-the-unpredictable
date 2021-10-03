@@ -4,7 +4,7 @@ import numpy as np
 import glob
 import matplotlib.pyplot as plt
 from tensorflow.keras import backend as K
-
+import imageio
 
 def iou_coef(y_true, y_pred, smooth=1):
     #print(y_true)
@@ -18,6 +18,26 @@ def dice_coef(y_true, y_pred, smooth=1):
     union = K.sum(y_true, axis=[1,2,3]) + K.sum(y_pred, axis=[1,2,3])
     dice = K.mean((2. * intersection + smooth)/(union + smooth), axis=0)
     return dice
+
+def com_coef(y_true, y_pred, smooth=0):
+    actual = calculate_com(y_true.eval(session=tf.compat.v1.Session()))
+    predict = calculate_com(y_pred.eval(session=tf.compat.v1.Session()))
+    difference = predict - actual
+    radius_sq = difference[0]**2 + difference[1]**2
+    return np.exp(radius_sq)
+
+def calculate_com(bubble_image):
+    size = np.size(bubble_image[0])
+    total_mass = np.sum(bubble_image)
+    x = 0
+    y = 0
+    for i in range(0,size):
+        for j in range(0,size):
+            x += bubble_image[i][j] * i
+            y += bubble_image[i][j] * (size - j)
+    x = x/total_mass
+    y = y/total_mass
+    return [x, y]
 
 def get_source_arrays(files, timestep_size=5):
     """Get the arrays from simulated data.
@@ -79,7 +99,6 @@ def create_neural_net(activation, optimizer, loss, size=128):
     model.compile(optimizer=optimizer, loss=loss, metrics=[iou_coef, dice_coef])
     return model
 
-
 def train_model(model, training_images, validation_split=0.1, epochs=20):
     """Trains the model. This can take a while!
     Inputs:
@@ -97,13 +116,54 @@ def train_model(model, training_images, validation_split=0.1, epochs=20):
 
     return model, history
 
+def predict_future(model, start_image_number, number_of_steps, timestep_size, name):
+    initial = np.load("Simulation_images/{}.npy".format(start_image_number))
+    initial = [initial]
+    current_imgs = np.stack([x.tolist() for x in initial])
+    plt.imshow(current_imgs[0], cmap=plt.get_cmap(name))
+    plt.savefig("Machine_predictions/setup.png")
+    saved_names = []
+    comparison_names = []
+    distances = []
+    for i in range(0,number_of_steps):
+        current_imgs = model(current_imgs)
+        plt.imshow(current_imgs[0], cmap=plt.get_cmap(name))
+        plt.savefig("Machine_predictions/{}.png".format(i))
+        saved_names.append("Machine_predictions/{}.png".format(i))
+        actual = np.load("Simulation_images/{}.npy".format(start_image_number + (i+1)*timestep_size))
+        #Centre of mass difference
+        #Shape difference? Similar to chi squared? But centred in mid image?
+        machine_guess = np.asarray(current_imgs[0])
+        overlap = actual + machine_guess
+        plt.imshow(overlap)
+        guess_com = calculate_com(machine_guess)
+        actual_com = calculate_com(actual)
+        difference = np.asarray(guess_com) - np.asarray(actual_com)
+        distances.append(np.sqrt(difference[0]**2 + difference[1]**2))
+        plt.scatter(guess_com[0], guess_com[1], label="Prediction COM")
+        plt.scatter(actual_com[0], actual_com[1], label="Actual COM")
+        plt.legend(loc='lower right')
+        plt.savefig("Machine_predictions/Compararison_{}.png".format(i))
+        plt.clf()
+        comparison_names.append("Machine_predictions/Compararison_{}.png".format(i))
+    plt.plot(distances)
+    plt.savefig("Machine_predictions/COM_distances.png")
+    make_gif(saved_names, "Current_Guess")
+    make_gif(comparison_names, "Comparison")
+    
+        
+def make_gif(filenames, name):
+    images = []
+    for filename in filenames:
+        images.append(imageio.imread(filename))
+    imageio.mimsave('Machine_predictions/{}.gif'.format(name), images)
+    
 
 def main():
     print("Getting source files...")
     files = glob.glob("Simulation_images/*.npy")
-    timestep_size = 5
+    timestep_size = 1
     training_data = get_source_arrays(files[:], timestep_size)
-    
     print("Creating CNN...")
     active='LeakyReLU'
     optimizer='adam'
@@ -136,15 +196,7 @@ def main():
     #test_loss, test_acc = model.evaluate(test_set, test_solutions, verbose=2)
     #plt.show()
     plt.clf()
-    initial = np.load("Simulation_images/200.npy")
-    initial = [initial]
-    current_imgs = np.stack([x.tolist() for x in initial])
-    plt.imshow(current_imgs[0], cmap=plt.get_cmap(name))
-    plt.savefig("Machine_predictions/setup.png")
-    for i in range(0,100):
-        current_imgs = model(current_imgs)
-        plt.imshow(current_imgs[0], cmap=plt.get_cmap(name))
-        plt.savefig("Machine_predictions/{}.png".format(i))
+    predict_future(model, 300, 200, timestep_size, name)
         
 
 if __name__ == "__main__":
