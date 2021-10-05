@@ -192,6 +192,7 @@ def main():
     active='LeakyReLU'
     optimizer='adam'
     loss = losses.BinaryCrossentropy()
+    loss = losses.MeanSquaredError()
     model = create_neural_net(active, optimizer, loss, size=64)
     
     print("Training montage begins...")
