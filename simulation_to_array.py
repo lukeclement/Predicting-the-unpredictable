@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import glob
+import os
 
 
 def read_file(file_path):
@@ -39,7 +40,7 @@ def transform_into_array(x, y, size=128):
     for i in range(0,np.size(h[0])):
         li = []
         for j in range(0,np.size(h[0])):
-            temp = h[i][j]
+            temp = h[j][np.size(h[0]) - 1 - i]
             #colour = int((float(temp)/float(max_val))*255.0)
             if temp >= 1:
                 colour = 1
@@ -53,12 +54,19 @@ def transform_into_array(x, y, size=128):
 def main():
     """Extracting data from the simulation and making a series of arrays
     """
-    files = glob.glob("Example_Simulation/b*.dat")
-    print("Running ({} files found)".format(np.size(files)))
-    for file in files:
-        x, y = read_file(file)
-        step_number = int(file[file.find("s_")+2:-4])
-        np.save("Simulation_images/{}".format(step_number), transform_into_array(x, y, size=64))
+    sim_names = glob.glob("Simulation_data/*")
+    #print(sim_names)
+    for sim_number in range(0, np.size(sim_names)):
+        files = glob.glob("{}/b*.dat".format(sim_names[sim_number]))
+        print("Running ({} files found in simulation {})".format(np.size(files),sim_names[sim_number]))
+        try:
+            os.mkdir("Simulation_images/Simulation_{}".format(sim_number))
+        except:
+            print("")
+        for file in files:
+            x, y = read_file(file)
+            step_number = int(file[file.find("s_")+2:-4])
+            np.save("Simulation_images/Simulation_{}/img_{}".format(sim_number,step_number), transform_into_array(x, y, size=64))
     
 if __name__ == "__main__":
     main()

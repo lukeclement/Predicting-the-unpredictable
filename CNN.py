@@ -19,13 +19,18 @@ def dice_coef(y_true, y_pred, smooth=1):
     dice = K.mean((2. * intersection + smooth)/(union + smooth), axis=0)
     return dice
 
-def com_coef(y_true, y_pred, smooth=0):
+def com_coef(y_true, y_pred):
     actual = calculate_com(y_true.eval(session=tf.compat.v1.Session()))
     predict = calculate_com(y_pred.eval(session=tf.compat.v1.Session()))
     difference = predict - actual
     radius_sq = difference[0]**2 + difference[1]**2
     return np.exp(radius_sq)
 
+def mass_preservation(y_true, y_pred, smooth=1):
+    true_mass = K.sum(y_true)
+    pred_mass = K.sum(y_pred)
+    return K.exp(-K.sqrt(K.abs(true_mass - pred_mass))/2)
+    
 def calculate_com(bubble_image):
     size = np.size(bubble_image[0])
     total_mass = np.sum(bubble_image)
@@ -33,40 +38,53 @@ def calculate_com(bubble_image):
     y = 0
     for i in range(0,size):
         for j in range(0,size):
-            x += bubble_image[i][j] * i
-            y += bubble_image[i][j] * (size - j)
+            x += bubble_image[j][i] * i
+            y += bubble_image[j][i] * j
     x = x/total_mass
     y = y/total_mass
     return [x, y]
 
-def get_source_arrays(files, timestep_size=5):
+def get_source_arrays(sims, timestep_size=5):
     """Get the arrays from simulated data.
     Input:
-        files:              list of files (list of strings)
+        sims:              list of simulations (list of strings)
         timestep_size:      int of the timestep to use (1 is minimum, default is 5)
     Output:
         training_images:    source files of training images
             a 2d array containing training set and solutions
     """
-    number_of_steps = np.size(files)
     training_questions = []
     training_solutions = []
     in_use = 0
-    for file in files:
-        loc = file.find("/")+1
-        step_number = int(file[loc:-4])
-        if step_number + timestep_size < number_of_steps:
-            in_use += 1
-            source_array = np.load(file)
-            #Normalisation
-            #training_questions.append(source_array/255.0)
-            training_questions.append(source_array)
-            
-            source_array = np.load("Simulation_images/{}.npy".format(step_number + timestep_size))
-            #Normalisation
-            #training_solutions.append(source_array/255.0)
-            training_solutions.append(source_array)
-                        
+    for sim in sims:
+        files = glob.glob("{}/*.npy".format(sim))
+        number_of_steps = np.size(files)
+        for file in files:
+            adding_question = np.array([])
+            adding_solution = np.array([])
+            try:
+                loc = file.find("/img_")+5
+                step_number = int(file[loc:-4])
+                if step_number + timestep_size < number_of_steps:
+                    in_use += 1
+                    source_array = np.load(file)
+                    #Normalisation
+                    #training_questions.append(source_array/255.0)
+                    adding_question = source_array
+                    
+                    source_array = np.load("{}/img_{}.npy".format(sim,step_number + timestep_size))
+                    #Normalisation
+                    #training_solutions.append(source_array/255.0)
+                    adding_solution = source_array
+                if np.size(adding_question) == 0 or np.size(adding_solution) == 0:
+                    print(file)
+                else:
+                    training_solutions.append(adding_solution)
+                    training_questions.append(adding_question)
+            except:
+                print("Missed on {}".format(file))
+    print(np.shape(training_questions[0]))
+    print(np.shape(training_solutions[0]))
     training_questions = np.stack([x.tolist() for x in training_questions])
     training_solutions = np.stack([x.tolist() for x in training_solutions])
     print("Using {} images".format(in_use))
@@ -83,20 +101,21 @@ def create_neural_net(activation, optimizer, loss, size=128):
         The model, ready to be fitted!
     """
     model = models.Sequential()
-    model.add(layers.Conv2D(32, (3, 3), activation='tanh', input_shape=(size, size, 1)))
+    model.add(layers.Conv2D(32, (3, 3), activation=activation, input_shape=(size, size, 1)))
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Conv2D(64, (3, 3), activation=activation))
     model.add(layers.MaxPooling2D((2, 2)))
-    model.add(layers.Conv2D(64, (3, 3), activation=activation))
-    model.add(layers.Conv2DTranspose(64, (3, 3), activation=activation))
+    model.add(layers.Conv2D(128, (3, 3), activation=activation))
+    model.add(layers.Conv2DTranspose(128, (3, 3), activation=activation))
     model.add(layers.UpSampling2D((2, 2)))
-    model.add(layers.Conv2DTranspose(64, (3, 3), activation=activation))
+    model.add(layers.Conv2DTranspose(64, (4, 4), activation=activation))
     model.add(layers.UpSampling2D((2, 2)))
     model.add(layers.Conv2DTranspose(32, (3, 3), activation=activation))
-    model.add(layers.Conv2DTranspose(1, (3, 3), activation='sigmoid'))
+    model.add(layers.Conv2DTranspose(1, (1, 1), activation='sigmoid'))
     
     print(model.summary())
-    model.compile(optimizer=optimizer, loss=loss, metrics=[iou_coef, dice_coef])
+    model.compile(optimizer=optimizer, loss=loss, metrics=[iou_coef, dice_coef, mass_preservation])
+    #model.compile(optimizer=optimizer, loss=loss, metrics=[mass_preservation])
     return model
 
 def train_model(model, training_images, validation_split=0.1, epochs=20):
@@ -116,8 +135,8 @@ def train_model(model, training_images, validation_split=0.1, epochs=20):
 
     return model, history
 
-def predict_future(model, start_image_number, number_of_steps, timestep_size, name):
-    initial = np.load("Simulation_images/{}.npy".format(start_image_number))
+def predict_future(model, start_image_number, sim, number_of_steps, timestep_size, name):
+    initial = np.load("Simulation_images/{}/img_{}.npy".format(sim,start_image_number))
     initial = [initial]
     current_imgs = np.stack([x.tolist() for x in initial])
     plt.imshow(current_imgs[0], cmap=plt.get_cmap(name))
@@ -130,23 +149,30 @@ def predict_future(model, start_image_number, number_of_steps, timestep_size, na
         plt.imshow(current_imgs[0], cmap=plt.get_cmap(name))
         plt.savefig("Machine_predictions/{}.png".format(i))
         saved_names.append("Machine_predictions/{}.png".format(i))
-        actual = np.load("Simulation_images/{}.npy".format(start_image_number + (i+1)*timestep_size))
-        #Centre of mass difference
-        #Shape difference? Similar to chi squared? But centred in mid image?
-        machine_guess = np.asarray(current_imgs[0])
-        overlap = actual + machine_guess
-        plt.imshow(overlap)
-        guess_com = calculate_com(machine_guess)
-        actual_com = calculate_com(actual)
-        difference = np.asarray(guess_com) - np.asarray(actual_com)
-        distances.append(np.sqrt(difference[0]**2 + difference[1]**2))
-        plt.scatter(guess_com[0], guess_com[1], label="Prediction COM")
-        plt.scatter(actual_com[0], actual_com[1], label="Actual COM")
-        plt.legend(loc='lower right')
-        plt.savefig("Machine_predictions/Compararison_{}.png".format(i))
-        plt.clf()
-        comparison_names.append("Machine_predictions/Compararison_{}.png".format(i))
+        try:
+            actual = np.load("Simulation_images/{}/img_{}.npy".format(sim,start_image_number + (i+1)*timestep_size))
+            #Centre of mass difference
+            #Shape difference? Similar to chi squared? But centred in mid image?
+            machine_guess = np.asarray(current_imgs[0])
+            overlap = actual + machine_guess
+            plt.imshow(overlap)
+            guess_com = calculate_com(machine_guess)
+            actual_com = calculate_com(actual)
+            difference = np.asarray(guess_com) - np.asarray(actual_com)
+            distances.append(np.sqrt(difference[0]**2 + difference[1]**2))
+            plt.scatter(guess_com[0], guess_com[1], label="Prediction COM")
+            plt.scatter(actual_com[0], actual_com[1], label="Actual COM")
+            plt.legend(loc='lower right')
+            plt.savefig("Machine_predictions/Compararison_{}.png".format(i))
+            plt.clf()
+            comparison_names.append("Machine_predictions/Compararison_{}.png".format(i))
+        except:
+            print("Fail")
+        
+        #current_imgs = K.round(current_imgs)
     plt.plot(distances)
+    plt.ylabel("Distance of COM")
+    plt.xlabel("Number of steps")
     plt.savefig("Machine_predictions/COM_distances.png")
     make_gif(saved_names, "Current_Guess")
     make_gif(comparison_names, "Comparison")
@@ -161,8 +187,8 @@ def make_gif(filenames, name):
 
 def main():
     print("Getting source files...")
-    files = glob.glob("Simulation_images/*.npy")
-    timestep_size = 1
+    files = glob.glob("Simulation_images/*")
+    timestep_size = 5
     training_data = get_source_arrays(files[:], timestep_size)
     print("Creating CNN...")
     active='LeakyReLU'
@@ -171,7 +197,7 @@ def main():
     model = create_neural_net(active, optimizer, loss, size=64)
     
     print("Training montage begins...")
-    model, history = train_model(model, training_data, epochs=40)
+    model, history = train_model(model, training_data, epochs=10)
     
     print("Diagnosing...")
     out = model(training_data[0][0:1])
@@ -185,18 +211,27 @@ def main():
     plt.imshow(training_data[1][0], cmap=plt.get_cmap(name))
     plt.savefig("Second.png")
     plt.clf()
+    print("Getting metrics info...")
     plt.plot(history.history['dice_coef'], label='dice_coef')
     plt.plot(history.history['val_dice_coef'], label = 'val_dice_coef')
     plt.plot(history.history['iou_coef'], label='iou_coef')
     plt.plot(history.history['val_iou_coef'], label = 'val_iou_coef')
+    plt.plot(history.history['mass_preservation'], label='mass_preservation')
+    plt.plot(history.history['val_mass_preservation'], label = 'val_mass_preservation')
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy')
-    plt.legend(loc='lower right')
+    plt.legend()
     plt.savefig("Metrics.png")
     #test_loss, test_acc = model.evaluate(test_set, test_solutions, verbose=2)
     #plt.show()
     plt.clf()
-    predict_future(model, 300, 200, timestep_size, name)
+    #Max is 820
+    starting = 100
+    print("Performing predictions...")
+    start_sim = "Simulation_2"
+    max_sim_num = np.size(glob.glob("Simulation_images/{}/*".format(start_sim)))
+    max_steps = int((max_sim_num - starting)/timestep_size)
+    predict_future(model, starting, start_sim, max_steps, timestep_size, name)
         
 
 if __name__ == "__main__":
