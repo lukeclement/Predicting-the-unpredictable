@@ -99,7 +99,7 @@ def create_neural_net(activation, optimizer, loss, size=128):
         The model, ready to be fitted!
     """
     model = models.Sequential()
-    model.add(layers.Conv2D(32, (3, 3), activation=activation, input_shape=(size, size, 1)))
+    model.add(layers.Conv2D(32, (3, 3), activation=activation, input_shape=(size, size, 3)))
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Conv2D(64, (3, 3), activation=activation))
     model.add(layers.MaxPooling2D((2, 2)))
@@ -109,7 +109,7 @@ def create_neural_net(activation, optimizer, loss, size=128):
     model.add(layers.Conv2DTranspose(64, (4, 4), activation=activation))
     model.add(layers.UpSampling2D((2, 2)))
     model.add(layers.Conv2DTranspose(32, (3, 3), activation=activation))
-    model.add(layers.Conv2DTranspose(1, (1, 1), activation='sigmoid'))
+    model.add(layers.Conv2DTranspose(3, (1, 1), activation='sigmoid'))
     
     print(model.summary())
     model.compile(optimizer=optimizer, loss=loss, metrics=[iou_coef, dice_coef, mass_preservation])
