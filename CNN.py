@@ -190,7 +190,7 @@ def main():
     active='LeakyReLU'
     optimizer='adam'
     loss = losses.BinaryCrossentropy()
-    loss = losses.MeanSquaredError()
+    #loss = losses.MeanSquaredError()
     choice = input(">>")
     if choice == "Y":
         timestep_size = 20
@@ -200,9 +200,9 @@ def main():
         
         print("Training montage begins...")
         model, history = train_model(model, training_data, epochs=10)
-        model.save("Model_{}_{}_{}".format(active,optimizer,"MeanSquaredError"))
+        model.save("Model_{}_{}_{}".format(active,optimizer,"BinaryCrossEntropy"))
     else:
-        saved_model = models.load_model("Model_{}_{}_{}".format(active,optimizer,"MeanSquaredError"))
+        saved_model = models.load_model("Model_{}_{}_{}".format(active,optimizer,"BinaryCrossEntropy"))
     
     
     print("Diagnosing...")
