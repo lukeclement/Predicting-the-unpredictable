@@ -186,17 +186,24 @@ def make_gif(filenames, name):
 def main():
     print("Getting source files...")
     files = glob.glob("Simulation_images/*")
-    timestep_size = 20
-    training_data = get_source_arrays(files[:], timestep_size)
-    print("Creating CNN...")
+    print("Do you want to generate a new model? [Y/N]")
     active='LeakyReLU'
     optimizer='adam'
     loss = losses.BinaryCrossentropy()
     loss = losses.MeanSquaredError()
-    model = create_neural_net(active, optimizer, loss, size=64)
+    choice = input(">>")
+    if choice == "Y":
+        timestep_size = 20
+        training_data = get_source_arrays(files[:], timestep_size)
+        print("Creating CNN...")
+        model = create_neural_net(active, optimizer, loss, size=64)
+        
+        print("Training montage begins...")
+        model, history = train_model(model, training_data, epochs=10)
+        model.save("Model_{}_{}_{}".format(active,optimizer,"MeanSquaredError"))
+    else:
+        saved_model = models.load_model("Model_{}_{}_{}".format(active,optimizer,"MeanSquaredError"))
     
-    print("Training montage begins...")
-    model, history = train_model(model, training_data, epochs=10)
     
     print("Diagnosing...")
     out = model(training_data[0][0:1])
