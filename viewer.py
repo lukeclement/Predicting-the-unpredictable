@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import imageio
 import os
 
-for i in range(0,16):
+"""for i in range(0,16):
     images = []
     simulation = "Simulation_{}".format(i)
     print("Working on {}".format(simulation))
@@ -32,6 +32,8 @@ for i in range(0,16):
     for filename in images:
         files.append(imageio.imread(filename))
     imageio.mimsave('Temp_data/{}.gif'.format(simulation), files)
-    #img = np.load("Simulation_images/829.npy")
-#plt.imshow(img)
-#plt.show()
+   
+"""
+img = np.load("Simulation_images/Simulation_0/img_500.npy")
+plt.imshow(img)
+plt.show()
