@@ -76,9 +76,7 @@ def get_source_arrays(sims, timestep_size=5):
                     #Normalisation
                     #training_solutions.append(source_array/255.0)
                     adding_solution = source_array
-                if np.size(adding_question) == 0 or np.size(adding_solution) == 0:
-                    print(file)
-                else:
+                if np.size(adding_question) != 0 and np.size(adding_solution) != 0:
                     training_solutions.append(adding_solution)
                     training_questions.append(adding_question)
             except:
@@ -154,8 +152,8 @@ def predict_future(model, start_image_number, sim, number_of_steps, timestep_siz
             #Centre of mass difference
             #Shape difference? Similar to chi squared? But centred in mid image?
             machine_guess = np.asarray(current_imgs[0])
-            overlap = actual + machine_guess
-            plt.imshow(overlap)
+            plt.imshow(actual, cmap=plt.get_cmap('Blues'))
+            plt.imshow(machine_guess, cmap=plt.get_cmap('Reds'), alpha=0.5)
             guess_com = calculate_com(machine_guess)
             actual_com = calculate_com(actual)
             difference = np.asarray(guess_com) - np.asarray(actual_com)
@@ -188,7 +186,7 @@ def make_gif(filenames, name):
 def main():
     print("Getting source files...")
     files = glob.glob("Simulation_images/*")
-    timestep_size = 5
+    timestep_size = 20
     training_data = get_source_arrays(files[:], timestep_size)
     print("Creating CNN...")
     active='LeakyReLU'
@@ -226,12 +224,12 @@ def main():
     #plt.show()
     plt.clf()
     #Max is 820
-    starting = 100
+    starting = 200
     print("Performing predictions...")
-    start_sim = "Simulation_2"
+    start_sim = "Simulation_10"
     max_sim_num = np.size(glob.glob("Simulation_images/{}/*".format(start_sim)))
     max_steps = int((max_sim_num - starting)/timestep_size)
-    predict_future(model, starting, start_sim, max_steps, timestep_size, name)
+    predict_future(model, starting, start_sim, 100, timestep_size, name)
         
 
 if __name__ == "__main__":
