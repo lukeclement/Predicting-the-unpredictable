@@ -32,14 +32,14 @@ def mass_preservation(y_true, y_pred, smooth=1):
     return K.exp(-K.sqrt(K.abs(true_mass - pred_mass))/2)
     
 def calculate_com(bubble_image):
-    size = np.size(bubble_image[0])
+    size = np.size(bubble_image[0])/3
     total_mass = np.sum(bubble_image)
     x = 0
     y = 0
     for i in range(0,size):
         for j in range(0,size):
-            x += bubble_image[j][i] * i
-            y += bubble_image[j][i] * j
+            x += bubble_image[j][i][1] * i
+            y += bubble_image[j][i][1] * j
     x = x/total_mass
     y = y/total_mass
     return [x, y]
@@ -152,8 +152,8 @@ def predict_future(model, start_image_number, sim, number_of_steps, timestep_siz
             #Centre of mass difference
             #Shape difference? Similar to chi squared? But centred in mid image?
             machine_guess = np.asarray(current_imgs[0])
-            plt.imshow(actual, cmap=plt.get_cmap('Blues'))
-            plt.imshow(machine_guess, cmap=plt.get_cmap('Reds'), alpha=0.5)
+            #plt.imshow(actual)
+            plt.imshow(machine_guess)
             guess_com = calculate_com(machine_guess)
             actual_com = calculate_com(actual)
             difference = np.asarray(guess_com) - np.asarray(actual_com)
@@ -162,10 +162,12 @@ def predict_future(model, start_image_number, sim, number_of_steps, timestep_siz
             plt.scatter(actual_com[0], actual_com[1], label="Actual COM")
             plt.legend(loc='lower right')
             plt.savefig("Machine_predictions/Compararison_{}.png".format(i))
-            plt.clf()
             comparison_names.append("Machine_predictions/Compararison_{}.png".format(i))
-        except:
-            print("Fail")
+        except Exception as e:
+            print(e)
+            
+                        
+        plt.clf()
         
         #current_imgs = K.round(current_imgs)
     plt.plot(distances)
@@ -184,26 +186,36 @@ def make_gif(filenames, name):
     
 
 def main():
-    print("Getting source files...")
     files = glob.glob("Simulation_images/*")
-    print("Do you want to generate a new model? [Y/N]")
     active='LeakyReLU'
     optimizer='adam'
-    loss = losses.BinaryCrossentropy()
-    #loss = losses.MeanSquaredError()
+    #loss = losses.BinaryCrossentropy()
+    #loss = losses.CategoricalCrossentropy()
+    #loss = losses.KLDivergence()
+    #loss = losses.CosineSimilarity()#Works goodish
+    #loss = losses.Hinge()
+    #loss = losses.SquaredHinge()
+    loss = losses.MeanSquaredError()
+    #loss = losses.MeanAbsoluteError()
+    #loss = losses.MeanAbsolutePercentageError()
+    #loss = losses.MeanSquaredLogarithmicError()
+    #loss = losses.LogCosh()
+    #loss = losses.Huber()
+    timestep_size = 20
+    print("Do you want to generate a new model? [Y/N]")
     choice = input(">>")
     if choice == "Y":
-        timestep_size = 20
+        print("Getting source files...")
         training_data = get_source_arrays(files[:], timestep_size)
         print("Creating CNN...")
         model = create_neural_net(active, optimizer, loss, size=64)
         
         print("Training montage begins...")
         model, history = train_model(model, training_data, epochs=10)
-        model.save("Model_{}_{}_{}".format(active,optimizer,"BinaryCrossEntropy"))
+        model.save("Model_{}_{}_{}_{}".format(active,optimizer,"MeanSquaredError",timestep_size))
     else:
-        saved_model = models.load_model("Model_{}_{}_{}".format(active,optimizer,"BinaryCrossEntropy"))
-    
+        training_data = get_source_arrays(files[0:1], timestep_size)
+        model = models.load_model("Model_{}_{}_{}_{}".format(active,optimizer,"MeanSquaredError",timestep_size),custom_objects={"iou_coef":iou_coef, "dice_coef":dice_coef, "mass_preservation":mass_preservation})
     
     print("Diagnosing...")
     out = model(training_data[0][0:1])

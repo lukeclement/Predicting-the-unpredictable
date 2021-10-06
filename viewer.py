@@ -34,6 +34,6 @@ import os
     imageio.mimsave('Temp_data/{}.gif'.format(simulation), files)
    
 """
-img = np.load("Simulation_images/Simulation_0/img_500.npy")
+img = np.load("Simulation_images/Simulation_10/img_700.npy")
 plt.imshow(img)
 plt.show()
