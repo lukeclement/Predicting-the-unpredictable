@@ -63,6 +63,7 @@ def transform_into_array(x, y, size=128):
                 rail = 2 - i / (np.size(news[0])/2)
             rail_val = rail
             distance = np.exp(-np.sqrt((centre[0]-i)**2 + (centre[1]-j)**2)/alpha)
+            distance = 0
             entry.append([distance, bubble_val, rail_val])
         final.append(entry)
     return final

@@ -189,13 +189,13 @@ def main():
     files = glob.glob("Simulation_images/*")
     active='LeakyReLU'
     optimizer='adam'
-    #loss = losses.BinaryCrossentropy()
+    loss = losses.BinaryCrossentropy()
     #loss = losses.CategoricalCrossentropy()
     #loss = losses.KLDivergence()
     #loss = losses.CosineSimilarity()#Works goodish
     #loss = losses.Hinge()
     #loss = losses.SquaredHinge()
-    loss = losses.MeanSquaredError()
+    #loss = losses.MeanSquaredError() #Semi-Okay
     #loss = losses.MeanAbsoluteError()
     #loss = losses.MeanAbsolutePercentageError()
     #loss = losses.MeanSquaredLogarithmicError()
@@ -212,10 +212,10 @@ def main():
         
         print("Training montage begins...")
         model, history = train_model(model, training_data, epochs=10)
-        model.save("Model_{}_{}_{}_{}".format(active,optimizer,"MeanSquaredError",timestep_size))
+        model.save("Model_{}_{}_{}_{}".format(active,optimizer,"BinaryCrossEntropy",timestep_size))
     else:
         training_data = get_source_arrays(files[0:1], timestep_size)
-        model = models.load_model("Model_{}_{}_{}_{}".format(active,optimizer,"MeanSquaredError",timestep_size),custom_objects={"iou_coef":iou_coef, "dice_coef":dice_coef, "mass_preservation":mass_preservation})
+        model = models.load_model("Model_{}_{}_{}_{}".format(active,optimizer,"BinaryCrossEntropy",timestep_size),custom_objects={"iou_coef":iou_coef, "dice_coef":dice_coef, "mass_preservation":mass_preservation})
     
     print("Diagnosing...")
     out = model(training_data[0][0:1])
