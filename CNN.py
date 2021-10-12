@@ -15,6 +15,10 @@ def iou_coef(y_true, y_pred, smooth=1):
     return iou
 
 
+def bce_dice(y_true, y_pred):
+    return losses.binary_crossentropy(y_true, y_pred) - K.log(dice_coef(y_true, y_pred))
+
+
 def dice_coef(y_true, y_pred, smooth=1):
     intersection = K.sum(y_true * y_pred, axis=[1, 2, 3])
     union = K.sum(y_true, axis=[1, 2, 3]) + K.sum(y_pred, axis=[1, 2, 3])
@@ -218,10 +222,10 @@ def main():
     choice = input(">>")
     if choice == "Y":
         print("Getting source files...")
-        training_data = get_source_arrays(files[:5], timestep_size)
-        np.save("Qs", training_data[0])
-        np.save("As", training_data[1])
-        training_data = [np.load("Qs.npy"), np.load("As.npy")]
+        training_data = get_source_arrays(files[:], timestep_size)
+        # np.save("Qs", training_data[0])
+        # np.save("As", training_data[1])
+        # training_data = [np.load("Qs.npy"), np.load("As.npy")]
         print("Creating CNN...")
         model = create_neural_net(active, optimizer, loss, size=64)
 
@@ -241,7 +245,7 @@ def main():
     plt.imshow(out[0])
     plt.savefig("Machine.png")
     # plt.show()
-    plt.imshow(training_data[0][0])
+    plt.imshow(training_data[0][0][3])
     plt.savefig("First.png")
     plt.imshow(training_data[1][0])
     plt.savefig("Second.png")
