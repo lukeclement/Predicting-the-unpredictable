@@ -15,6 +15,10 @@ def iou_coef(y_true, y_pred, smooth=1):
     return iou
 
 
+def bce_dice(y_true, y_pred):
+    return losses.binary_crossentropy(y_true, y_pred) - K.log(dice_coef(y_true, y_pred))
+
+
 def dice_coef(y_true, y_pred, smooth=1):
     intersection = K.sum(y_true * y_pred, axis=[1, 2, 3])
     union = K.sum(y_true, axis=[1, 2, 3]) + K.sum(y_pred, axis=[1, 2, 3])
