@@ -89,7 +89,7 @@ def get_source_arrays(sims, timestep_size=5, frames=4):
     print(np.shape(training_solutions))
     return [training_questions, training_solutions]
     
-def create_neural_net(activation, optimizer, loss, frames=4, size=128, channels=2):
+def create_neural_net(activation, optimizer, loss, frames=4, size=128, channels=3):
     """Creates the CNN.
     Inputs:
         activation: The activation function used on the neurons (string)
