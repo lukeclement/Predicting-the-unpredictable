@@ -4,9 +4,7 @@ import os
 import time
 
 
-def get_question(sim, file, frames):
-    loc = file.find("/img_") + 5
-    step_number = int(file[loc:-4])
+def get_question(sim, file, frames, loc, step_number):
     start_array = []
     for i in range(frames, 0, -1):
         source_array = np.load("{}/img_{}.npy".format(sim, step_number - i))
@@ -40,17 +38,19 @@ def get_source_arrays(sims, timestep_size=5, frames=4):
             t_1 = time.time()*1000
             if step_number + timestep_size < number_of_steps and step_number - frames > 0:
                 if not run_before:
-                    start_array = get_question(sim, file, frames)
+                    start_array = get_question(sim, file, frames, loc, step_number)
                     current_questions = np.array([np.stack([x.tolist() for x in start_array])])
                     current_answers = np.array([np.load("{}/img_{}.npy".format(sim, step_number + timestep_size))])
                     run_before = True
                 else:
                     # current_questions = np.load("Questions.npy")
                     # current_answers = np.load("Answers.npy")
-                    new_question = get_question(sim, file, frames)
+                    new_question = get_question(sim, file, frames, loc, step_number)
                     new_answer = np.load("{}/img_{}.npy".format(sim, step_number + timestep_size))
                     current_answers = np.append(current_answers, np.array([new_answer]), axis=0)
-                    current_questions = np.append(current_questions, np.array([np.stack([x.tolist() for x in new_question])]), axis=0)
+                    current_questions = np.append(current_questions, np.array([
+                        np.stack([x.tolist() for x in new_question])
+                    ]), axis=0)
                 # print(np.shape(current_questions))
                 # np.save("Questions", current_questions)
                 # np.save("Answers", current_answers)
