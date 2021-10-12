@@ -44,7 +44,7 @@ def calculate_com(bubble_image):
     y = y/total_mass
     return [x, y]
 
-def get_source_arrays(sims, timestep_size=5):
+def get_source_arrays(sims, timestep_size=5, frames=4):
     """Get the arrays from simulated data.
     Input:
         sims:              list of simulations (list of strings)
@@ -57,38 +57,39 @@ def get_source_arrays(sims, timestep_size=5):
     training_solutions = []
     in_use = 0
     for sim in sims:
+        print("Running {}...".format(sim))
         files = glob.glob("{}/*.npy".format(sim))
         number_of_steps = np.size(files)
         for file in files:
-            adding_question = np.array([])
-            adding_solution = np.array([])
+            #print("{:.1f}%...".format(in_use*100/(np.size(files)*np.size(sims))))
             try:
-                loc = file.find("/img_")+5
+                loc = file.find("/img_") + 5
                 step_number = int(file[loc:-4])
-                if step_number + timestep_size < number_of_steps:
+                if step_number + timestep_size < number_of_steps and step_number - frames > 0:
                     in_use += 1
-                    source_array = np.load(file)
+                    start_array = []
+                    for i in range(frames, 0, -1):
+                        source_array = np.load("{}/img_{}.npy".format(sim,step_number - i))
+                        start_array.append(source_array)
                     #Normalisation
-                    #training_questions.append(source_array/255.0)
-                    adding_question = source_array
                     
                     source_array = np.load("{}/img_{}.npy".format(sim,step_number + timestep_size))
                     #Normalisation
-                    #training_solutions.append(source_array/255.0)
-                    adding_solution = source_array
-                if np.size(adding_question) != 0 and np.size(adding_solution) != 0:
-                    training_solutions.append(adding_solution)
-                    training_questions.append(adding_question)
-            except:
-                print("Missed on {}".format(file))
-    print(np.shape(training_questions[0]))
-    print(np.shape(training_solutions[0]))
-    training_questions = np.stack([x.tolist() for x in training_questions])
-    training_solutions = np.stack([x.tolist() for x in training_solutions])
+                    training_questions.append(np.stack([x.tolist() for x in start_array]))
+                    training_solutions.append(source_array)
+            except Exception as e:
+                print("Missed on {}:".format(file))
+                print(e)
     print("Using {} images".format(in_use))
+    print("Processing questions...")
+    training_questions = np.stack([x.tolist() for x in training_questions])
+    print("Processing answers...")
+    training_solutions = np.stack([x.tolist() for x in training_solutions])
+    print(np.shape(training_questions))
+    print(np.shape(training_solutions))
     return [training_questions, training_solutions]
     
-def create_neural_net(activation, optimizer, loss, size=128):
+def create_neural_net(activation, optimizer, loss, frames=4, size=128, channels=2):
     """Creates the CNN.
     Inputs:
         activation: The activation function used on the neurons (string)
@@ -99,7 +100,9 @@ def create_neural_net(activation, optimizer, loss, size=128):
         The model, ready to be fitted!
     """
     model = models.Sequential()
-    model.add(layers.Conv2D(32, (3, 3), activation=activation, input_shape=(size, size, 3)))
+    model.add(layers.Conv3D(32, (3, 3, 3), activation=activation, input_shape=(frames, size, size, channels)))
+    model.add(layers.Conv3D(64, (2, 2, 2), activation=activation))
+    model.add(layers.Reshape((61,61,64)))
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Conv2D(64, (3, 3), activation=activation))
     model.add(layers.MaxPooling2D((2, 2)))
@@ -109,7 +112,7 @@ def create_neural_net(activation, optimizer, loss, size=128):
     model.add(layers.Conv2DTranspose(64, (4, 4), activation=activation))
     model.add(layers.UpSampling2D((2, 2)))
     model.add(layers.Conv2DTranspose(32, (3, 3), activation=activation))
-    model.add(layers.Conv2DTranspose(3, (1, 1), activation='sigmoid'))
+    model.add(layers.Conv2DTranspose(channels, (1, 1), activation='sigmoid'))
     
     print(model.summary())
     model.compile(optimizer=optimizer, loss=loss, metrics=[iou_coef, dice_coef, mass_preservation])
@@ -206,7 +209,10 @@ def main():
     choice = input(">>")
     if choice == "Y":
         print("Getting source files...")
-        training_data = get_source_arrays(files[:], timestep_size)
+        training_data = get_source_arrays(files[:5], timestep_size)
+        np.save("Qs",training_data[0])
+        np.save("As",training_data[1])
+        training_data = [np.load("Qs.npy"), np.load("As.npy")]
         print("Creating CNN...")
         model = create_neural_net(active, optimizer, loss, size=64)
         
@@ -221,12 +227,12 @@ def main():
     out = model(training_data[0][0:1])
     #plt.imshow(out[0]*255.0)
     name = 'Greys'
-    plt.imshow(out[0], cmap=plt.get_cmap(name))
+    plt.imshow(out[0])
     plt.savefig("Machine.png")
     #plt.show()
-    plt.imshow(training_data[0][0], cmap=plt.get_cmap(name))
+    plt.imshow(training_data[0][0])
     plt.savefig("First.png")
-    plt.imshow(training_data[1][0], cmap=plt.get_cmap(name))
+    plt.imshow(training_data[1][0])
     plt.savefig("Second.png")
     plt.clf()
     print("Getting metrics info...")

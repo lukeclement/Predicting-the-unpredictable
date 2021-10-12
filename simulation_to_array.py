@@ -24,11 +24,12 @@ def read_file(file_path):
     return x, y
 
 
-def transform_into_array(x, y, size=128):
+def transform_into_array(x, y, varient, size=128):
     """Transforms a set of x and y coordanates to an array of the bubble.
     Inputs:
         x:      a 1d array of x coordanates
         y:      a 1d array of y coordinates
+        varient:an integer between -1 and infinity to give the offset from the original image. If -1, image is flipped.
         size:   an integer for the number of pixels
                 to be used in a single axis (defult 128)
     Output:
@@ -40,7 +41,13 @@ def transform_into_array(x, y, size=128):
     for i in range(0,np.size(h[0])):
         li = []
         for j in range(0,np.size(h[0])):
-            temp = h[j][np.size(h[0]) - 1 - i]
+            if varient != -1:
+                if varient + j < np.size(h[0]):
+                    temp = h[j+varient][np.size(h[0]) - 1 - i]
+                else:
+                    temp = h[j][np.size(h[0]) - 1 - i]
+            else:
+                temp = h[j][i]
             
             #colour = int((float(temp)/float(max_val))*255.0)
             if temp >= 1:
@@ -64,7 +71,8 @@ def transform_into_array(x, y, size=128):
             rail_val = rail
             distance = np.exp(-np.sqrt((centre[0]-i)**2 + (centre[1]-j)**2)/alpha)
             distance = 0
-            entry.append([distance, bubble_val, rail_val])
+            #entry.append([distance, bubble_val, rail_val])
+            entry.append([bubble_val, rail_val])
         final.append(entry)
     return final
     
@@ -86,17 +94,19 @@ def main():
     """
     sim_names = glob.glob("Simulation_data/*")
     #print(sim_names)
-    for sim_number in range(0, np.size(sim_names)):
+    num_of_sims = np.size(sim_names)
+    for sim_number in range(0, num_of_sims):
         files = glob.glob("{}/b*.dat".format(sim_names[sim_number]))
-        print("Running ({} files found in simulation {})".format(np.size(files),sim_names[sim_number]))
-        try:
-            os.mkdir("Simulation_images/Simulation_{}".format(sim_number))
-        except:
-            print("Folder exists!")
-        for file in files:
-            x, y = read_file(file)
-            step_number = int(file[file.find("s_")+2:-4])
-            np.save("Simulation_images/Simulation_{}/img_{}".format(sim_number,step_number), transform_into_array(x, y, size=64))
+        for i in range(0, 3):
+            print("Running ({} files found in simulation {})".format(np.size(files),sim_names[sim_number]))
+            try:
+                os.mkdir("Simulation_images/Simulation_{}".format(sim_number + i*num_of_sims))
+            except:
+                print("Folder exists!")
+            for file in files:
+                x, y = read_file(file)
+                step_number = int(file[file.find("s_")+2:-4])
+                np.save("Simulation_images/Simulation_{}/img_{}".format(sim_number + i*num_of_sims,step_number), transform_into_array(x, y, i-1, size=64))
     
 if __name__ == "__main__":
     main()
