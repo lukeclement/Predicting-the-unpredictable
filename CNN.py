@@ -218,7 +218,7 @@ def main():
     choice = input(">>")
     if choice == "Y":
         print("Getting source files...")
-        training_data = get_source_arrays(files[:5], timestep_size)
+        training_data = get_source_arrays(files[:], timestep_size)
         # np.save("Qs", training_data[0])
         # np.save("As", training_data[1])
         # training_data = [np.load("Qs.npy"), np.load("As.npy")]
@@ -241,7 +241,7 @@ def main():
     plt.imshow(out[0])
     plt.savefig("Machine.png")
     # plt.show()
-    plt.imshow(training_data[0][0])
+    plt.imshow(training_data[0][0][3])
     plt.savefig("First.png")
     plt.imshow(training_data[1][0])
     plt.savefig("Second.png")
