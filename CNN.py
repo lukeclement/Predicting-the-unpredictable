@@ -96,7 +96,7 @@ def get_source_arrays(sims, timestep_size=5, frames=4):
     return [training_questions, training_solutions]
 
 
-def create_neural_net(activation, optimizer, loss, frames=4, size=128, channels=3):
+def create_neural_net(activation, optimizer, loss, frames=4, size=128, channels=2):
     """Creates the CNN.
     Inputs:
         activation: The activation function used on the neurons (string)
@@ -218,10 +218,10 @@ def main():
     choice = input(">>")
     if choice == "Y":
         print("Getting source files...")
-        training_data = get_source_arrays(files[:5], timestep_size)
-        np.save("Qs", training_data[0])
-        np.save("As", training_data[1])
-        training_data = [np.load("Qs.npy"), np.load("As.npy")]
+        training_data = get_source_arrays(files[:], timestep_size)
+        # np.save("Qs", training_data[0])
+        # np.save("As", training_data[1])
+        # training_data = [np.load("Qs.npy"), np.load("As.npy")]
         print("Creating CNN...")
         model = create_neural_net(active, optimizer, loss, size=64)
 
@@ -241,7 +241,7 @@ def main():
     plt.imshow(out[0])
     plt.savefig("Machine.png")
     # plt.show()
-    plt.imshow(training_data[0][0])
+    plt.imshow(training_data[0][0][3])
     plt.savefig("First.png")
     plt.imshow(training_data[1][0])
     plt.savefig("Second.png")
