@@ -72,7 +72,7 @@ def transform_into_array(x, y, varient, size=128):
             distance = np.exp(-np.sqrt((centre[0]-i)**2 + (centre[1]-j)**2)/alpha)
             distance = 0
             #entry.append([distance, bubble_val, rail_val])
-            entry.append([bubble_val, rail_val])
+            entry.append([0 ,bubble_val, rail_val])
         final.append(entry)
     return final
     
