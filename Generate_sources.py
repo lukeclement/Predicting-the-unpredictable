@@ -12,6 +12,10 @@ def get_question(sim, file, frames, loc, step_number):
     return start_array
 
 
+def get_source_arrays_2():
+    return None
+
+
 def get_source_arrays(sims, timestep_size=5, frames=4):
     """Get the arrays from simulated data.
     Input:
@@ -35,7 +39,7 @@ def get_source_arrays(sims, timestep_size=5, frames=4):
         for file in files:
             loc = file.find("/img_") + 5
             step_number = int(file[loc:-4])
-            t_1 = time.time()*1000
+            t_1 = time.time() * 1000
             if step_number + timestep_size < number_of_steps and step_number - frames > 0:
                 if not run_before:
                     start_array = get_question(sim, file, frames, loc, step_number)
@@ -54,12 +58,12 @@ def get_source_arrays(sims, timestep_size=5, frames=4):
                 # print(np.shape(current_questions))
                 # np.save("Questions", current_questions)
                 # np.save("Answers", current_answers)
-            t_2 = time.time()*1000
+            t_2 = time.time() * 1000
             time_data.append(t_2 - t_1)
-        print("Mean time of {:.3f} mins".format(np.mean(time_data)/(60*1000)))
-        print("Initial time of {:.3f} mins".format(time_data[0]/(60*1000)))
-        print("Final time of {:.3f} mins".format(time_data[-1:][0]/(60*1000)))
-        print("Total time of {:.2f} mins".format(np.sum(time_data)/(60*1000)))
+        print("Mean time of {:.3f} mins".format(np.mean(time_data) / (60 * 1000)))
+        print("Initial time of {:.3f} mins".format(time_data[0] / (60 * 1000)))
+        print("Final time of {:.3f} mins".format(time_data[-1:][0] / (60 * 1000)))
+        print("Total time of {:.2f} mins".format(np.sum(time_data) / (60 * 1000)))
         print(np.shape(current_questions))
         print(np.shape(current_answers))
         np.save("Questions", current_questions)

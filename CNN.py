@@ -16,7 +16,13 @@ def iou_coef(y_true, y_pred, smooth=1):
 
 
 def bce_dice(y_true, y_pred):
-    return losses.binary_crossentropy(y_true, y_pred) - K.log(dice_coef(y_true, y_pred))
+    bce = losses.binary_crossentropy(y_true, y_pred)
+    di = K.log(dice_coef(y_true, y_pred))
+    com = com_coef(y_true, y_pred)
+    print(tf.shape(bce))
+    print(tf.shape(di))
+    print(tf.shape(com))
+    return bce - di + com
 
 
 def dice_coef(y_true, y_pred, smooth=1):
@@ -27,11 +33,17 @@ def dice_coef(y_true, y_pred, smooth=1):
 
 
 def com_coef(y_true, y_pred):
-    actual = calculate_com(y_true.eval(session=tf.compat.v1.Session()))
-    predict = calculate_com(y_pred.eval(session=tf.compat.v1.Session()))
-    difference = predict - actual
-    radius_sq = difference[0] ** 2 + difference[1] ** 2
-    return np.exp(radius_sq)
+    i_1, j_1 = tf.meshgrid(tf.range(64),tf.range(64), indexing='ij')
+    coords_1 = tf.stack([tf.reshape(i_1, (-1,)), tf.reshape(j_1, (-1,))], axis=-1)
+    coords_1 = tf.cast(coords_1, tf.float32)
+    volumes_flat_1 = tf.reshape(y_true, [-1, 64 * 64, 1])
+    total_mass_1 = tf.reduce_sum(volumes_flat_1, axis=1)
+    centre_of_mass_1 = tf.reduce_sum(volumes_flat_1 * coords_1, axis=1) / total_mass_1
+    volumes_flat_2 = tf.reshape(y_pred, [-1, 64 * 64, 1])
+    total_mass_2 = tf.reduce_sum(volumes_flat_2, axis=1)
+    centre_of_mass_2 = tf.reduce_sum(volumes_flat_2 * coords_1, axis=1) / total_mass_2
+    difference = centre_of_mass_1 - centre_of_mass_2
+    return K.abs(difference)
 
 
 def mass_preservation(y_true, y_pred, smooth=1):
@@ -126,7 +138,7 @@ def create_neural_net(activation, optimizer, loss, frames=4, size=128, channels=
     model.add(layers.Conv2DTranspose(channels, (1, 1), activation='sigmoid'))
 
     print(model.summary())
-    model.compile(optimizer=optimizer, loss=loss, metrics=[iou_coef, dice_coef, mass_preservation])
+    model.compile(optimizer=optimizer, loss=loss, metrics=[iou_coef, dice_coef, mass_preservation, com_coef])
     # model.compile(optimizer=optimizer, loss=loss, metrics=[mass_preservation])
     return model
 
@@ -205,7 +217,9 @@ def main():
     files = glob.glob("Simulation_images/*")
     active = 'LeakyReLU'
     optimizer = 'adam'
-    loss = losses.BinaryCrossentropy()
+    # loss = losses.BinaryCrossentropy()
+    loss = bce_dice
+    # loss = com_coef
     # loss = losses.CategoricalCrossentropy()
     # loss = losses.KLDivergence()
     # loss = losses.CosineSimilarity()#Works goodish
@@ -222,10 +236,10 @@ def main():
     choice = input(">>")
     if choice == "Y":
         print("Getting source files...")
-        training_data = get_source_arrays(files[:], timestep_size)
+        # training_data = get_source_arrays(files[:], timestep_size)
         # np.save("Qs", training_data[0])
         # np.save("As", training_data[1])
-        # training_data = [np.load("Qs.npy"), np.load("As.npy")]
+        training_data = [np.load("Questions.npy"), np.load("Answers.npy")]
         print("Creating CNN...")
         model = create_neural_net(active, optimizer, loss, size=64)
 
