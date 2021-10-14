@@ -12,8 +12,33 @@ def get_question(sim, file, frames, loc, step_number):
     return start_array
 
 
-def get_source_arrays_2():
-    return None
+def get_source_arrays_2(sims, timestep_size=5, frames=4, size=64, channels=3):
+    files = []
+    file_nums = []
+    print("Checking sims...")
+    for sim in sims:
+        sim_files = glob.glob("{}/*.npy".format(sim))
+        for i in range(frames, len(sim_files)-timestep_size):
+            files.append("{}/img_{}.npy".format(sim, i))
+            file_nums.append([sim, i])
+    print("Generating arrays of size {}...".format(len(files)))
+    questions_array = np.zeros((len(files), frames, size, size, channels))
+    answers_array = np.zeros((len(files), size, size, channels))
+    print("Running...")
+    print(np.shape(questions_array))
+    print(np.shape(answers_array))
+    for index, file in enumerate(files):
+        for frame in range(0, frames):
+            questions_array[index, frame, :, :, :] = np.load(
+                "{}/img_{}.npy".format(file_nums[index][0], file_nums[index][1]-frame)
+            )
+        answers_array[index, :, :, :] = np.load(
+            "{}/img_{}.npy".format(file_nums[index][0], file_nums[index][1]+timestep_size)
+        )
+    print("Saving...")
+    np.save("Questions", questions_array)
+    np.save("Answers", answers_array)
+    return [np.load("Questions.npy"), np.load("Answers.npy")]
 
 
 def get_source_arrays(sims, timestep_size=5, frames=4):
@@ -74,7 +99,7 @@ def get_source_arrays(sims, timestep_size=5, frames=4):
 
 def main():
     sources = glob.glob("Simulation_images/*")
-    results = get_source_arrays(sources)
+    results = get_source_arrays_2(sources)
     print(np.shape(results[0]))
     print(np.shape(results[1]))
 
