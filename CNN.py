@@ -18,11 +18,13 @@ def iou_coef(y_true, y_pred, smooth=1):
 def bce_dice(y_true, y_pred):
     bce = losses.binary_crossentropy(y_true, y_pred)
     di = K.log(dice_coef(y_true, y_pred))
-    com = com_coef(y_true, y_pred)
-    print(tf.shape(bce))
-    print(tf.shape(di))
-    print(tf.shape(com))
-    return bce - di + com
+    iou = K.log(iou_coef(y_true, y_pred))
+    # I don't know if this works!
+    com = K.log(com_coef(y_true, y_pred))
+    # print(tf.shape(bce))
+    # print(tf.shape(di))
+    # print(tf.shape(com))
+    return bce - di - iou - com
 
 
 def dice_coef(y_true, y_pred, smooth=1):
@@ -244,7 +246,7 @@ def main():
         model = create_neural_net(active, optimizer, loss, size=64)
 
         print("Training montage begins...")
-        model, history = train_model(model, training_data, epochs=10)
+        model, history = train_model(model, training_data, epochs=5)
         model.save("Model_{}_{}_{}_{}".format(active, optimizer, "BinaryCrossEntropy", timestep_size))
     else:
         training_data = get_source_arrays(files[0:1], timestep_size)
