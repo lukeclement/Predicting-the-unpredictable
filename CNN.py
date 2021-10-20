@@ -19,12 +19,9 @@ def bce_dice(y_true, y_pred):
     bce = losses.binary_crossentropy(y_true, y_pred)
     di = K.log(dice_coef(y_true, y_pred))
     iou = K.log(iou_coef(y_true, y_pred))
-    # I don't know if this works!
     com = K.log(com_coef(y_true, y_pred))
-    # print(tf.shape(bce))
-    # print(tf.shape(di))
-    # print(tf.shape(com))
-    return bce - di - iou - com
+    #return bce - di - iou + com
+    return bce - di - iou
 
 
 def dice_coef(y_true, y_pred, smooth=1):
@@ -35,15 +32,15 @@ def dice_coef(y_true, y_pred, smooth=1):
 
 
 def com_coef(y_true, y_pred):
-    i_1, j_1 = tf.meshgrid(tf.range(64),tf.range(64), indexing='ij')
+    i_1, j_1 = tf.meshgrid(tf.range(64), tf.range(64), indexing='ij')
     coords_1 = tf.stack([tf.reshape(i_1, (-1,)), tf.reshape(j_1, (-1,))], axis=-1)
     coords_1 = tf.cast(coords_1, tf.float32)
     volumes_flat_1 = tf.reshape(y_true, [-1, 64 * 64, 1])
-    total_mass_1 = tf.reduce_sum(volumes_flat_1, axis=1)
-    centre_of_mass_1 = tf.reduce_sum(volumes_flat_1 * coords_1, axis=1) / total_mass_1
+    total_mass_1 = tf.reduce_sum(volumes_flat_1, axis=None)
+    centre_of_mass_1 = tf.reduce_sum(volumes_flat_1 * coords_1, axis=None) / total_mass_1
     volumes_flat_2 = tf.reshape(y_pred, [-1, 64 * 64, 1])
-    total_mass_2 = tf.reduce_sum(volumes_flat_2, axis=1)
-    centre_of_mass_2 = tf.reduce_sum(volumes_flat_2 * coords_1, axis=1) / total_mass_2
+    total_mass_2 = tf.reduce_sum(volumes_flat_2, axis=None)
+    centre_of_mass_2 = tf.reduce_sum(volumes_flat_2 * coords_1, axis=None) / total_mass_2
     difference = centre_of_mass_1 - centre_of_mass_2
     return K.abs(difference)
 
@@ -137,7 +134,7 @@ def create_neural_net(activation, optimizer, loss, frames=4, size=128, channels=
     model.add(layers.Conv2DTranspose(64, (4, 4), activation=activation))
     model.add(layers.UpSampling2D((2, 2)))
     model.add(layers.Conv2DTranspose(32, (3, 3), activation=activation))
-    model.add(layers.Conv2DTranspose(channels, (1, 1), activation='sigmoid'))
+    model.add(layers.Conv2DTranspose(1, (1, 1), activation='sigmoid'))
 
     print(model.summary())
     model.compile(optimizer=optimizer, loss=loss, metrics=[iou_coef, dice_coef, mass_preservation, com_coef])

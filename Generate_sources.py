@@ -18,23 +18,23 @@ def get_source_arrays_2(sims, timestep_size=5, frames=4, size=64, channels=3):
     print("Checking sims...")
     for sim in sims:
         sim_files = glob.glob("{}/*.npy".format(sim))
-        for i in range(frames, len(sim_files)-timestep_size):
+        for i in range(frames*timestep_size, len(sim_files)-timestep_size):
             files.append("{}/img_{}.npy".format(sim, i))
             file_nums.append([sim, i])
     print("Generating arrays of size {}...".format(len(files)))
     questions_array = np.zeros((len(files), frames, size, size, channels))
-    answers_array = np.zeros((len(files), size, size, channels))
+    answers_array = np.zeros((len(files), size, size, 1))
     print("Running...")
     print(np.shape(questions_array))
     print(np.shape(answers_array))
     for index, file in enumerate(files):
-        for frame in range(0, frames):
+        for frame in range(0, frames*timestep_size, timestep_size):
             questions_array[index, frame, :, :, :] = np.load(
                 "{}/img_{}.npy".format(file_nums[index][0], file_nums[index][1]-frame)
             )
-        answers_array[index, :, :, :] = np.load(
+        answers_array[index, :, :, 0] = np.load(
             "{}/img_{}.npy".format(file_nums[index][0], file_nums[index][1]+timestep_size)
-        )
+        )[:, :, 1]
     print("Saving...")
     np.save("Questions", questions_array)
     np.save("Answers", answers_array)
