@@ -160,11 +160,13 @@ def train_model(model, training_images, validation_split=0.1, epochs=20):
     return model, history
 
 
-def predict_future(model, start_image_number, sim, number_of_steps, timestep_size, name):
-    initial = np.load("Simulation_images/{}/img_{}.npy".format(sim, start_image_number))
-    initial = [initial]
-    current_imgs = np.stack([x.tolist() for x in initial])
-    plt.imshow(current_imgs[0], cmap=plt.get_cmap(name))
+def predict_future(model, start_image_number, sim, number_of_steps, timestep_size, name, frames=4):
+    initial = []
+    for f in range(0, frames):
+        temp = np.load("Simulation_images/{}/img_{}.npy".format(sim, start_image_number + frames*timestep_size))
+        initial.append(temp)
+    current_frames = np.stack([x.tolist() for x in initial])
+    plt.imshow(current_frames[0])
     plt.savefig("Machine_predictions/setup.png")
     saved_names = []
     comparison_names = []

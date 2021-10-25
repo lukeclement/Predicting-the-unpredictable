@@ -99,7 +99,7 @@ def main():
     num_of_sims = np.size(sim_names)
     for sim_number in range(0, num_of_sims):
         files = glob.glob("{}/b*.dat".format(sim_names[sim_number]))
-        for i in range(0, 2):
+        for i in range(0, 3):
             print("Running ({} files found in simulation {})".format(np.size(files), sim_names[sim_number]))
             try:
                 os.mkdir("Simulation_images/Simulation_{}".format(sim_number + i * num_of_sims))

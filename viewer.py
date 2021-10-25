@@ -36,7 +36,7 @@ import os
 """
 all = np.load("Answers.npy")
 print(np.shape(all))
-img = all[44498]
+img = all[43730]
 #img = np.load("Simulation_images/Simulation_0/img_700.npy")
 plt.imshow(img)
 plt.show()

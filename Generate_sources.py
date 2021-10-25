@@ -29,7 +29,7 @@ def get_source_arrays_2(sims, timestep_size=5, frames=4, size=64, channels=3):
     print(np.shape(answers_array))
     for index, file in enumerate(files):
         for frame in range(0, frames*timestep_size, timestep_size):
-            questions_array[index, frame, :, :, :] = np.load(
+            questions_array[index, int(frame/timestep_size), :, :, :] = np.load(
                 "{}/img_{}.npy".format(file_nums[index][0], file_nums[index][1]-frame)
             )
         answers_array[index, :, :, 0] = np.load(
