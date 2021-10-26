@@ -155,7 +155,7 @@ def train_model(model, training_images, validation_split=0.1, epochs=20):
     """
     questions = training_images[0]
     answers = training_images[1]
-    history = model.fit(questions, answers, epochs=epochs, validation_split=validation_split)
+    history = model.fit(questions, answers, epochs=epochs, validation_split=validation_split, shuffle=True, batch_size=64)
 
     return model, history
 
@@ -182,15 +182,13 @@ def predict_future_2(model, timestep_size, simulation_number, start_number,
                         rail = 2 - i / (size / 2)
                     runway = np.zeros(size) + rail
                     input_frames[0, frame, i, :, 2] = runway
-        plt.imshow(input_frames[0, 0])
-        plt.savefig("Test_A.png")
-        plt.imshow(input_frames[0, 1])
-        plt.savefig("Test_B.png")
-        plt.imshow(input_frames[0, 2])
-        plt.savefig("Test_C.png")
         plt.imshow(input_frames[0, 3])
-        plt.savefig("Test_D.png")
-        exit()
+        plt.savefig("Machine/Test_Predict_{}.png".format(prediction))
+        #test_img = np.load("Simulation_images/Simulation_{}/img_{}.npy".format(
+        #    simulation_number, start_number + (prediction+frames) * timestep_size
+        #))
+        #plt.imshow(test_img)
+        #plt.savefig("Machine/Test_Actual_{}.png".format(prediction))
     return 0
 
 def predict_future(model, start_image_number, sim, number_of_steps, timestep_size, name, frames=4):
@@ -279,7 +277,7 @@ def main():
         model = create_neural_net(active, optimizer, loss, size=64)
 
         print("Training montage begins...")
-        model, history = train_model(model, training_data, epochs=1)
+        model, history = train_model(model, training_data, epochs=5)
         model.save("Model_{}_{}_{}_{}".format(active, optimizer, "BinaryCrossEntropy", timestep_size))
     else:
         model = models.load_model("Model_{}_{}_{}_{}".format(active, optimizer, "BinaryCrossEntropy", timestep_size),
@@ -318,8 +316,7 @@ def main():
     start_sim = "Simulation_10"
     max_sim_num = np.size(glob.glob("Simulation_images/{}/*".format(start_sim)))
     max_steps = int((max_sim_num - starting) / timestep_size)
-    predict_future_2(model, timestep_size, 10, 0, size=64)
-    predict_future(model, starting, start_sim, 100, timestep_size, name)
+    predict_future_2(model, timestep_size, 12, 10, size=64)
 
 
 if __name__ == "__main__":
