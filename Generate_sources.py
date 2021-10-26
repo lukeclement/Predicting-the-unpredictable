@@ -18,7 +18,7 @@ def get_source_arrays_2(sims, timestep_size=5, frames=4, size=64, channels=3):
     print("Checking sims...")
     for sim in sims:
         sim_files = glob.glob("{}/*.npy".format(sim))
-        for i in range(frames*timestep_size, len(sim_files)-timestep_size):
+        for i in range(0, len(sim_files)-timestep_size*frames):
             files.append("{}/img_{}.npy".format(sim, i))
             file_nums.append([sim, i])
     print("Generating arrays of size {}...".format(len(files)))
@@ -30,7 +30,7 @@ def get_source_arrays_2(sims, timestep_size=5, frames=4, size=64, channels=3):
     for index, file in enumerate(files):
         for frame in range(0, frames*timestep_size, timestep_size):
             questions_array[index, int(frame/timestep_size), :, :, :] = np.load(
-                "{}/img_{}.npy".format(file_nums[index][0], file_nums[index][1]-frame)
+                "{}/img_{}.npy".format(file_nums[index][0], file_nums[index][1]+frame)
             )
         answers_array[index, :, :, 0] = np.load(
             "{}/img_{}.npy".format(file_nums[index][0], file_nums[index][1]+timestep_size)

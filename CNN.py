@@ -174,16 +174,16 @@ def predict_future_2(model, timestep_size, simulation_number, start_number,
             if frame != frames-1:
                 input_frames[0, frame, :, :, :] = input_frames[0, frame+1, :, :, :]
             else:
-                input_frames[0, frame, :, :, 1] = output_frame
+                input_frames[0, frame, :, :, 1] = output_frame[0, :, :, 0]
                 for i in range(0, size):
                     if i < size / 2:
                         rail = i / (size / 2)
                     else:
                         rail = 2 - i / (size / 2)
                     runway = np.zeros(size) + rail
-                    input_frames[0, frame, :, i, 2] = runway
+                    input_frames[0, frame, i, :, 2] = runway
         plt.imshow(input_frames[0, 0])
-        plt.show()
+        plt.savefig("Test_A.png")
     return 0
 
 def predict_future(model, start_image_number, sim, number_of_steps, timestep_size, name, frames=4):
@@ -277,7 +277,7 @@ def main():
     else:
         model = models.load_model("Model_{}_{}_{}_{}".format(active, optimizer, "BinaryCrossEntropy", timestep_size),
                                   custom_objects={"iou_coef": iou_coef, "dice_coef": dice_coef,
-                                                  "mass_preservation": mass_preservation})
+                                                  "mass_preservation": mass_preservation}, compile=False)
 
     print("Diagnosing...")
     out = model(training_data[0][0:1])
@@ -292,16 +292,16 @@ def main():
     plt.savefig("Second.png")
     plt.clf()
     print("Getting metrics info...")
-    plt.plot(history.history['dice_coef'], label='dice_coef')
-    plt.plot(history.history['val_dice_coef'], label='val_dice_coef')
-    plt.plot(history.history['iou_coef'], label='iou_coef')
-    plt.plot(history.history['val_iou_coef'], label='val_iou_coef')
-    plt.plot(history.history['mass_preservation'], label='mass_preservation')
-    plt.plot(history.history['val_mass_preservation'], label='val_mass_preservation')
-    plt.xlabel('Epoch')
-    plt.ylabel('Accuracy')
-    plt.legend()
-    plt.savefig("Metrics.png")
+    #plt.plot(history.history['dice_coef'], label='dice_coef')
+    #plt.plot(history.history['val_dice_coef'], label='val_dice_coef')
+    #plt.plot(history.history['iou_coef'], label='iou_coef')
+    #plt.plot(history.history['val_iou_coef'], label='val_iou_coef')
+    #plt.plot(history.history['mass_preservation'], label='mass_preservation')
+    #plt.plot(history.history['val_mass_preservation'], label='val_mass_preservation')
+    #plt.xlabel('Epoch')
+    #plt.ylabel('Accuracy')
+    #plt.legend()
+    #plt.savefig("Metrics.png")
     # test_loss, test_acc = model.evaluate(test_set, test_solutions, verbose=2)
     # plt.show()
     plt.clf()
