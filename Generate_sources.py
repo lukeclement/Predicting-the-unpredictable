@@ -33,7 +33,7 @@ def get_source_arrays_2(sims, timestep_size=5, frames=4, size=64, channels=3):
                 "{}/img_{}.npy".format(file_nums[index][0], file_nums[index][1]+frame)
             )
         answers_array[index, :, :, 0] = np.load(
-            "{}/img_{}.npy".format(file_nums[index][0], file_nums[index][1]+timestep_size)
+            "{}/img_{}.npy".format(file_nums[index][0], file_nums[index][1] + timestep_size*frames)
         )[:, :, 1]
     print("Saving...")
     np.save("Questions", questions_array)

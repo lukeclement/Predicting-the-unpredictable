@@ -184,6 +184,13 @@ def predict_future_2(model, timestep_size, simulation_number, start_number,
                     input_frames[0, frame, i, :, 2] = runway
         plt.imshow(input_frames[0, 0])
         plt.savefig("Test_A.png")
+        plt.imshow(input_frames[0, 1])
+        plt.savefig("Test_B.png")
+        plt.imshow(input_frames[0, 2])
+        plt.savefig("Test_C.png")
+        plt.imshow(input_frames[0, 3])
+        plt.savefig("Test_D.png")
+        exit()
     return 0
 
 def predict_future(model, start_image_number, sim, number_of_steps, timestep_size, name, frames=4):
