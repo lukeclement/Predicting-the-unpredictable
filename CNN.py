@@ -20,7 +20,7 @@ def bce_dice(y_true, y_pred):
     di = K.log(dice_coef(y_true, y_pred))
     iou = K.log(iou_coef(y_true, y_pred))
     com = K.log(com_coef(y_true, y_pred))
-    #return bce - di - iou + com
+    # return bce - di - iou + com
     return bce - di - iou
 
 
@@ -160,10 +160,36 @@ def train_model(model, training_images, validation_split=0.1, epochs=20):
     return model, history
 
 
+def predict_future_2(model, timestep_size, simulation_number, start_number,
+                     frames=4, size=128, channels=3, predicition_length=100):
+    input_frames = np.zeros((1, frames, size, size, channels))
+    for frame in range(0, frames):
+        input_frames[0, frame, :, :, :] = np.load("Simulation_images/Simulation_{}/img_{}.npy".format(
+            simulation_number, start_number + frame * timestep_size
+        ))
+    generated_frames = []
+    for prediction in range(0, predicition_length):
+        output_frame = model(input_frames)
+        for frame in range(0, frames):
+            if frame != frames-1:
+                input_frames[0, frame, :, :, :] = input_frames[0, frame+1, :, :, :]
+            else:
+                input_frames[0, frame, :, :, 1] = output_frame
+                for i in range(0, size):
+                    if i < size / 2:
+                        rail = i / (size / 2)
+                    else:
+                        rail = 2 - i / (size / 2)
+                    runway = np.zeros(size) + rail
+                    input_frames[0, frame, :, i, 2] = runway
+        plt.imshow(input_frames[0, 0])
+        plt.show()
+    return 0
+
 def predict_future(model, start_image_number, sim, number_of_steps, timestep_size, name, frames=4):
     initial = []
     for f in range(0, frames):
-        temp = np.load("Simulation_images/{}/img_{}.npy".format(sim, start_image_number + frames*timestep_size))
+        temp = np.load("Simulation_images/{}/img_{}.npy".format(sim, start_image_number + frames * timestep_size))
         initial.append(temp)
     current_frames = np.stack([x.tolist() for x in initial])
     plt.imshow(current_frames[0])
@@ -233,22 +259,22 @@ def main():
     # loss = losses.LogCosh()
     # loss = losses.Huber()
     timestep_size = 20
+    print("Getting source files...")
+    training_data = [np.load("Questions.npy"), np.load("Answers.npy")]
+    print(np.shape(training_data[0]))
     print("Do you want to generate a new model? [Y/N]")
     choice = input(">>")
     if choice == "Y":
-        print("Getting source files...")
         # training_data = get_source_arrays(files[:], timestep_size)
         # np.save("Qs", training_data[0])
         # np.save("As", training_data[1])
-        training_data = [np.load("Questions.npy"), np.load("Answers.npy")]
         print("Creating CNN...")
         model = create_neural_net(active, optimizer, loss, size=64)
 
         print("Training montage begins...")
-        model, history = train_model(model, training_data, epochs=5)
+        model, history = train_model(model, training_data, epochs=1)
         model.save("Model_{}_{}_{}_{}".format(active, optimizer, "BinaryCrossEntropy", timestep_size))
     else:
-        training_data = get_source_arrays(files[0:1], timestep_size)
         model = models.load_model("Model_{}_{}_{}_{}".format(active, optimizer, "BinaryCrossEntropy", timestep_size),
                                   custom_objects={"iou_coef": iou_coef, "dice_coef": dice_coef,
                                                   "mass_preservation": mass_preservation})
@@ -285,6 +311,7 @@ def main():
     start_sim = "Simulation_10"
     max_sim_num = np.size(glob.glob("Simulation_images/{}/*".format(start_sim)))
     max_steps = int((max_sim_num - starting) / timestep_size)
+    predict_future_2(model, timestep_size, 10, 0, size=64)
     predict_future(model, starting, start_sim, 100, timestep_size, name)
 
 
