@@ -17,6 +17,7 @@ def iou_coef(y_true, y_pred, smooth=1):
 
 def bce_dice(y_true, y_pred):
     bce = losses.binary_crossentropy(y_true, y_pred)
+    #bce = losses.MeanSquaredError(y_true, y_pred)
     di = K.log(dice_coef(y_true, y_pred))
     iou = K.log(iou_coef(y_true, y_pred))
     com = K.log(com_coef(y_true, y_pred))
@@ -134,7 +135,8 @@ def create_neural_net(activation, optimizer, loss, frames=4, size=128, channels=
     model.add(layers.Conv2DTranspose(64, (4, 4), activation=activation))
     model.add(layers.UpSampling2D((2, 2)))
     model.add(layers.Conv2DTranspose(32, (3, 3), activation=activation))
-    model.add(layers.Conv2DTranspose(1, (1, 1), activation='sigmoid'))
+    #model.add(layers.Conv2DTranspose(1, (1, 1), activation='sigmoid'))
+    model.add(layers.Conv2DTranspose(1, (1, 1), activation=activation))
 
     print(model.summary())
     model.compile(optimizer=optimizer, loss=loss, metrics=[iou_coef, dice_coef, mass_preservation, com_coef])
@@ -155,7 +157,7 @@ def train_model(model, training_images, validation_split=0.1, epochs=20):
     """
     questions = training_images[0]
     answers = training_images[1]
-    history = model.fit(questions, answers, epochs=epochs, validation_split=validation_split, shuffle=True, batch_size=64)
+    history = model.fit(questions, answers, epochs=epochs, validation_split=validation_split, shuffle=True)
 
     return model, history
 
@@ -174,6 +176,7 @@ def predict_future_2(model, timestep_size, simulation_number, start_number,
             if frame != frames-1:
                 input_frames[0, frame, :, :, :] = input_frames[0, frame+1, :, :, :]
             else:
+                #input_frames[0, frame, :, :, 1] = np.around(output_frame[0, :, :, 0])
                 input_frames[0, frame, :, :, 1] = output_frame[0, :, :, 0]
                 for i in range(0, size):
                     if i < size / 2:
@@ -250,14 +253,14 @@ def main():
     active = 'LeakyReLU'
     optimizer = 'adam'
     # loss = losses.BinaryCrossentropy()
-    loss = bce_dice
+    # loss = bce_dice
     # loss = com_coef
     # loss = losses.CategoricalCrossentropy()
     # loss = losses.KLDivergence()
     # loss = losses.CosineSimilarity()#Works goodish
     # loss = losses.Hinge()
     # loss = losses.SquaredHinge()
-    # loss = losses.MeanSquaredError() #Semi-Okay
+    loss = losses.MeanSquaredError() #Semi-Okay
     # loss = losses.MeanAbsoluteError()
     # loss = losses.MeanAbsolutePercentageError()
     # loss = losses.MeanSquaredLogarithmicError()
@@ -277,7 +280,7 @@ def main():
         model = create_neural_net(active, optimizer, loss, size=64)
 
         print("Training montage begins...")
-        model, history = train_model(model, training_data, epochs=5)
+        model, history = train_model(model, training_data, epochs=1)
         model.save("Model_{}_{}_{}_{}".format(active, optimizer, "BinaryCrossEntropy", timestep_size))
     else:
         model = models.load_model("Model_{}_{}_{}_{}".format(active, optimizer, "BinaryCrossEntropy", timestep_size),
@@ -321,3 +324,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
