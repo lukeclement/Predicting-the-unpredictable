@@ -131,7 +131,6 @@ def main():
             else:
                 print("{}, shifted {} -> Simulation_{}".format(sim_names[sim_number], i-1, sim_number + index * num_of_sims))
 
-
             try:
                 os.mkdir("Simulation_images/Simulation_{}".format(sim_number + index * num_of_sims))
             except OSError:
