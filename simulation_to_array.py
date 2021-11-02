@@ -122,10 +122,10 @@ def main():
     for sim_number in range(0, num_of_sims):
         files = glob.glob("{}/b*.dat".format(sim_names[sim_number]))
         index = 0
-        for fi in [[True, 0], [True, 1], [False, 0], [False, 1], [True, 2], [False, 2]]:
+        for fi in [[True, 0], [True, 1], [False, 0], [False, 1]]:
             flip = fi[0]
             i = fi[1]
-            #print("Running ({} files found in simulation {})".format(np.size(files), sim_names[sim_number]))
+            # print("Running ({} files found in simulation {})".format(np.size(files), sim_names[sim_number]))
             if flip:
                 print("{}, flipped, shifted {} -> Simulation_{}".format(sim_names[sim_number], i-1, sim_number + index * num_of_sims))
             else:

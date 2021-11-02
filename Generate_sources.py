@@ -38,8 +38,8 @@ def get_source_arrays_2(sims, timestep_size=5, frames=4, size=64, channels=3):
     print("Saving...")
     np.save("Questions", questions_array)
     np.save("Answers", answers_array)
-    for file in sims:
-        os.system("rm -r {}".format(file))
+    #for file in sims:
+    #    os.system("rm -r {}".format(file))
     return [np.load("Questions.npy"), np.load("Answers.npy")]
 
 
