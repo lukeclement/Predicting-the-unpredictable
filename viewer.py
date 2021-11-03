@@ -34,9 +34,9 @@ import os
     imageio.mimsave('Temp_data/{}.gif'.format(simulation), files)
    
 """
-all = np.load("Answers.npy")
-print(np.shape(all))
-img = all[43730]
-#img = np.load("Simulation_images/Simulation_0/img_700.npy")
+#all = np.load("Answers.npy")
+#print(np.shape(all))
+#img = all[43730]
+img = np.load("Simulation_images/Simulation_48/img_950.npy")
 plt.imshow(img)
 plt.show()

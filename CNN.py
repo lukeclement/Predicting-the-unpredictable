@@ -183,8 +183,8 @@ def predict_future_2(model, timestep_size, simulation_number, start_number,
             if frame != frames - 1:
                 input_frames[0, frame, :, :, :] = input_frames[0, frame + 1, :, :, :]
             else:
-                # input_frames[0, frame, :, :, 1] = np.around(output_frame[0, :, :, 0])
-                input_frames[0, frame, :, :, 1] = output_frame[0, :, :, 0]
+                input_frames[0, frame, :, :, 1] = np.around(output_frame[0, :, :, 0])
+                # input_frames[0, frame, :, :, 1] = output_frame[0, :, :, 0]
                 for i in range(0, size):
                     if i < size / 2:
                         rail = i / (size / 2)
@@ -192,8 +192,9 @@ def predict_future_2(model, timestep_size, simulation_number, start_number,
                         rail = 2 - i / (size / 2)
                     runway = np.zeros(size) + rail
                     input_frames[0, frame, i, :, 2] = runway
-        plt.imshow(input_frames[0, 3])
+        plt.imshow(input_frames[0, frames-1])
         plt.savefig("Machine/{}/Test_Predict_{}.png".format(name, prediction))
+        plt.close()
         # test_img = np.load("Simulation_images/Simulation_{}/img_{}.npy".format(
         #    simulation_number, start_number + (prediction+frames) * timestep_size
         # ))
@@ -264,23 +265,27 @@ def run_metaparameter_tests(files):
     optimizer = 'adam'
     #loss = bce_dice
     loss = losses.binary_crossentropy
-    for i in range(1, 21):
-        for j in range(4, 11):
+    for j in range(3, 9):
+        for i in range(2, 7):
             timestep_sizes.append(i)
             frame_numbers.append(j)
             training_data = Generate_sources.get_source_arrays_2(files, timestep_size=i, frames=j, size=64, channels=3)
             # training_data = [np.load("Questions.npy"), np.load("Answers.npy")]
             model = create_neural_net(active, optimizer, loss, size=64, frames=j)
-
             model, history = train_model(model, training_data, epochs=1)
-            loss_results.append(history.history['loss'])
-            predict_future_2(model, i, 12, 10, size=64, frames=j, name="{}_{}".format(i, j))
+            del training_data[:]
+            loss_results.append(history.history['loss'][0])
+            for k in range(0, 500, 50):
+                print(k)
+                predict_future_2(model, i, 48, k, size=64, frames=j, name="{}_{}_{}".format(i, j, k))
+                plt.close('all')
+            print(loss_results)
+            print(frame_numbers)
+            print(timestep_sizes)
     plt.hist2d(frame_numbers, timestep_sizes, weights=loss_results, bins=(19, 9))
     plt.savefig("Overall_picture.png")
     plt.close()
-    print(loss_results)
-    print(frame_numbers)
-    print(timestep_sizes)
+
 
 def main():
     files = glob.glob("Simulation_images/*")
