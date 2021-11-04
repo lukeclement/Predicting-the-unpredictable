@@ -3,6 +3,7 @@
     <words>
       <w>coef</w>
       <w>pred</w>
+      <w>timestep</w>
       <w>upsampling</w>
     </words>
   </dictionary>

@@ -1,6 +1,8 @@
 import glob
 import os
 import numpy as np
+import tensorflow as tf
+from PIL import Image
 
 
 def read_file(file_path):
@@ -74,7 +76,8 @@ def transform_to_numpy_array(x, y, variant, invert, image_size=64):
     output_array[:, :, 1] = np.minimum(h, np.zeros((image_size, image_size)) + 1)
     # Adding the central rail
     output_array = generate_rail(output_array)
-    del h
+    output_array = 255*output_array
+    output_array = output_array.astype(np.uint8)
     return output_array
 
 
@@ -121,14 +124,41 @@ def convert_dat_files(variant_range, image_size=64):
                     # Converting to array
                     resulting_array = transform_to_numpy_array(x, y, variant, inversion, image_size=image_size)
                     # Saving to memory
-                    np.save("Simulation_images/Simulation_{}/img_{}".format(
+                    image = Image.fromarray(resulting_array)
+                    image.save("Simulation_images/Simulation_{}/img_{}.bmp".format(
                         simulation_index + tracking_index*np.size(simulation_names), step_number
-                    ), resulting_array)
+                    ))
                     del resulting_array
                 tracking_index += 1
         simulation_index += 1
 
 
-def create_training_data():
+def create_training_data(frames, timestep):
     simulation_names = glob.glob("Simulation_images/*")
     print(simulation_names)
+    data_sources = []
+    refs = []
+    for simulation in simulation_names:
+        files = glob.glob("{}/*".format(simulation))
+        number_of_files = len(files)
+        for i in range(0, number_of_files-timestep*frames):
+            data_sources.append("{}/img_{}.bmp".format(simulation, i))
+            refs.append([simulation, i])
+
+    questions = []
+    answers = []
+    for index, file in enumerate(data_sources):
+        new_question_dataset = []
+        for frame in range(0, frames*timestep, timestep):
+            source = tf.io.read_file("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
+            data = tf.io.decode_bmp(source)
+            new_question_dataset.append(data)
+        question = tf.stack(new_question_dataset)
+        source = tf.io.read_file("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frames*timestep))
+        data = tf.io.decode_bmp(source)
+        answer = data
+        questions.append(question)
+        answers.append(answer)
+    questions_final = tf.stack(questions)
+    answers_final = tf.stack(answers)
+    return [questions_final, answers_final]

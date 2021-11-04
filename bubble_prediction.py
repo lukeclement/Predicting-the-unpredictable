@@ -1,7 +1,6 @@
 import dat_to_training
 import create_network
 import loss_functions
-import gc
 
 
 def main():
@@ -15,7 +14,7 @@ def main():
     model = create_network.create_neural_network(
         activation_function, optimizer, loss_function, image_frames, image_size=image_size
     )
-    dat_to_training.create_training_data()
+    dat_to_training.create_training_data(image_frames, timestep)
 
 
 if __name__ == "__main__":
