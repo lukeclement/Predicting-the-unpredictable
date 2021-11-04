@@ -80,14 +80,15 @@ def transform_to_numpy_array(x, y, variant, invert, image_size=64):
     return output_array
 
 
-def convert_dat_files(variant_range):
+def convert_dat_files(variant_range, image_size=64):
     """Converts all .dat files to numpy arrays, and saves them as .npy files.
     These .npy files are stored in Simulation_images/Simulation_X, where X is the reference number for the simulation.
     These aren't necessarily actual simulations, but can be variants of these 'base' simulations,
     where the physics remains constant.
     Input:
-        variant_range: An array of two floats,
-            defining the (minimum, maximum) amount to shift the original images in the x-axis. This range is inclusive.
+        variant_range:  An array of two floats, defining the [minimum, maximum]
+                            amount to shift the original images in the x-axis. This range is inclusive.
+        image_size:     (default 64) An integer for the number of pixels to be used per axis.
     Output:
         Nothing
     """
@@ -120,10 +121,15 @@ def convert_dat_files(variant_range):
                     # Finding the actual frame number
                     step_number = int(file[file.find("s_")+2:-4])
                     # Converting to array
-                    resulting_array = transform_to_numpy_array(x, y, variant, inversion)
+                    resulting_array = transform_to_numpy_array(x, y, variant, inversion, image_size=image_size)
                     # Saving to memory
                     np.save("Simulation_images/Simulation_{}/img_{}".format(
                         simulation_index + tracking_index*np.size(simulation_names), step_number
                     ), resulting_array)
                 tracking_index += 1
         simulation_index += 1
+
+
+def create_training_data():
+    simulation_names = glob.glob("Simulation_images/*")
+    print(simulation_names)
