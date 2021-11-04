@@ -2,6 +2,7 @@
   <dictionary name="lukeclement">
     <words>
       <w>pred</w>
+      <w>upsampling</w>
     </words>
   </dictionary>
 </component>
