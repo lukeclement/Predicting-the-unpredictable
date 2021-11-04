@@ -1,5 +1,6 @@
 import numpy as np
-from tensorflow.keras import layers, models, losses
+import loss_functions
+from tensorflow.keras import layers, models
 
 
 def interpret_model_summary(model):
@@ -18,17 +19,17 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
     This function also prints the model summary,
     allowing for an estimation on training time to be established, among other things.
     Inputs:
-        activation: A string of the activation function used on the neurons.
-        optimizer: A string of the optimisation function used on the model.
-        loss: A function that represents the loss on the network.
-        input_frames: An integer representing the number of reference images to be passed to the network.
-        image_size: (default 64) An integer of the size of an axis of the images to be passed to the network.
-        channels: (default 3) An integer for the number of channels used in the image. RGB images have 3 channels.
-        encode_size: (default 2) An integer for the size of an axis for the encoded image.
+        activation:     A string of the activation function used on the neurons.
+        optimizer:      A string of the optimisation function used on the model.
+        loss:           A function that represents the loss on the network.
+        input_frames:   An integer representing the number of reference images to be passed to the network.
+        image_size:     (default 64) An integer of the size of an axis of the images to be passed to the network.
+        channels:       (default 3) An integer for the number of channels used in the image. RGB images have 3 channels.
+        encode_size:    (default 2) An integer for the size of an axis for the encoded image.
                             *Note* This is the final size achieved by ConvXD and MaxPoolingXD layers.
         allow_upsampling: (default True) A boolean to say whether to include upsampling layers.
-        allow_pooling: (default True) A boolean to say whether to include max pooling layers.
-        kernel_size: (default 3) An integer for the default size of kernels used in convolutional layers.
+        allow_pooling:  (default True) A boolean to say whether to include max pooling layers.
+        kernel_size:    (default 3) An integer for the default size of kernels used in convolutional layers.
         max_transpose_layers: (default 3) An integer for the maximum number of transpose layers after the
                             final upsampling layer.
     Output:
@@ -97,8 +98,26 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
             current_axis_size += kernel_size - 1 + leap_correction
     # Final adjustments
     model.add(layers.Conv2DTranspose(1, 1, activation='sigmoid'))
-    # print(model.summary())
-    # model.compile(optimizer=optimizer, loss=loss, metrics=[iou_coef, dice_coef, mass_preservation, com_coef])
+    print(model.summary())
+    model.compile(optimizer=optimizer, loss=loss, metrics=[
+        loss_functions.iou_coef, loss_functions.dice_coef, loss_functions.mass_preservation, loss_functions.com_coef
+    ])
     return model
 
 
+def train_model(model, training_images, validation_split=0.1, epochs=2):
+    """Trains the model. This can take a while!
+    Inputs:
+        model:              A sequential model object.
+        training_images:    A 2d array of training data, structured as [input images, expected output images].
+                                *Note* This technically means the shape of training_images is not easily defined!
+        validation_split:   (default 0.1) The split of training vs validation data.
+        epochs:             (default 2) The number of epochs to perform.
+    Outputs:
+        model:              The fitted model.
+        history:            The history of changes to important variables, like loss.
+    """
+    questions = training_images[0]
+    answers = training_images[1]
+    history = model.fit(questions, answers, epochs=epochs, validation_split=validation_split, shuffle=True)
+    return model, history
