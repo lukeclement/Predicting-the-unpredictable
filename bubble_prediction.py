@@ -1,6 +1,7 @@
 import dat_to_training
 import create_network
 import loss_functions
+import gc
 
 
 def main():
@@ -15,6 +16,7 @@ def main():
         activation_function, optimizer, loss_function, image_frames, image_size=image_size
     )
     dat_to_training.create_training_data()
+
 
 if __name__ == "__main__":
     main()

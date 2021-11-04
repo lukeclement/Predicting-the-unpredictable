@@ -37,6 +37,6 @@ import os
 #all = np.load("Answers.npy")
 #print(np.shape(all))
 #img = all[43730]
-img = np.load("Simulation_images/Simulation_48/img_950.npy")
+img = np.load("Simulation_images/Simulation_31/img_600.npy")
 plt.imshow(img)
 plt.show()

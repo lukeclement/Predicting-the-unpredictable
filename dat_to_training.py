@@ -1,7 +1,6 @@
 import glob
 import os
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 def read_file(file_path):
@@ -66,17 +65,16 @@ def transform_to_numpy_array(x, y, variant, invert, image_size=64):
     Output:
         A numpy array of shape (image_size, image_size) with elements 1 or 0 for the bubble edge.
     """
-    h, x_edge, y_edge, image = plt.hist2d(
+    h, x_edge, y_edge = np.histogram2d(
         x + variant / (image_size / 2), (-1**(not invert))*y,
         range=[[-1, 1], [-1, 1]], bins=(image_size, image_size)
     )
-    # Getting rid of matplotlib
-    plt.close()
     # Preparing memory for the output array, then filling the bubble edge
     output_array = np.zeros((image_size, image_size, 3))
     output_array[:, :, 1] = np.minimum(h, np.zeros((image_size, image_size)) + 1)
     # Adding the central rail
     output_array = generate_rail(output_array)
+    del h
     return output_array
 
 
@@ -126,6 +124,7 @@ def convert_dat_files(variant_range, image_size=64):
                     np.save("Simulation_images/Simulation_{}/img_{}".format(
                         simulation_index + tracking_index*np.size(simulation_names), step_number
                     ), resulting_array)
+                    del resulting_array
                 tracking_index += 1
         simulation_index += 1
 
