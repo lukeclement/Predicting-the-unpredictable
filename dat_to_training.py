@@ -133,7 +133,7 @@ def convert_dat_files(variant_range, image_size=64):
         simulation_index += 1
 
 
-def create_training_data(frames, timestep):
+def create_training_data(frames, timestep, validation_split=0.1):
     simulation_names = glob.glob("Simulation_images/*")
     print(simulation_names)
     data_sources = []
@@ -146,19 +146,35 @@ def create_training_data(frames, timestep):
             refs.append([simulation, i])
 
     questions = []
+    questions_valid = []
     answers = []
+    answers_valid = []
+    validation_point = len(data_sources)/(1-validation_split)
     for index, file in enumerate(data_sources):
-        new_question_dataset = []
-        for frame in range(0, frames*timestep, timestep):
-            source = tf.io.read_file("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
-            data = tf.io.decode_bmp(source)
-            new_question_dataset.append(data)
-        question = tf.stack(new_question_dataset)
-        source = tf.io.read_file("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frames*timestep))
-        data = tf.io.decode_bmp(source)
-        answer = data
-        questions.append(question)
-        answers.append(answer)
-    questions_final = tf.stack(questions)
-    answers_final = tf.stack(answers)
-    return [questions_final, answers_final]
+        if index < validation_point:
+            extract_bmp(answers, frames, index, questions, refs, timestep)
+        else:
+            extract_bmp(answers_valid, frames, index, questions_valid, refs, timestep)
+    questions_final = tf.data.Dataset.from_tensors(questions)
+    answers_final = tf.data.Dataset.from_tensors(answers)
+    questions_final_valid = tf.data.Dataset.from_tensors(questions_valid)
+    answers_final_valid = tf.data.Dataset.from_tensors(answers_valid)
+    # print(answers_final)
+    print(questions_final)
+    print(tf.data.Dataset.zip((questions_final, answers_final)))
+    return [tf.data.Dataset.zip((questions_final, answers_final)), tf.data.Dataset.zip((questions_final_valid, answers_final_valid))]
+
+
+def extract_bmp(answers, frames, index, questions, refs, timestep):
+    new_question_dataset = []
+    for frame in range(0, frames * timestep, timestep):
+        source = tf.io.read_file("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
+        data = tf.cast(tf.io.decode_bmp(source), tf.float16)
+        new_question_dataset.append(data / 255)
+    question = tf.stack(new_question_dataset)
+    image = Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frames * timestep))
+    source = tf.io.read_file("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frames * timestep))
+    data = tf.cast(tf.io.decode_bmp(source), tf.float16) / 255
+    answer = [data[:, :, 2]]
+    questions.append(question)
+    answers.append(tf.reshape(answer, [64, 64, 1]))

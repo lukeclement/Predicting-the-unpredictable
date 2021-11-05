@@ -14,7 +14,8 @@ def main():
     model = create_network.create_neural_network(
         activation_function, optimizer, loss_function, image_frames, image_size=image_size
     )
-    dat_to_training.create_training_data(image_frames, timestep)
+    training_data = dat_to_training.create_training_data(image_frames, timestep)
+    model, history = create_network.train_model(model, training_data)
 
 
 if __name__ == "__main__":

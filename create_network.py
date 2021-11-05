@@ -119,6 +119,6 @@ def train_model(model, training_images, validation_split=0.1, epochs=2):
         history:            The history of changes to important variables, like loss.
     """
     questions = training_images[0]
-    answers = training_images[1]
-    history = model.fit(questions, answers, epochs=epochs, validation_split=validation_split, shuffle=True)
+    validation = training_images[1]
+    history = model.fit(questions, validation_data=validation, epochs=epochs, shuffle=True)
     return model, history
