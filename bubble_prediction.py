@@ -18,8 +18,9 @@ def main():
     # dat_to_training.convert_dat_files([0, 0], image_size=image_size)
     model = create_network.create_neural_network(
         activation_function, optimizer, loss_function, image_frames,
-        image_size=image_size, encode_size=13, allow_pooling=True,
-        allow_upsampling=True, max_transpose_layers=1, kernel_size=2
+        image_size=image_size, encode_size=5, allow_pooling=True,
+        allow_upsampling=True, max_transpose_layers=3, kernel_size=2,
+        dropout_rate=0.8
     )
     training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
     model, history = create_network.train_model(model, training_data, epochs=2)
