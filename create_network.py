@@ -3,6 +3,7 @@ import loss_functions
 from tensorflow.keras import layers, models
 import tensorflow as tf
 
+
 def interpret_model_summary(model):
     line_list = []
     model.summary(line_length=70, print_fn=lambda x: line_list.append(x))
@@ -104,7 +105,7 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
             current_axis_size += kernel_size - 1 + leap_correction
     # Final adjustments
     model.add(layers.Conv2DTranspose(1, 1, activation='sigmoid'))
-    print(model.summary())
+    print(model.summary(line_length=100))
     model.compile(optimizer=optimizer, loss=loss)
     return model
 
@@ -121,8 +122,8 @@ def train_model(model, training_images, validation_split=0.1, epochs=2):
         model:              The fitted model.
         history:            The history of changes to important variables, like loss.
     """
-    X = training_images[0]
-    Y = training_images[1]
+    x = training_images[0]
+    y = training_images[1]
     # X_t = training_images[2]
     # Y_t = training_images[3]
     # X = da.from_array(np.asarray(X), chunks=1000)
@@ -132,6 +133,6 @@ def train_model(model, training_images, validation_split=0.1, epochs=2):
     # questions = training_images[0]
     # validation = training_images[1]
     # history = model.fit(questions, validation_data=validation, epochs=epochs, shuffle=True)
-    history = model.fit(X, Y, validation_split=validation_split, epochs=epochs, shuffle=True)
+    history = model.fit(x, y, validation_split=validation_split, epochs=epochs, shuffle=True)
 
     return model, history

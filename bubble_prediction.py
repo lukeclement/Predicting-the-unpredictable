@@ -1,15 +1,15 @@
-import numpy as np
 import dat_to_training
 import create_network
 import loss_functions
-import dask.array as da
+from tensorflow.keras import layers
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 
 
 def main():
-    activation_function = "LeakyReLU"
+    # activation_function = "LeakyReLU"
+    activation_function = layers.LeakyReLU()
     optimizer = "adam"
     loss_function = loss_functions.bce_dice
     image_frames = 4
@@ -22,7 +22,7 @@ def main():
         allow_upsampling=True, max_transpose_layers=1, kernel_size=2
     )
     training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
-    model, history = create_network.train_model(model, training_data, epochs=5)
+    model, history = create_network.train_model(model, training_data, epochs=2)
     preamble = "Simulation_images/Simulation_8/img_"
     start = 20
     initial = np.zeros((1, image_frames, image_size, image_size, 3))
@@ -37,6 +37,7 @@ def main():
     print(np.shape(guess))
 
     plt.imshow(guess - expected)
+    plt.colorbar()
     plt.show()
 
 
