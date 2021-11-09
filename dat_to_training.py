@@ -137,7 +137,7 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
     simulation_names = glob.glob("Simulation_images/*")
     data_sources = []
     refs = []
-    for simulation in simulation_names[:2]:
+    for simulation in simulation_names[:]:
         files = glob.glob("{}/*".format(simulation))
         number_of_files = len(files)
         for i in range(0, number_of_files-timestep*frames):
