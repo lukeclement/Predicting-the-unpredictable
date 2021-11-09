@@ -129,6 +129,8 @@ def train_model(model, training_images, validation_split=0.1, epochs=2):
     # Y = da.from_array(np.asarray(Y), chunks=1000)
     # X_t = da.from_array(np.asarray(X_t), chunks=1000)
     # Y_t = da.from_array(np.asarray(Y_t), chunks=1000)
+    # questions = training_images[0]
+    # validation = training_images[1]
     # history = model.fit(questions, validation_data=validation, epochs=epochs, shuffle=True)
     history = model.fit(X, Y, validation_split=validation_split, epochs=epochs, shuffle=True)
 
