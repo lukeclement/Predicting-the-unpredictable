@@ -45,9 +45,12 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
     while current_axis_size > target_axis_size:
         if current_frames > 1:
             # Initial 3D convolutional layers to reduce the frames into a single image
-            model.add(layers.Conv3D(64, 2, activation=activation))
-            current_frames -= 1
-            current_axis_size -= 1
+            # model.add(layers.Conv3D(64, 2, activation=activation))
+            # current_frames -= 1
+            # current_axis_size -= 1
+            model.add(layers.Conv3D(64, input_frames, activation=activation))
+            current_frames -= input_frames-1
+            current_axis_size -= input_frames-1
         elif current_frames == 1:
             # Reshaping the image to be the correct dimensions
             current_frames -= 1
@@ -60,13 +63,13 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
                 model.add(layers.MaxPooling2D(2))
                 current_axis_size = np.floor(current_axis_size / 2)
             if current_axis_size - (kernel_size - 1) < target_axis_size:
-                model.add(layers.Conv2D(128, 2, activation=activation))
+                model.add(layers.Conv2D(64, 2, activation=activation))
                 current_axis_size -= 1
             else:
                 model.add(layers.Conv2D(64, kernel_size, activation=activation))
                 current_axis_size -= (kernel_size - 1)
     # Now decoding the image using transpose operations
-    model.add(layers.Conv2DTranspose(128, kernel_size, activation=activation))
+    model.add(layers.Conv2DTranspose(64, kernel_size, activation=activation))
     current_axis_size += (kernel_size - 1)
     # Some variables to keep track of in the while loop
     max_leaps = max_transpose_layers
@@ -95,7 +98,7 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
             current_axis_size += kernel_size - 1
         else:
             # Full size far away but too close for upsampling
-            model.add(layers.Conv2DTranspose(64, kernel_size + leap_correction, activation=activation))
+            model.add(layers.Conv2DTranspose(32, kernel_size + leap_correction, activation=activation))
             current_axis_size += kernel_size - 1 + leap_correction
     # Final adjustments
     model.add(layers.Conv2DTranspose(1, 1, activation='sigmoid'))
@@ -104,7 +107,6 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
         loss_functions.iou_coef, loss_functions.dice_coef, loss_functions.mass_preservation, loss_functions.com_coef
     ])
     return model
-
 
 def train_model(model, training_images, validation_split=0.1, epochs=2):
     """Trains the model. This can take a while!
@@ -118,7 +120,15 @@ def train_model(model, training_images, validation_split=0.1, epochs=2):
         model:              The fitted model.
         history:            The history of changes to important variables, like loss.
     """
-    questions = training_images[0]
-    validation = training_images[1]
-    history = model.fit(questions, validation_data=validation, epochs=epochs, shuffle=True)
+    X = training_images[0]
+    Y = training_images[1]
+    # X_t = training_images[2]
+    # Y_t = training_images[3]
+    # X = da.from_array(np.asarray(X), chunks=1000)
+    # Y = da.from_array(np.asarray(Y), chunks=1000)
+    # X_t = da.from_array(np.asarray(X_t), chunks=1000)
+    # Y_t = da.from_array(np.asarray(Y_t), chunks=1000)
+    # history = model.fit(questions, validation_data=validation, epochs=epochs, shuffle=True)
+    history = model.fit(X, Y, validation_split=validation_split, epochs=epochs, shuffle=True)
+
     return model, history
