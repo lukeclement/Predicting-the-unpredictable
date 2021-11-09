@@ -1,7 +1,7 @@
 import numpy as np
 import loss_functions
 from tensorflow.keras import layers, models
-
+import tensorflow as tf
 
 def interpret_model_summary(model):
     line_list = []
@@ -40,7 +40,7 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
     current_axis_size = image_size
     target_axis_size = encode_size
     current_frames = input_frames
-    model.add(layers.Conv3D(64, 1, activation=activation, input_shape=(input_frames, image_size, image_size, channels)))
+    model.add(layers.Conv3D(3, 1, activation=activation, input_shape=(input_frames, image_size, image_size, channels)))
     # Encoding the image
     while current_axis_size > target_axis_size:
         if current_frames > 1:
@@ -48,14 +48,14 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
             # model.add(layers.Conv3D(64, 2, activation=activation))
             # current_frames -= 1
             # current_axis_size -= 1
-            model.add(layers.Conv3D(64, input_frames, activation=activation))
+            model.add(layers.Conv3D(32, input_frames, activation=activation))
             current_frames -= input_frames-1
             current_axis_size -= input_frames-1
         elif current_frames == 1:
             # Reshaping the image to be the correct dimensions
             current_frames -= 1
-            model.add(layers.Reshape((current_axis_size, current_axis_size, 64)))
-            model.add(layers.Conv2D(64, kernel_size, activation=activation))
+            model.add(layers.Reshape((current_axis_size, current_axis_size, 32)))
+            model.add(layers.Conv2D(32, kernel_size, activation=activation))
             current_axis_size -= (kernel_size - 1)
         else:
             # Bringing the image down to encoding size
@@ -69,20 +69,22 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
                 model.add(layers.Conv2D(64, kernel_size, activation=activation))
                 current_axis_size -= (kernel_size - 1)
     # Now decoding the image using transpose operations
-    model.add(layers.Conv2DTranspose(64, kernel_size, activation=activation))
-    current_axis_size += (kernel_size - 1)
+    # model.add(layers.Conv2DTranspose(64, kernel_size, activation=activation))
+    # current_axis_size += (kernel_size - 1)
     # Some variables to keep track of in the while loop
     max_leaps = max_transpose_layers
     leap_correction = 0
     calculated = False
+    first_run = True
     while current_axis_size < image_size:
-        if current_axis_size * 2 < image_size and allow_upsampling:
+        if current_axis_size * 2 < image_size and allow_upsampling and not first_run:
             # Upsampling
             model.add(layers.UpSampling2D(2))
             current_axis_size = current_axis_size * 2
+        first_run = False
         if (image_size - current_axis_size) > (kernel_size - 1) * max_leaps \
                 and not calculated \
-                and (not allow_upsampling or current_axis_size * 2 > image_size):
+                and (not allow_upsampling or current_axis_size * 2 > image_size or first_run):
             # Calculating the ideal kernel size for the fewest layers needed
             leaps_needed = np.floor((image_size - current_axis_size) / (kernel_size - 1))
             leap_correction = int(np.floor((kernel_size - 1) * (leaps_needed / max_leaps - 1)))
@@ -94,19 +96,18 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
             current_axis_size += 1
         elif current_axis_size + kernel_size - 1 + leap_correction > image_size:
             # Within a few jumps of full size
-            model.add(layers.Conv2DTranspose(32, kernel_size, activation=activation))
+            model.add(layers.Conv2DTranspose(64, kernel_size, activation=activation))
             current_axis_size += kernel_size - 1
         else:
             # Full size far away but too close for upsampling
-            model.add(layers.Conv2DTranspose(32, kernel_size + leap_correction, activation=activation))
+            model.add(layers.Conv2DTranspose(64, kernel_size + leap_correction, activation=activation))
             current_axis_size += kernel_size - 1 + leap_correction
     # Final adjustments
     model.add(layers.Conv2DTranspose(1, 1, activation='sigmoid'))
     print(model.summary())
-    model.compile(optimizer=optimizer, loss=loss, metrics=[
-        loss_functions.iou_coef, loss_functions.dice_coef, loss_functions.mass_preservation, loss_functions.com_coef
-    ])
+    model.compile(optimizer=optimizer, loss=loss)
     return model
+
 
 def train_model(model, training_images, validation_split=0.1, epochs=2):
     """Trains the model. This can take a while!

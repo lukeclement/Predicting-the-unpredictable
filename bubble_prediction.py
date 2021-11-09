@@ -22,8 +22,7 @@ def main():
         allow_upsampling=True, max_transpose_layers=1, kernel_size=2
     )
     training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
-    model, history = create_network.train_model(model, training_data)
-    model.save("Test_model")
+    model, history = create_network.train_model(model, training_data, epochs=5)
     preamble = "Simulation_images/Simulation_8/img_"
     start = 20
     initial = np.zeros((1, image_frames, image_size, image_size, 3))
