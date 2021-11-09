@@ -14,7 +14,8 @@ def interpret_model_summary(model):
 
 
 def create_neural_network(activation, optimizer, loss, input_frames, image_size=64, channels=3, encode_size=2,
-                          allow_upsampling=True, allow_pooling=True, kernel_size=3, max_transpose_layers=3):
+                          allow_upsampling=True, allow_pooling=True, kernel_size=3, max_transpose_layers=3,
+                          dropout_rate=0.8):
     """Generates a Convolutional Neural Network (CNN), based on a sequential architecture. Does not train the CNN.
     This function can be adjusted to change the overall architecture of the CNN.
     This function also prints the model summary,
@@ -33,6 +34,7 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
         kernel_size:    (default 3) An integer for the default size of kernels used in convolutional layers.
         max_transpose_layers: (default 3) An integer for the maximum number of transpose layers after the
                             final upsampling layer.
+        dropout_rate:   (default 0.2) A float for the rate that weights are dropped out in the dropout layers.
     Output:
         An untrained keras model
     """
@@ -42,6 +44,7 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
     target_axis_size = encode_size
     current_frames = input_frames
     model.add(layers.Conv3D(3, 1, activation=activation, input_shape=(input_frames, image_size, image_size, channels)))
+    model.add(layers.Dropout(rate=dropout_rate))
     # Encoding the image
     while current_axis_size > target_axis_size:
         if current_frames > 1:
