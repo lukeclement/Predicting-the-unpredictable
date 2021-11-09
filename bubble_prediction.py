@@ -3,24 +3,27 @@ import dat_to_training
 import create_network
 import loss_functions
 import dask.array as da
-import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
+from tensorflow.keras import layers, losses, optimizers
+import tensorflow as tf
 
 
 def main():
-    activation_function = "LeakyReLU"
-    optimizer = "adam"
-    loss_function = loss_functions.bce_dice
+    tf.random.set_seed(100)
+    activation_function = layers.LeakyReLU()
+    optimizer = optimizers.Adam()
+    loss_function = losses.BinaryCrossentropy()
     image_frames = 4
     image_size = 64
     timestep = 5
     # dat_to_training.convert_dat_files([0, 0], image_size=image_size)
-    model = create_network.create_neural_network(
-        activation_function, optimizer, loss_function, image_frames,
-        image_size=image_size, encode_size=13, allow_pooling=True,
-        allow_upsampling=True, max_transpose_layers=1, kernel_size=2
-    )
+    model = create_network.create_inception_net(activation_function, optimizer, loss_function)
+    # model = create_network.create_neural_network(
+    #     activation_function, optimizer, loss_function, image_frames,
+    #     image_size=image_size, encode_size=13, allow_pooling=True,
+    #     allow_upsampling=True, max_transpose_layers=1, kernel_size=2
+    # )
     training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
     model, history = create_network.train_model(model, training_data)
     model.save("Test_model")
@@ -38,6 +41,37 @@ def main():
     print(np.shape(guess))
 
     plt.imshow(guess - expected)
+    plt.colorbar()
+    plt.show()
+
+    plt.imshow(guess)
+    plt.colorbar()
+    plt.show()
+
+    plt.imshow(expected)
+    plt.colorbar()
+    plt.show()
+
+    plt.imshow((guess+1) / (expected+1))
+    plt.colorbar()
+    plt.show()
+
+    rounded_guess = np.around(guess)
+
+    plt.imshow(rounded_guess - expected)
+    plt.colorbar()
+    plt.show()
+
+    plt.imshow(rounded_guess)
+    plt.colorbar()
+    plt.show()
+
+    plt.imshow(expected)
+    plt.colorbar()
+    plt.show()
+
+    plt.imshow((rounded_guess + 1) / (expected + 1))
+    plt.colorbar()
     plt.show()
 
 

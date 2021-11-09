@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras import datasets, layers, models, losses
+from tensorflow.keras import datasets, layers, models, losses, Model
 import numpy as np
 import glob
 import matplotlib.pyplot as plt
@@ -114,6 +114,29 @@ def get_source_arrays(sims, timestep_size=5, frames=4):
     return [training_questions, training_solutions]
 
 
+def inception_cell(model, activation, axis):
+    shape = model.output_shape
+    li = list(shape)
+    li.pop(0)
+    shape = tuple(li)
+    input_tower = layers.Input(shape=shape)
+
+    tower_1 = layers.Conv2D(32, (1, 1), padding='same', activation=activation)(input_tower)
+
+    tower_2 = layers.Conv2D(32, (1, 1), padding='same', activation=activation)(input_tower)
+    tower_2 = layers.Conv2D(32, (3, 3), padding='same', activation=activation)(tower_2)
+
+    tower_3 = layers.Conv2D(32, (1, 1), padding='same', activation=activation)(input_tower)
+    tower_3 = layers.Conv2D(32, (5, 5), padding='same', activation=activation)(tower_3)
+
+    # tower_4 = layers.MaxPooling2D((3, 3), strides=1)(input_tower)
+    tower_4 = layers.Conv2D(32, (3, 3), padding='same', activation=activation)(input_tower)
+
+    merged = layers.concatenate([tower_1, tower_2, tower_3, tower_4], axis=axis)
+    model.add(Model(input_tower, merged))
+
+    return model
+
 def create_neural_net(activation, optimizer, loss, frames=4, size=128, channels=3):
     """Creates the CNN.
     Inputs:
@@ -124,21 +147,41 @@ def create_neural_net(activation, optimizer, loss, frames=4, size=128, channels=
     Output:
         The model, ready to be fitted!
     """
+
     model = models.Sequential()
-    model.add(layers.Conv3D(32, (2, 2, 2), activation=activation, input_shape=(frames, size, size, channels)))
-    for frame in range(1, frames-1):
-        model.add(layers.Conv3D(32, (2, 1, 1), activation=activation))
-    model.add(layers.Reshape((63, 63, 32)))
-    model.add(layers.MaxPooling2D((2, 2)))
-    model.add(layers.Conv2D(64, (3, 3), activation=activation))
-    model.add(layers.MaxPooling2D((2, 2)))
-    model.add(layers.Conv2D(128, (3, 3), activation=activation))
-    model.add(layers.Conv2DTranspose(128, (3, 3), activation=activation))
-    model.add(layers.UpSampling2D((2, 2)))
-    model.add(layers.Conv2DTranspose(64, (4, 4), activation=activation))
-    model.add(layers.UpSampling2D((2, 2)))
-    model.add(layers.Conv2DTranspose(32, (3, 3), activation=activation))
-    model.add(layers.Conv2DTranspose(1, (1, 1), activation='sigmoid'))
+    model.add(layers.Conv3D(32, (4, 7, 7), activation=activation, input_shape=(frames, size, size, channels)))
+    model.add(layers.Reshape((58, 58, 32)))
+    model.add(layers.MaxPooling2D((3, 3)))
+    model.add(layers.BatchNormalization())
+    model = inception_cell(model, activation=activation, axis=1)
+    model = inception_cell(model, activation=activation, axis=2)
+
+    model.add(layers.Conv2D(32, (1, 1), activation=activation))
+    model.add(layers.Conv2D(32, (3, 3), activation=activation))
+
+    model.add(layers.Conv2D(32, (5, 5), activation=activation, strides=(5, 5)))
+    model = inception_cell(model, activation=activation, axis=1)
+    model = inception_cell(model, activation=activation, axis=2)
+    model.add(layers.Conv2DTranspose(32, (6, 6), activation=activation))
+    model.add(layers.Conv2DTranspose(32, (6, 6), activation=activation))
+    model.add(layers.Conv2D(1, (3, 3), activation=activation))
+
+
+    # model = models.Sequential()
+    # model.add(layers.Conv3D(32, (2, 2, 2), activation=activation, input_shape=(frames, size, size, channels)))
+    # for frame in range(1, frames-1):
+    #     model.add(layers.Conv3D(32, (2, 1, 1), activation=activation))
+    # model.add(layers.Reshape((63, 63, 32)))
+    # model.add(layers.MaxPooling2D((2, 2)))
+    # model.add(layers.Conv2D(64, (3, 3), activation=activation))
+    # model.add(layers.MaxPooling2D((2, 2)))
+    # model.add(layers.Conv2D(128, (3, 3), activation=activation))
+    # model.add(layers.Conv2DTranspose(128, (3, 3), activation=activation))
+    # model.add(layers.UpSampling2D((2, 2)))
+    # model.add(layers.Conv2DTranspose(64, (4, 4), activation=activation))
+    # model.add(layers.UpSampling2D((2, 2)))
+    # model.add(layers.Conv2DTranspose(32, (3, 3), activation=activation))
+    # model.add(layers.Conv2DTranspose(1, (1, 1), activation='sigmoid'))
     # model.add(layers.Conv2DTranspose(1, (1, 1), activation=activation))
 
     print(model.summary())

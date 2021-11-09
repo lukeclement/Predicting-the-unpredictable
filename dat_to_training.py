@@ -138,7 +138,7 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
     print(simulation_names)
     data_sources = []
     refs = []
-    for simulation in simulation_names[:]:
+    for simulation in simulation_names[:6]:
         files = glob.glob("{}/*".format(simulation))
         number_of_files = len(files)
         for i in range(0, number_of_files-timestep*frames):
@@ -188,7 +188,7 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
     print(tf.data.Dataset.zip((questions_final, answers_final)))
     m_1 = psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2
     print(m_1 - m_0)
-    return [questions_final, answers_final, questions_final_valid, answers_final_valid]
+    return [tf.data.Dataset.zip((questions_final, answers_final)), tf.data.Dataset.zip((questions_final, answers_final))]
 
 
 def extract_bmp(answers, frames, index, questions, refs, timestep, image_size):
