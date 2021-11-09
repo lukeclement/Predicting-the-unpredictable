@@ -135,7 +135,6 @@ def convert_dat_files(variant_range, image_size=64):
 
 def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
     simulation_names = glob.glob("Simulation_images/*")
-    print(simulation_names)
     data_sources = []
     refs = []
     for simulation in simulation_names[:]:

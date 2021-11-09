@@ -38,7 +38,6 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
     Output:
         An untrained keras model
     """
-    # TODO: dropout functions
     model = models.Sequential()
     current_axis_size = image_size
     target_axis_size = encode_size

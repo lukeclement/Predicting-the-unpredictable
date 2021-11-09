@@ -36,8 +36,16 @@ def main():
     print(np.shape(expected))
     print(np.shape(guess))
 
-    plt.imshow(guess - expected)
-    plt.colorbar()
+    axes = plt.figure(constrained_layout=True).subplot_mosaic(
+        """
+        AC
+        BB
+        BB
+        """
+    )
+    axes["B"].imshow(guess - expected)
+    axes["C"].imshow(guess)
+    axes["A"].imshow(expected)
     plt.show()
 
 
