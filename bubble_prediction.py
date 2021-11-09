@@ -58,7 +58,7 @@ def main():
         dropout_rate=0.2
     )
     training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
-    model, history = create_network.train_model(model, training_data, epochs=5)
+    model, history = create_network.train_model(model, training_data, epochs=2)
     print(plot_performance(model, image_frames, image_size, timestep))
 
 
