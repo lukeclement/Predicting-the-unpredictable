@@ -100,7 +100,7 @@ def explore_learning_space(activation_function, optimizer, loss_function):
         "image_size": image_sizes,
         "timestep": timesteps,
         "image_frames": image_frames,
-        "dropout_rate": dropout
+        "dropout_rate": dropouts
     })
     learning_space.to_csv("Total_evaluation_of_all_spaces.csv")
     return learning_space
@@ -174,7 +174,7 @@ def main():
     )
     training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
     model, history = create_network.train_model(model, training_data, epochs=2)
-    print(plot_performance(model, image_frames, image_size, timestep))
+    print(plot_performance(model, image_frames, image_size, timestep, name="Test"))
 
 
 if __name__ == "__main__":
