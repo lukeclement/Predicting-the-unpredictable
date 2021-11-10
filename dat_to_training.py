@@ -5,6 +5,7 @@ import tensorflow as tf
 from PIL import Image
 import psutil
 
+
 def read_file(file_path):
     """Takes in a filepath and extracts a set of x and y coordinates of the bubble edge.
     Input:
@@ -134,6 +135,7 @@ def convert_dat_files(variant_range, image_size=64):
 
 
 def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
+    print(tf.executing_eagerly())
     simulation_names = glob.glob("Simulation_images/*")
     data_sources = []
     refs = []
@@ -167,27 +169,31 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
     print(type(questions_array[0, 0, 0, 0, 0]))
     return [questions_array, answers_array]
 
-    questions = []
-    questions_valid = []
-    answers = []
-    answers_valid = []
-    validation_point = len(data_sources)/(1-validation_split)
-    for index, file in enumerate(data_sources):
-        if index < validation_point:
-            extract_bmp(answers, frames, index, questions, refs, timestep, image_size)
-        else:
-            extract_bmp(answers_valid, frames, index, questions_valid, refs, timestep, image_size)
-    questions_final = tf.data.Dataset.from_tensors(questions)
-    answers_final = tf.data.Dataset.from_tensors(answers)
-    questions_final_valid = tf.data.Dataset.from_tensors(questions_valid)
-    answers_final_valid = tf.data.Dataset.from_tensors(answers_valid)
-    # print(answers_final)
-    print(questions_final)
-    m_0 = psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2
-    print(tf.data.Dataset.zip((questions_final, answers_final)))
-    m_1 = psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2
-    print(m_1 - m_0)
-    return [tf.data.Dataset.zip((questions_final, answers_final)), tf.data.Dataset.zip((questions_final, answers_final))]
+    # Previous tensorflow method.
+    # questions = []
+    # questions_valid = []
+    # answers = []
+    # answers_valid = []
+    # validation_point = len(data_sources)/(1-validation_split)
+    # for index, file in enumerate(data_sources):
+    #     if index < validation_point:
+    #         extract_bmp(answers, frames, index, questions, refs, timestep, image_size)
+    #     else:
+    #         extract_bmp(answers_valid, frames, index, questions_valid, refs, timestep, image_size)
+    # questions_final = tf.data.Dataset.from_tensors(questions)
+    # answers_final = tf.data.Dataset.from_tensors(answers)
+    # questions_final_valid = tf.data.Dataset.from_tensors(questions_valid)
+    # answers_final_valid = tf.data.Dataset.from_tensors(answers_valid)
+    # # print(answers_final)
+    # print(questions_final)
+    # m_0 = psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2
+    # print(tf.data.Dataset.zip((questions_final, answers_final)))
+    # m_1 = psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2
+    # print(m_1 - m_0)
+    # return [
+    #     tf.data.Dataset.zip((questions_final, answers_final)),
+    #     tf.data.Dataset.zip((questions_final_valid, answers_final_valid))
+    # ]
 
 
 def extract_bmp(answers, frames, index, questions, refs, timestep, image_size):

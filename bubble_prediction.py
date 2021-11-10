@@ -5,6 +5,7 @@ from tensorflow.keras import layers
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
+import tensorflow as tf
 
 
 def plot_performance(model, image_frames, image_size, timestep):
@@ -42,7 +43,42 @@ def plot_performance(model, image_frames, image_size, timestep):
     return np.sum(difference)
 
 
+def explore_parameter_space(image_frames, image_size, dropout_rate, activation_function, optimizer, loss_function):
+    encode_sizes = []
+    allowing_pooling = []
+    allowing_upsampling = []
+    max_transpose_layering = []
+    kernel_sizes = []
+    encode_range = [1, 20, 1]
+    pooling_range = [True, False]
+    upsample_range = [True, False]
+    transpose_range = [1, 10, 1]
+    kernel_range = [2, 10, 1]
+    parameters = []
+
+    for encode in range(encode_range[0], encode_range[1], encode_range[2]):
+        for pool in pooling_range:
+            for upsample in upsample_range:
+                for transpose in range(transpose_range[0], transpose_range[1], transpose_range[2]):
+                    for kernel in range(kernel_range[0], kernel_range[1], kernel_range[2]):
+                        encode_sizes.append(encode)
+                        allowing_pooling.append(pool)
+                        allowing_upsampling.append(upsample)
+                        max_transpose_layering.append(transpose)
+                        kernel_sizes.append(kernel)
+                        model = create_network.create_neural_network(
+                            activation_function, optimizer, loss_function, image_frames,
+                            image_size=image_size, encode_size=encode, allow_pooling=pool,
+                            allow_upsampling=upsample, max_transpose_layers=transpose, kernel_size=kernel,
+                            dropout_rate=dropout_rate
+                        )
+                        parameters_line = create_network.interpret_model_summary(model)
+                        number = float(parameters_line.split(":")[1].replace(",", ""))
+                        parameters.append(number)
+
+
 def main():
+    # dat_to_training.convert_dat_files([0, 0], image_size=image_size)
     # activation_function = "LeakyReLU"
     activation_function = layers.LeakyReLU()
     optimizer = "adam"
@@ -50,12 +86,12 @@ def main():
     image_frames = 4
     image_size = 64
     timestep = 5
-    dat_to_training.convert_dat_files([0, 0], image_size=image_size)
+    dropout_rate = 0.2
     model = create_network.create_neural_network(
         activation_function, optimizer, loss_function, image_frames,
         image_size=image_size, encode_size=5, allow_pooling=True,
         allow_upsampling=True, max_transpose_layers=3, kernel_size=2,
-        dropout_rate=0.2
+        dropout_rate=dropout_rate
     )
     training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
     model, history = create_network.train_model(model, training_data, epochs=2)

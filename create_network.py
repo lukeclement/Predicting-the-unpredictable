@@ -1,7 +1,8 @@
 import numpy as np
-import loss_functions
 from tensorflow.keras import layers, models, initializers
-import tensorflow as tf
+import gc
+from tensorflow.keras import backend as k
+from tensorflow.keras.callbacks import Callback
 
 
 def interpret_model_summary(model):
@@ -15,7 +16,7 @@ def interpret_model_summary(model):
 
 def create_neural_network(activation, optimizer, loss, input_frames, image_size=64, channels=3, encode_size=2,
                           allow_upsampling=True, allow_pooling=True, kernel_size=3, max_transpose_layers=3,
-                          dropout_rate=0.8):
+                          dropout_rate=0.2):
     """Generates a Convolutional Neural Network (CNN), based on a sequential architecture. Does not train the CNN.
     This function can be adjusted to change the overall architecture of the CNN.
     This function also prints the model summary,
@@ -43,7 +44,10 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
     current_axis_size = image_size
     target_axis_size = encode_size
     current_frames = input_frames
-    model.add(layers.Conv3D(3, 1, activation=activation, kernel_initializer=initializer, input_shape=(input_frames, image_size, image_size, channels)))
+    model.add(layers.Conv3D(
+        3, 1, activation=activation, kernel_initializer=initializer,
+        input_shape=(input_frames, image_size, image_size, channels)
+    ))
     model.add(layers.Dropout(rate=dropout_rate))
     # Encoding the image
     while current_axis_size > target_axis_size:
@@ -104,13 +108,21 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
             current_axis_size += kernel_size - 1
         else:
             # Full size far away but too close for upsampling
-            model.add(layers.Conv2DTranspose(64, kernel_size + leap_correction, activation=activation, kernel_initializer=initializer))
+            model.add(layers.Conv2DTranspose(
+                64, kernel_size + leap_correction, activation=activation, kernel_initializer=initializer
+            ))
             current_axis_size += kernel_size - 1 + leap_correction
     # Final adjustments
     model.add(layers.Conv2DTranspose(1, 1, activation='sigmoid', kernel_initializer=initializer))
     print(model.summary(line_length=100))
-    model.compile(optimizer=optimizer, loss=loss)
+    model.compile(optimizer=optimizer, loss=loss, run_eagerly=False)
     return model
+
+
+class ClearMemory(Callback):
+    def on_epoch_end(self, epoch, logs=None):
+        gc.collect()
+        k.clear_session()
 
 
 def train_model(model, training_images, validation_split=0.1, epochs=2):
@@ -136,6 +148,7 @@ def train_model(model, training_images, validation_split=0.1, epochs=2):
     # questions = training_images[0]
     # validation = training_images[1]
     # history = model.fit(questions, validation_data=validation, epochs=epochs, shuffle=True)
-    history = model.fit(x, y, validation_split=validation_split, epochs=epochs, shuffle=True)
+    gc.collect()
+    history = model.fit(x, y, validation_split=validation_split, epochs=epochs, shuffle=True, callbacks=ClearMemory())
 
     return model, history
