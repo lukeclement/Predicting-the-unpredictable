@@ -151,7 +151,7 @@ def explore_parameter_space(image_frames, image_size, dropout_rate, activation_f
     })
     parameter_data.to_csv("Parameter_tests/Trainable_parameters_for_S{}-T{}-F{}-D{:.2f}".format(
                         image_size, "any", image_frames, dropout_rate
-                    ).replace(".", "_"), index=False)
+                    ).replace(".", "_")+".csv", index=False)
     return parameter_data
 
 
@@ -161,11 +161,11 @@ def main():
     activation_function = layers.LeakyReLU()
     optimizer = "adam"
     loss_function = loss_functions.bce_dice
-    image_frames = 4
-    image_size = 64
-    timestep = 5
+    image_frames = 1
+    image_size = 44
+    timestep = 1
     dropout_rate = 0.2
-    dat_to_training.convert_dat_files([0, 0], image_size=image_size)
+    dat_to_training.convert_dat_files([-1, 1], image_size=image_size)
     model = create_network.create_neural_network(
         activation_function, optimizer, loss_function, image_frames,
         image_size=image_size, encode_size=5, allow_pooling=True,

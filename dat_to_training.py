@@ -139,13 +139,19 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
     simulation_names = glob.glob("Simulation_images/*")
     data_sources = []
     refs = []
+    print(len(simulation_names))
+    total = 0
+    sub_total = 0
     for simulation in simulation_names[:]:
         files = glob.glob("{}/*".format(simulation))
         number_of_files = len(files)
+        sub_total += len(files)
         for i in range(0, number_of_files-timestep*frames):
+            total += 1
             data_sources.append("{}/img_{}.bmp".format(simulation, i))
             refs.append([simulation, i])
-
+    print(total)
+    print(sub_total/2)
     print("Generating arrays of size {}...".format(len(data_sources)))
     questions_array = np.zeros((len(data_sources), frames, image_size, image_size, 3), dtype="float16")
     answers_array = np.zeros((len(data_sources), image_size, image_size, 1), dtype="float16")

@@ -62,7 +62,10 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
         elif current_frames == 1:
             # Reshaping the image to be the correct dimensions
             current_frames -= 1
-            model.add(layers.Reshape((current_axis_size, current_axis_size, 32)))
+            if input_frames == 1:
+                model.add(layers.Reshape((current_axis_size, current_axis_size, 3)))
+            else:
+                model.add(layers.Reshape((current_axis_size, current_axis_size, 32)))
             model.add(layers.Conv2D(32, kernel_size, activation=activation, kernel_initializer=initializer))
             current_axis_size -= (kernel_size - 1)
         else:
