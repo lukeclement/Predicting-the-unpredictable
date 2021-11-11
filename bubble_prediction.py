@@ -34,10 +34,10 @@ def plot_performance(model, image_frames, image_size, timestep, name):
     axes["B"].imshow(guess - expected)
     axes["C"].imshow(guess)
     axes["A"].imshow(expected)
-    cool = np.zeros((image_size, image_size, 3))
-    cool[:, :, 0] = guess[:, :, 0]
-    cool[:, :, 1] = expected[:, :, 0]
-    axes["D"].imshow(cool)
+    overlap = np.zeros((image_size, image_size, 3))
+    overlap[:, :, 0] = guess[:, :, 0]
+    overlap[:, :, 1] = expected[:, :, 0]
+    axes["D"].imshow(overlap)
     big_difference = (guess - expected) / (guess + expected + 1)
     axes["E"].imshow(big_difference)
     plt.savefig("{}.png".format(name), dpi=500)
@@ -161,14 +161,14 @@ def main():
     activation_function = layers.LeakyReLU()
     optimizer = "adam"
     loss_function = loss_functions.bce_dice
-    image_frames = 1
-    image_size = 44
+    image_frames = 4
+    image_size = 16
     timestep = 1
     dropout_rate = 0.2
-    dat_to_training.convert_dat_files([-1, 1], image_size=image_size)
+    # dat_to_training.convert_dat_files([-1, 1], image_size=image_size)
     model = create_network.create_neural_network(
         activation_function, optimizer, loss_function, image_frames,
-        image_size=image_size, encode_size=5, allow_pooling=True,
+        image_size=image_size, encode_size=12, allow_pooling=True,
         allow_upsampling=True, max_transpose_layers=3, kernel_size=2,
         dropout_rate=dropout_rate
     )
