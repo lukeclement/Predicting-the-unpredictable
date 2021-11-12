@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 import psutil
+import tensorflow_io as tfio
 
 
 def read_file(file_path):
@@ -175,7 +176,10 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
     print(type(questions_array[0, 0, 0, 0, 0]))
     # test = tf.data.Dataset.from_tensor_slices((questions_array, answers_array))
     # return test
-    return [questions_array, answers_array]
+    # d_x = tfio.experimental.IODataset.from_numpy(questions_array)
+    # d_y = tfio.experimental.IODataset.from_numpy(answers_array)
+    return tf.data.Dataset.from_tensor_slices((questions_array, answers_array)).batch(32)
+    # return [questions_array.tolist(), answers_array.tolist()]
 
     # Previous tensorflow method.
     # questions = []

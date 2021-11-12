@@ -140,16 +140,17 @@ def train_model(model, training_images, validation_split=0.1, epochs=2):
         model:              The fitted model.
         history:            The history of changes to important variables, like loss.
     """
-    x = training_images[0]
-    y = training_images[1]
-    gc.collect()
-    history = model.fit(x, y, validation_split=validation_split, epochs=epochs, shuffle=True, callbacks=ClearMemory())
+    print("Got to training!")
+    # x = training_images[0]
+    # y = training_images[1]
+    # gc.collect()
+    # history = model.fit(x, y, validation_split=validation_split, epochs=epochs, shuffle=True, callbacks=ClearMemory())
 
     # questions = training_images[0]
     # validation = training_images[1]
     # history = model.fit(questions, validation_data=validation, epochs=epochs, shuffle=True)
 
-    # data = training_images
-    # history = model.fit(data, epochs=epochs, shuffle=True)
+    data = training_images
+    history = model.fit(data, epochs=epochs, shuffle=True)
 
     return model, history
