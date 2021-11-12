@@ -97,9 +97,9 @@ def plot_performance(model, image_frames, image_size, timestep, name):
     combined_rgb = negative_rgb + positive_rgb
     combined_rgb[(combined_rgb[:, :, 0] == 0) & (combined_rgb[:, :, 1] == 0) & (combined_rgb[:, :, 2] == 0), :] = 255
     # for a in axes:
-        # axes[a].set_xticklabels([])
-        # axes[a].set_yticklabels([])
-        # axes[a].tick_params(bottom=False, left=False)
+    #     axes[a].set_xticklabels([])
+    #     axes[a].set_yticklabels([])
+    #     axes[a].tick_params(bottom=False, left=False)
 
     # plt.subplots_adjust(wspace=0, hspace=0)
     plt.savefig("{}.png".format(name), dpi=500, bbox_inches='tight')

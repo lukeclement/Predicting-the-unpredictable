@@ -212,5 +212,5 @@ def extract_bmp(answers, frames, index, questions, refs, timestep, image_size):
     source = tf.io.read_file("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frames * timestep))
     data = tf.cast(tf.io.decode_bmp(source), tf.float16) / 255
     answer = [data[:, :, 2]]
-    questions.append(new_question_dataset)
+    questions.append(question)
     answers.append(tf.reshape(answer, [image_size, image_size, 1]))

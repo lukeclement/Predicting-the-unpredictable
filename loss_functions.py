@@ -15,7 +15,7 @@ def bce_dice(y_true, y_pred):
     # bce = losses.MeanSquaredError(y_true, y_pred)
     di = k.log(dice_coef(y_true, y_pred))
     iou = k.log(iou_coef(y_true, y_pred))
-    com = k.log(com_coef(y_true, y_pred))
+    # com = k.log(com_coef(y_true, y_pred))
     # return bce - di - iou + com
     return bce - di - iou
 

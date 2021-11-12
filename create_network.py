@@ -142,16 +142,11 @@ def train_model(model, training_images, validation_split=0.1, epochs=2):
     """
     x = training_images[0]
     y = training_images[1]
-    # X_t = training_images[2]
-    # Y_t = training_images[3]
-    # X = da.from_array(np.asarray(X), chunks=1000)
-    # Y = da.from_array(np.asarray(Y), chunks=1000)
-    # X_t = da.from_array(np.asarray(X_t), chunks=1000)
-    # Y_t = da.from_array(np.asarray(Y_t), chunks=1000)
+    gc.collect()
+    history = model.fit(x, y, validation_split=validation_split, epochs=epochs, shuffle=True, callbacks=ClearMemory())
+
     # questions = training_images[0]
     # validation = training_images[1]
     # history = model.fit(questions, validation_data=validation, epochs=epochs, shuffle=True)
-    gc.collect()
-    history = model.fit(x, y, validation_split=validation_split, epochs=epochs, shuffle=True, callbacks=ClearMemory())
 
     return model, history
