@@ -173,6 +173,8 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
     #    os.system("rm -r {}".format(file))
     print(np.shape(questions_array))
     print(type(questions_array[0, 0, 0, 0, 0]))
+    # test = tf.data.Dataset.from_tensor_slices((questions_array, answers_array))
+    # return test
     return [questions_array, answers_array]
 
     # Previous tensorflow method.
