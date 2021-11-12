@@ -27,21 +27,82 @@ def plot_performance(model, image_frames, image_size, timestep, name):
 
     axes = plt.figure(constrained_layout=True).subplot_mosaic(
         """
-        A.C
-        BDE
+        ABCD
+        EEEF
+        EEEG
+        EEEH
+        IIJJ
+        IIJJ
         """
     )
-    axes["B"].imshow(guess - expected)
+    axes["B"].imshow(expected)
     axes["C"].imshow(guess)
-    axes["A"].imshow(expected)
+
+    axes["D"].imshow(guess - expected)
     overlap = np.zeros((image_size, image_size, 3))
     overlap[:, :, 0] = guess[:, :, 0]
     overlap[:, :, 1] = expected[:, :, 0]
-    axes["D"].imshow(overlap)
-    big_difference = (guess - expected) / (guess + expected + 1)
-    axes["E"].imshow(big_difference)
-    plt.savefig("{}.png".format(name), dpi=500)
+    axes["E"].imshow(overlap)
 
+    previous_frame = np.zeros((image_size, image_size, 1))
+    previous_frame[:, :, 0] = initial[0, image_frames - 1, :, :, 1]
+    axes["A"].imshow(previous_frame)
+    rounded_guess = np.around(guess)
+
+    axes["F"].imshow(rounded_guess - expected)\
+
+    axes["G"].imshow(expected - previous_frame)
+    axes["H"].imshow(rounded_guess - previous_frame)
+
+    print(np.sum(np.abs((rounded_guess - expected))))
+
+    positive_real = np.zeros((image_size, image_size, 1))
+    negative_real = np.zeros((image_size, image_size, 1))
+    real_difference = expected - previous_frame
+    positive_real[real_difference > 0] = 1
+    negative_real[real_difference < 0] = 1
+
+    positive_guess = np.zeros((image_size, image_size, 1))
+    negative_guess = np.zeros((image_size, image_size, 1))
+    guess_difference = rounded_guess - previous_frame
+    positive_guess[guess_difference > 0] = 1
+    negative_guess[guess_difference < 0] = 1
+
+    positive_correct = np.zeros((image_size, image_size, 1))
+    positive_correct[(positive_guess == positive_real) & (positive_real == 0)] = 0
+    positive_correct[(positive_guess == positive_real) & (positive_real == 1)] = 2
+    positive_correct[(positive_guess != positive_real) & (positive_real == 0)] = 1
+    positive_correct[(positive_guess != positive_real) & (positive_real == 1)] = 3
+
+    negative_correct = np.zeros((image_size, image_size, 1))
+    negative_correct[(negative_guess == negative_real) & (negative_guess == 0)] = 0
+    negative_correct[(negative_guess == negative_real) & (negative_guess == 1)] = 2
+    negative_correct[(negative_guess != negative_real) & (negative_guess == 0)] = 1
+    negative_correct[(negative_guess != negative_real) & (negative_guess == 1)] = 3
+
+    positive_rgb = np.zeros((image_size, image_size, 3), dtype=int)
+    positive_rgb[positive_correct[:, :, 0] == 0, :] = 0
+    for i in range(0, 3):
+        positive_rgb[positive_correct[:, :, 0] == i+1, i] = 255
+
+    axes["I"].imshow(positive_rgb)
+
+    negative_rgb = np.zeros((image_size, image_size, 3), dtype=int)
+    negative_rgb[negative_correct[:, :, 0] == 0, :] = 0
+    for i in range(0, 3):
+        negative_rgb[negative_correct[:, :, 0] == i+1, i] = 255
+
+    axes["J"].imshow(negative_rgb)
+
+    combined_rgb = negative_rgb + positive_rgb
+    combined_rgb[(combined_rgb[:, :, 0] == 0) & (combined_rgb[:, :, 1] == 0) & (combined_rgb[:, :, 2] == 0), :] = 255
+    # for a in axes:
+        # axes[a].set_xticklabels([])
+        # axes[a].set_yticklabels([])
+        # axes[a].tick_params(bottom=False, left=False)
+
+    # plt.subplots_adjust(wspace=0, hspace=0)
+    plt.savefig("{}.png".format(name), dpi=500, bbox_inches='tight')
     return np.sum(difference)
 
 
@@ -139,8 +200,8 @@ def explore_parameter_space(image_frames, image_size, dropout_rate, activation_f
                             allowing_upsampling.append(upsample)
                             max_transpose_layering.append(transpose)
                             kernel_sizes.append(kernel)
-                        except:
-                            print("Fail!")
+                        except Exception as e:
+                            print(e)
     parameter_data = pd.DataFrame({
         "encode_size": encode_sizes,
         "allow_pooling": allowing_pooling,
@@ -161,14 +222,14 @@ def main():
     activation_function = layers.LeakyReLU()
     optimizer = "adam"
     loss_function = loss_functions.bce_dice
-    image_frames = 4
+    image_frames = 1
     image_size = 16
-    timestep = 1
+    timestep = 5
     dropout_rate = 0.2
-    # dat_to_training.convert_dat_files([-1, 1], image_size=image_size)
+    dat_to_training.convert_dat_files([0, 0], image_size=image_size)
     model = create_network.create_neural_network(
         activation_function, optimizer, loss_function, image_frames,
-        image_size=image_size, encode_size=12, allow_pooling=True,
+        image_size=image_size, encode_size=5, allow_pooling=True,
         allow_upsampling=True, max_transpose_layers=3, kernel_size=2,
         dropout_rate=dropout_rate
     )
