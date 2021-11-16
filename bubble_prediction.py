@@ -275,7 +275,7 @@ def main():
     # model, history = create_network.train_model(model, training_data, epochs=2)
     # model.save("Current_model")
     print(plot_performance(model, image_frames, image_size, timestep, name="Test"))
-    test_positions = long_term_prediction(model, 8, 200, image_size, timestep, image_frames, 100)
+    test_positions = long_term_prediction(model, 24, 200, image_size, timestep, image_frames, 100)
     write_gif(test_positions, 'test_gif.gif', fps=5)
 
 
