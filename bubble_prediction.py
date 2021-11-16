@@ -2,11 +2,46 @@ import numpy as np
 import dat_to_training
 import create_network
 import loss_functions
-import dask.array as da
 from PIL import Image
 import matplotlib.pyplot as plt
 from tensorflow.keras import layers, losses, optimizers, models
 import tensorflow as tf
+from array2gif import write_gif
+
+
+def long_term_prediction(model, start_sim, start_image, image_size, timestep, frames, number_to_simulate):
+    input_images = np.zeros((1, frames, image_size, image_size, 3))
+    for frame in range(0, frames):
+        try:
+            input_images[0, frame, :, :, :] = np.asarray(
+                    Image.open("Simulation_images/Simulation_{}/img_{}.bmp".format(
+                        start_sim, start_image + frame*timestep
+                    ))
+                ) / 255
+        except IOError:
+            print("Error - either invalid simulation number or image out of range!")
+            return []
+    positions = []
+    for i in range(0, number_to_simulate):
+        output_image = np.zeros((image_size, image_size, 3))
+        test = model(input_images)
+        output_image[:, :, 1] = model(input_images)[0, :, :, 0]
+        output_image = np.around(output_image)
+        dat_to_training.generate_rail(output_image)
+        for frame in range(1, frames):
+            input_images[0, frame-1, :, :, :] = input_images[0, frame, :, :, :]
+        input_images[0, frames-1, :, :, :] = output_image
+        positions.append(np.rot90(output_image*255))
+    return positions
+
+
+def generate_gif(images_as_np):
+    images = []
+    for picture in images_as_np:
+        images.append(Image.fromarray(np.uint8(picture*255)))
+        plt.imshow(np.uint8(picture*255))
+        plt.show()
+    images[0].save('test_gif.gif', save_all=True, append_images=images[1:], optimize=False)
 
 
 def main():
@@ -26,7 +61,7 @@ def main():
     # )
     training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
     print(model.summary())
-    model, history = create_network.train_model(model, training_data)
+    # model, history = create_network.train_model(model, training_data)
     # model.save("Test_model")
     # """
     model = models.load_model("Test_model")
@@ -47,6 +82,8 @@ def main():
     previous_frame[:, :, 0] = initial[0, image_frames - 1, :, :, 1]
 
     positive_counts, negative_counts = difference_graphing(expected, guess, previous_frame)
+    test_positions = long_term_prediction(model, 8, 500, image_size, timestep, image_frames, 200)
+    write_gif(test_positions, 'test_gif.gif', fps=5)
 
 
     # """

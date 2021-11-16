@@ -1,16 +1,39 @@
 import numpy as np
 import loss_functions
-import bubble_prediction
 from tensorflow.keras import layers, models, Model, initializers, activations
-from tensorflow.keras.metrics import Metric
+import tensorflow as tf
+
+
+def metric_differences(positive_guess, positive_real):
+    positive_correct = tf.zeros((64, 64, 1), tf.float16)
+    positive_correct[(positive_guess == positive_real) & (positive_real == 0)] = 0  # Background
+    positive_correct[(positive_guess == positive_real) & (positive_real == 1)] = 2  # Correct Prediction (Green)
+    positive_correct[(positive_guess != positive_real) & (positive_real == 0)] = 1  # Over prediction (Red)
+    positive_correct[(positive_guess != positive_real) & (positive_real == 1)] = 3  # Under prediction (Blue)
+    unique, counts = tf.unique_with_counts(positive_correct)
+    positive_counts = dict(zip(unique, counts))
+    return positive_correct, positive_counts
 
 
 def pixel_prediction(input_data):
     def update_state(y_true, y_pred):
-        np_true = np.array(y_true)
-        np_pred = np.array(y_pred)
-        pos, neg = bubble_prediction.difference_graphing(np_true, np_pred, input_data, plotting=False)
-        return {**pos, **neg}
+        rounded_guess = tf.math.round(y_pred)
+
+        real_difference = y_true - input_data
+        guess_difference = rounded_guess - input_data
+
+        positive_real = tf.zeros((64, 64, 1), tf.float16)
+        positive_real[real_difference > 0] = 1
+        positive_guess = tf.zeros((64, 64, 1), tf.float16)
+        positive_guess[guess_difference > 0] = 1
+        positive_correct, positive_counts = metric_differences(positive_guess, positive_real)
+
+        negative_real = np.zeros((64, 64, 1))
+        negative_real[real_difference < 0] = 1
+        negative_guess = np.zeros((64, 64, 1))
+        negative_guess[guess_difference < 0] = 1
+        negative_correct, negative_counts = metric_differences(negative_guess, negative_guess)
+        return {**positive_counts, **negative_counts}
     return update_state
 
 
@@ -173,7 +196,8 @@ def create_inception_net(activation, optimizer, loss, frames=4, size=64, channel
     model.add(layers.Conv2DTranspose(32, (6, 6), activation=activation, kernel_initializer=initializer))
     model.add(layers.Conv2D(1, (3, 3), activation=activations.sigmoid, kernel_initializer=initializer))
 
-    model.compile(optimizer=optimizer, loss=loss, metrics=pixel_prediction(i))
+    # model.compile(optimizer=optimizer, loss=loss, metrics=pixel_prediction(i))
+    model.compile(optimizer=optimizer, loss=loss)
     # model.compile(optimizer=optimizer, loss=loss, metrics=[mass_preservation])
     return model
 
