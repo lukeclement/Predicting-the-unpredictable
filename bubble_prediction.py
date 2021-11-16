@@ -263,19 +263,19 @@ def main():
     image_size = 64
     timestep = 5
     dropout_rate = 0.2
-    model = models.load_model("Current_model", custom_objects={"bce_dice": loss_functions.bce_dice})
-    # dat_to_training.convert_dat_files([0, 0], image_size=image_size)
-    # model = create_network.create_neural_network(
-    #     activation_function, optimizer, loss_function, image_frames,
-    #     image_size=image_size, encode_size=5, allow_pooling=True,
-    #     allow_upsampling=True, max_transpose_layers=3, kernel_size=2,
-    #     dropout_rate=dropout_rate
-    # )
-    # training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
-    # model, history = create_network.train_model(model, training_data, epochs=2)
-    # model.save("Current_model")
+    # model = models.load_model("Current_model", custom_objects={"bce_dice": loss_functions.bce_dice})
+    dat_to_training.convert_dat_files([0, 0], image_size=image_size)
+    model = create_network.create_neural_network(
+        activation_function, optimizer, loss_function, image_frames,
+        image_size=image_size, encode_size=5, allow_pooling=True,
+        allow_upsampling=True, max_transpose_layers=3, kernel_size=2,
+        dropout_rate=dropout_rate
+    )
+    training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
+    model, history = create_network.train_model(model, training_data, epochs=2)
+    model.save("Current_model")
     print(plot_performance(model, image_frames, image_size, timestep, name="Test"))
-    test_positions = long_term_prediction(model, 8, 500, image_size, timestep, image_frames, 100)
+    test_positions = long_term_prediction(model, 29, 800, image_size, timestep, image_frames, 100)
     write_gif(test_positions, 'test_gif.gif', fps=5)
 
 
