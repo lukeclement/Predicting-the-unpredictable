@@ -1,7 +1,20 @@
 import numpy as np
 import loss_functions
+import bubble_prediction
 from tensorflow.keras import layers, models, Model, initializers, activations
-import tensorflow as tf
+from tensorflow.keras.metrics import Metric
+
+
+def pixel_prediction(input_data):
+    def update_state(y_true, y_pred):
+        np_true = np.array(y_true)
+        np_pred = np.array(y_pred)
+        pos, neg = bubble_prediction.difference_graphing(np_true, np_pred, input_data, plotting=False)
+        return {**pos, **neg}
+    return update_state
+
+
+
 
 def interpret_model_summary(model):
     line_list = []
@@ -141,6 +154,7 @@ def create_inception_net(activation, optimizer, loss, frames=4, size=64, channel
         The model, ready to be fitted!
     """
     initializer = initializers.HeNormal()
+    i = layers.Input(shape=(frames, size, size, channels))
     model = models.Sequential()
     model.add(layers.Conv3D(32, (4, 7, 7), kernel_initializer=initializer, activation=activation, input_shape=(frames, size, size, channels)))
     model.add(layers.Reshape((58, 58, 32)))
@@ -159,7 +173,7 @@ def create_inception_net(activation, optimizer, loss, frames=4, size=64, channel
     model.add(layers.Conv2DTranspose(32, (6, 6), activation=activation, kernel_initializer=initializer))
     model.add(layers.Conv2D(1, (3, 3), activation=activations.sigmoid, kernel_initializer=initializer))
 
-    model.compile(optimizer=optimizer, loss=loss)
+    model.compile(optimizer=optimizer, loss=loss, metrics=pixel_prediction(i))
     # model.compile(optimizer=optimizer, loss=loss, metrics=[mass_preservation])
     return model
 

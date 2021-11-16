@@ -27,7 +27,7 @@ def main():
     training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
     print(model.summary())
     model, history = create_network.train_model(model, training_data)
-    model.save("Test_model")
+    # model.save("Test_model")
     # """
     model = models.load_model("Test_model")
 
@@ -46,86 +46,86 @@ def main():
     previous_frame = np.zeros((image_size, image_size, 1))
     previous_frame[:, :, 0] = initial[0, image_frames - 1, :, :, 1]
 
-    # plt.imshow(guess - expected)
-    # plt.colorbar()
-    # plt.show()
+    positive_counts, negative_counts = difference_graphing(expected, guess, previous_frame)
 
-    plt.imshow(guess)
-    # plt.colorbar()
-    plt.show()
 
-    plt.imshow(expected)
-    # plt.colorbar()
-    plt.show()
+    # """
 
+
+def difference_graphing(expected, guess, previous_frame, plotting=True):
     rounded_guess = np.around(guess)
 
-    plt.imshow(rounded_guess - expected)
-    # plt.colorbar()
-    plt.show()
-
-    plt.imshow(rounded_guess)
-    # plt.colorbar()
-    plt.show()
-
-    plt.imshow(expected - previous_frame)
-    # plt.colorbar()
-    plt.show()
-
-    plt.imshow(rounded_guess - previous_frame)
-    # plt.colorbar()
-    plt.show()
-
-    print(np.sum(np.abs((rounded_guess - expected))))
+    real_difference = expected - previous_frame
+    guess_difference = rounded_guess - previous_frame
 
     positive_real = np.zeros((64, 64, 1))
-    negative_real = np.zeros((64, 64, 1))
-    real_difference = expected - previous_frame
     positive_real[real_difference > 0] = 1
-    negative_real[real_difference < 0] = 1
-
     positive_guess = np.zeros((64, 64, 1))
-    negative_guess = np.zeros((64, 64, 1))
-    guess_difference = rounded_guess - previous_frame
     positive_guess[guess_difference > 0] = 1
+    positive_correct, positive_counts = real_guess_differences(positive_guess, positive_real)
+
+    negative_real = np.zeros((64, 64, 1))
+    negative_real[real_difference < 0] = 1
+    negative_guess = np.zeros((64, 64, 1))
     negative_guess[guess_difference < 0] = 1
+    negative_correct, negative_counts = real_guess_differences(negative_guess, negative_guess)
 
-    positive_correct = np.zeros((64, 64, 1))
-    positive_correct[(positive_guess == positive_real) & (positive_real == 0)] = 0
-    positive_correct[(positive_guess == positive_real) & (positive_real == 1)] = 2
-    positive_correct[(positive_guess != positive_real) & (positive_real == 0)] = 1
-    positive_correct[(positive_guess != positive_real) & (positive_real == 1)] = 3
+    if plotting:
 
-    negative_correct = np.zeros((64, 64, 1))
-    negative_correct[(negative_guess == negative_real) & (negative_guess == 0)] = 0
-    negative_correct[(negative_guess == negative_real) & (negative_guess == 1)] = 2
-    negative_correct[(negative_guess != negative_real) & (negative_guess == 0)] = 1
-    negative_correct[(negative_guess != negative_real) & (negative_guess == 1)] = 3
+        positive_rgb = difference_to_rgb(positive_correct)
+        negative_rgb = difference_to_rgb(negative_correct)
 
+        combined_rgb = negative_rgb + positive_rgb
+        combined_rgb[(combined_rgb[:, :, 0] == 0) & (combined_rgb[:, :, 1] == 0) & (combined_rgb[:, :, 2] == 0), :] = 0
+
+        plt.imshow(guess)
+        plt.show()
+
+        plt.imshow(expected)
+        plt.show()
+
+        plt.imshow(rounded_guess - expected)
+        plt.show()
+
+        plt.imshow(rounded_guess)
+        plt.show()
+
+        plt.imshow(expected - previous_frame)
+        plt.show()
+
+        plt.imshow(rounded_guess - previous_frame)
+        plt.show()
+
+        plt.imshow(positive_rgb)
+        plt.show()
+
+        plt.imshow(negative_rgb)
+        plt.show()
+
+        plt.imshow(combined_rgb)
+        plt.show()
+
+    return positive_counts, negative_counts
+
+
+def difference_to_rgb(positive_correct):
     positive_rgb = np.zeros((64, 64, 3), dtype=int)
     positive_rgb[positive_correct[:, :, 0] == 0, :] = 0
     positive_rgb[positive_correct[:, :, 0] == 1, 0] = 255
     positive_rgb[positive_correct[:, :, 0] == 2, 1] = 255
     positive_rgb[positive_correct[:, :, 0] == 3, 2] = 255
+    return positive_rgb
 
-    plt.imshow(positive_rgb)
-    plt.show()
 
-    negative_rgb = np.zeros((64, 64, 3), dtype=int)
-    negative_rgb[negative_correct[:, :, 0] == 0, :] = 0
-    negative_rgb[negative_correct[:, :, 0] == 1, 0] = 255
-    negative_rgb[negative_correct[:, :, 0] == 2, 1] = 255
-    negative_rgb[negative_correct[:, :, 0] == 3, 2] = 255
-
-    plt.imshow(negative_rgb)
-    plt.show()
-
-    combined_rgb = negative_rgb + positive_rgb
-    combined_rgb[(combined_rgb[:, :, 0] == 0) & (combined_rgb[:, :, 1] == 0) & (combined_rgb[:, :, 2] == 0), :] = 255
-
-    plt.imshow(combined_rgb)
-    plt.show()
-    # """
+def real_guess_differences(positive_guess, positive_real):
+    positive_correct = np.zeros((64, 64, 1))
+    positive_correct[(positive_guess == positive_real) & (positive_real == 0)] = 0  # Background
+    positive_correct[(positive_guess == positive_real) & (positive_real == 1)] = 2  # Correct Prediction (Green)
+    positive_correct[(positive_guess != positive_real) & (positive_real == 0)] = 1  # Over prediction (Red)
+    positive_correct[(positive_guess != positive_real) & (positive_real == 1)] = 3  # Under prediction (Blue)
+    unique, counts = np.unique(positive_correct, return_counts=True)
+    positive_counts = dict(zip(unique, counts))
+    return positive_correct, positive_counts
 
 
 if __name__ == "__main__":
