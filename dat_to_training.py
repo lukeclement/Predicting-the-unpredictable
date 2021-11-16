@@ -166,7 +166,16 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
     #    os.system("rm -r {}".format(file))
     print(np.shape(questions_array))
     print(type(questions_array[0, 0, 0, 0, 0]))
-    return [questions_array, answers_array]
+
+    # questions_array = tf.data.Dataset.from_tensor_slices((questions_array, answers_array)).batch(32).prefetch(buffer_size=1000)
+
+    questions_array = [questions_array, answers_array]
+
+    # questions_array = tf.data.Dataset.from_generator(lambda: questions_array, tf.float16, output_shapes=[None, 4, 64, 64, 3])
+    # answers_array = tf.data.Dataset.from_generator(lambda: answers_array, tf.float16, output_shapes=[None, 1, 64, 64, 3])
+    # questions_array = questions_array.concatenate(answers_array)
+
+    return questions_array
 
     questions = []
     questions_valid = []

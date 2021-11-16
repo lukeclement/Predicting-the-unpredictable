@@ -25,10 +25,10 @@ def main():
     #     allow_upsampling=True, max_transpose_layers=1, kernel_size=2
     # )
     training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
-
-    # model, history = create_network.train_model(model, training_data)
-    # model.save("Test_model")
-
+    print(model.summary())
+    model, history = create_network.train_model(model, training_data)
+    model.save("Test_model")
+    # """
     model = models.load_model("Test_model")
 
     preamble = "Simulation_images/Simulation_8/img_"
@@ -125,7 +125,7 @@ def main():
 
     plt.imshow(combined_rgb)
     plt.show()
-
+    # """
 
 
 if __name__ == "__main__":
