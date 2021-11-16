@@ -4,7 +4,6 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 import psutil
-import tensorflow_io as tfio
 
 
 def read_file(file_path):
@@ -139,7 +138,9 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
     print(tf.executing_eagerly())
     simulation_names = glob.glob("Simulation_images/*")
     data_sources = []
+    data_sources_valid = []
     refs = []
+    refs_valid = []
     print(len(simulation_names))
     total = 0
     sub_total = 0
@@ -149,13 +150,25 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
         sub_total += len(files)
         for i in range(0, number_of_files-timestep*frames):
             total += 1
-            data_sources.append("{}/img_{}.bmp".format(simulation, i))
-            refs.append([simulation, i])
-    print(total)
-    print(sub_total/2)
-    print("Generating arrays of size {}...".format(len(data_sources)))
-    questions_array = np.zeros((len(data_sources), frames, image_size, image_size, 3), dtype="float16")
-    answers_array = np.zeros((len(data_sources), image_size, image_size, 1), dtype="float16")
+            if total > (1-validation_split)*len(files):
+                data_sources.append("{}/img_{}.bmp".format(simulation, i))
+                refs.append([simulation, i])
+            else:
+                data_sources_valid.append("{}/img_{}.bmp".format(simulation, i))
+                refs_valid.append([simulation, i])
+
+    questions_array = np.zeros((
+        len(data_sources), frames, image_size, image_size, 3
+    ), dtype="float16")
+    answers_array = np.zeros((
+        len(data_sources), image_size, image_size, 1
+    ), dtype="float16")
+    questions_array_valid = np.zeros((
+        len(data_sources_valid), frames, image_size, image_size, 3
+    ), dtype="float16")
+    answers_array_valid = np.zeros((
+        len(data_sources_valid), image_size, image_size, 1
+    ), dtype="float16")
     print("Running...")
     print(np.shape(questions_array))
     print(np.shape(answers_array))
@@ -167,19 +180,25 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
         answers_array[index, :, :, 0] = np.asarray(
             Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + timestep * frames))
         )[:, :, 1] / 255
-    print("Saving...")
-    # np.save("Questions", questions_array)
-    # np.save("Answers", answers_array)
-    # for file in sims:
-    #    os.system("rm -r {}".format(file))
-    print(np.shape(questions_array))
-    print(type(questions_array[0, 0, 0, 0, 0]))
-    # test = tf.data.Dataset.from_tensor_slices((questions_array, answers_array))
-    # return test
-    # d_x = tfio.experimental.IODataset.from_numpy(questions_array)
-    # d_y = tfio.experimental.IODataset.from_numpy(answers_array)
-    return tf.data.Dataset.from_tensor_slices((questions_array, answers_array)).batch(32)
-    # return [questions_array.tolist(), answers_array.tolist()]
+
+    for index, file in enumerate(data_sources_valid):
+        for frame in range(0, frames * timestep, timestep):
+            questions_array_valid[index, int(frame / timestep), :, :, :] = np.asarray(
+                Image.open("{}/img_{}.bmp".format(refs_valid[index][0], refs_valid[index][1] + frame))
+            ) / 255
+        answers_array_valid[index, :, :, 0] = np.asarray(
+            Image.open("{}/img_{}.bmp".format(refs_valid[index][0], refs_valid[index][1] + timestep * frames))
+        )[:, :, 1] / 255
+
+    print("Converting to datasets...")
+    batch_size = 2
+    testing_data = tf.data.Dataset.from_tensor_slices((questions_array, answers_array))
+    testing_data = testing_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+
+    validation_data = tf.data.Dataset.from_tensor_slices((questions_array_valid, answers_array_valid))
+    validation_data = validation_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    return [testing_data, validation_data]
+    # return [questions_array, answers_array]
 
     # Previous tensorflow method.
     # questions = []

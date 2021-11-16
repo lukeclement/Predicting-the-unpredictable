@@ -1,7 +1,7 @@
 import dat_to_training
 import create_network
 import loss_functions
-from tensorflow.keras import layers
+from tensorflow.keras import layers, losses
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
@@ -221,12 +221,13 @@ def main():
     tf.random.set_seed(100)
     activation_function = layers.LeakyReLU()
     optimizer = "adam"
-    loss_function = loss_functions.bce_dice
-    image_frames = 1
-    image_size = 128
+    # loss_function = loss_functions.bce_dice
+    loss_function = losses.BinaryCrossentropy()
+    image_frames = 2
+    image_size = 64
     timestep = 5
     dropout_rate = 0.2
-    # dat_to_training.convert_dat_files([0, 0], image_size=image_size)
+    dat_to_training.convert_dat_files([0, 0], image_size=image_size)
     model = create_network.create_neural_network(
         activation_function, optimizer, loss_function, image_frames,
         image_size=image_size, encode_size=5, allow_pooling=True,
