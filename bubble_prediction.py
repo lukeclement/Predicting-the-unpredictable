@@ -1,13 +1,14 @@
 import dat_to_training
 import create_network
 import loss_functions
-from tensorflow.keras import layers, losses
+from tensorflow.keras import layers, losses, models
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import pandas as pd
 from time import time
+from array2gif import write_gif
 
 
 def plot_performance(model, image_frames, image_size, timestep, name):
@@ -216,27 +217,66 @@ def explore_parameter_space(image_frames, image_size, dropout_rate, activation_f
     return parameter_data
 
 
+def long_term_prediction(model, start_sim, start_image, image_size, timestep, frames, number_to_simulate):
+    input_images = np.zeros((1, frames, image_size, image_size, 3))
+    for frame in range(0, frames):
+        try:
+            input_images[0, frame, :, :, :] = np.asarray(
+                    Image.open("Simulation_images/Simulation_{}/img_{}.bmp".format(
+                        start_sim, start_image + frame*timestep
+                    ))
+                ) / 255
+        except IOError:
+            print("Error - either invalid simulation number or image out of range!")
+            return []
+    positions = []
+    for i in range(0, number_to_simulate):
+        output_image = np.zeros((image_size, image_size, 3))
+        test = model(input_images)
+        output_image[:, :, 1] = model(input_images)[0, :, :, 0]
+        output_image = np.around(output_image)
+        dat_to_training.generate_rail(output_image)
+        for frame in range(1, frames):
+            input_images[0, frame-1, :, :, :] = input_images[0, frame, :, :, :]
+        input_images[0, frames-1, :, :, :] = output_image
+        positions.append(np.rot90(output_image*255))
+    return positions
+
+
+def generate_gif(images_as_np):
+    images = []
+    for picture in images_as_np:
+        images.append(Image.fromarray(np.uint8(picture*255)))
+        plt.imshow(np.uint8(picture*255))
+        plt.show()
+    images[0].save('test_gif.gif', save_all=True, append_images=images[1:], optimize=False)
+
+
 def main():
     # activation_function = "LeakyReLU"
     tf.random.set_seed(100)
     activation_function = layers.LeakyReLU()
     optimizer = "adam"
-    # loss_function = loss_functions.bce_dice
-    loss_function = losses.BinaryCrossentropy()
-    image_frames = 2
+    loss_function = loss_functions.bce_dice
+    # loss_function = losses.BinaryCrossentropy()
+    image_frames = 4
     image_size = 64
     timestep = 5
     dropout_rate = 0.2
-    dat_to_training.convert_dat_files([0, 0], image_size=image_size)
-    model = create_network.create_neural_network(
-        activation_function, optimizer, loss_function, image_frames,
-        image_size=image_size, encode_size=5, allow_pooling=True,
-        allow_upsampling=True, max_transpose_layers=3, kernel_size=2,
-        dropout_rate=dropout_rate
-    )
-    training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
-    model, history = create_network.train_model(model, training_data, epochs=2)
+    model = models.load_model("Current_model", custom_objects={"bce_dice": loss_functions.bce_dice})
+    # dat_to_training.convert_dat_files([0, 0], image_size=image_size)
+    # model = create_network.create_neural_network(
+    #     activation_function, optimizer, loss_function, image_frames,
+    #     image_size=image_size, encode_size=5, allow_pooling=True,
+    #     allow_upsampling=True, max_transpose_layers=3, kernel_size=2,
+    #     dropout_rate=dropout_rate
+    # )
+    # training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
+    # model, history = create_network.train_model(model, training_data, epochs=2)
+    # model.save("Current_model")
     print(plot_performance(model, image_frames, image_size, timestep, name="Test"))
+    test_positions = long_term_prediction(model, 8, 200, image_size, timestep, image_frames, 100)
+    write_gif(test_positions, 'test_gif.gif', fps=5)
 
 
 if __name__ == "__main__":
