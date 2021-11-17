@@ -191,7 +191,7 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
         )[:, :, 1] / 255
 
     print("Converting to datasets...")
-    batch_size = 32
+    batch_size = 8
     testing_data = tf.data.Dataset.from_tensor_slices((questions_array, answers_array))
     testing_data = testing_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
 

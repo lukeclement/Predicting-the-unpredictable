@@ -226,8 +226,9 @@ def long_term_prediction(model, start_sim, start_image, image_size, timestep, fr
                         start_sim, start_image + frame*timestep
                     ))
                 ) / 255
-        except IOError:
+        except IOError as e:
             print("Error - either invalid simulation number or image out of range!")
+            print(e)
             return []
     positions = []
     for i in range(0, number_to_simulate):
@@ -272,10 +273,10 @@ def main():
         dropout_rate=dropout_rate
     )
     training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
-    model, history = create_network.train_model(model, training_data, epochs=2)
+    model, history = create_network.train_model(model, training_data, epochs=5)
     model.save("Current_model")
     print(plot_performance(model, image_frames, image_size, timestep, name="Test"))
-    test_positions = long_term_prediction(model, 29, 800, image_size, timestep, image_frames, 100)
+    test_positions = long_term_prediction(model, 29, 400, image_size, timestep, image_frames, 200)
     write_gif(test_positions, 'test_gif.gif', fps=5)
 
 
