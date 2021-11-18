@@ -173,22 +173,22 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
     print(np.shape(questions_array))
     print(np.shape(answers_array))
     for index, file in enumerate(data_sources):
-        for frame in range(0, frames * timestep, timestep):
-            questions_array[index, int(frame / timestep), :, :, :] = np.asarray(
-                Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
-            ) / 255
-        answers_array[index, :, :, 0] = np.asarray(
-            Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + timestep * frames))
-        )[:, :, 1] / 255
-
-    for index, file in enumerate(data_sources_valid):
-        for frame in range(0, frames * timestep, timestep):
-            questions_array_valid[index, int(frame / timestep), :, :, :] = np.asarray(
-                Image.open("{}/img_{}.bmp".format(refs_valid[index][0], refs_valid[index][1] + frame))
-            ) / 255
-        answers_array_valid[index, :, :, 0] = np.asarray(
-            Image.open("{}/img_{}.bmp".format(refs_valid[index][0], refs_valid[index][1] + timestep * frames))
-        )[:, :, 1] / 255
+        if index % int(1.0/validation_split):
+            for frame in range(0, frames * timestep, timestep):
+                questions_array[index, int(frame / timestep), :, :, :] = np.asarray(
+                    Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
+                ) / 255
+            answers_array[index, :, :, 0] = np.asarray(
+                Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + timestep * frames))
+            )[:, :, 1] / 255
+        else:
+            for frame in range(0, frames * timestep, timestep):
+                questions_array_valid[index, int(frame / timestep), :, :, :] = np.asarray(
+                    Image.open("{}/img_{}.bmp".format(refs_valid[index][0], refs_valid[index][1] + frame))
+                ) / 255
+            answers_array_valid[index, :, :, 0] = np.asarray(
+                Image.open("{}/img_{}.bmp".format(refs_valid[index][0], refs_valid[index][1] + timestep * frames))
+            )[:, :, 1] / 255
 
     print("Converting to datasets...")
     batch_size = 8
