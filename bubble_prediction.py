@@ -257,7 +257,8 @@ def ensemble_prediction(
                 possible_images[j*samples + s, :, :, :] = generate_sample(image, image_size, rng)
         print("Selecting best...")
         unique_images, frequency = np.unique(possible_images, return_counts=True, axis=0)
-        for s in range(0, ensemble_size):
+        print(len(frequency))
+        for s in range(0, min(ensemble_size, len(frequency))):
             current_best = np.amax(frequency)
             current_best_index, = np.where(frequency == current_best)
             next_images[s, :, :, :] = unique_images[current_best_index[0], :, :, :]
@@ -287,7 +288,6 @@ def long_term_prediction(
     positions = []
     for i in range(0, number_to_simulate):
         output_image = np.zeros((image_size, image_size, 3))
-        test = model(input_images)
         output_image[:, :, 1] = model(input_images)[0, :, :, 0]
         if round_result:
             output_image = np.around(output_image)
@@ -317,18 +317,18 @@ def main():
     image_frames = 4
     image_size = 32
     timestep = 5
-    dropout_rate = 0.2
-    model = models.load_model("Current_model", custom_objects={"bce_dice": loss_functions.bce_dice})
-    # dat_to_training.convert_dat_files([0, 0], image_size=image_size)
-    # model = create_network.create_neural_network(
-    #     activation_function, optimizer, loss_function, image_frames,
-    #     image_size=image_size, encode_size=5, allow_pooling=True,
-    #     allow_upsampling=True, max_transpose_layers=3, kernel_size=2,
-    #     dropout_rate=dropout_rate
-    # )
-    # training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
-    # model, history = create_network.train_model(model, training_data, epochs=5)
-    # model.save("Current_model")
+    dropout_rate = 0.1
+    # model = models.load_model("Current_model", custom_objects={"bce_dice": loss_functions.bce_dice})
+    dat_to_training.convert_dat_files([0, 0], image_size=image_size)
+    model = create_network.create_neural_network(
+        activation_function, optimizer, loss_function, image_frames,
+        image_size=image_size, encode_size=5, allow_pooling=True,
+        allow_upsampling=True, max_transpose_layers=3, kernel_size=2,
+        dropout_rate=dropout_rate
+    )
+    training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
+    model, history = create_network.train_model(model, training_data, epochs=2)
+    model.save("Current_model")
     number_of_ensembles = 5
     number_of_samples = 1000
     predictions = ensemble_prediction(

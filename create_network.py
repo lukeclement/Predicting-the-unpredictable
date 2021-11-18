@@ -1,8 +1,10 @@
 import numpy as np
-from tensorflow.keras import layers, models, initializers
+from tensorflow.keras import layers, models, initializers, losses
 import gc
 from tensorflow.keras import backend as k
 from tensorflow.keras.callbacks import Callback
+
+import loss_functions
 
 
 def interpret_model_summary(model):
@@ -118,7 +120,7 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
     # Final adjustments
     model.add(layers.Conv2DTranspose(1, 1, activation='sigmoid', kernel_initializer=initializer))
     print(model.summary(line_length=100))
-    model.compile(optimizer=optimizer, loss=loss, run_eagerly=False)
+    model.compile(optimizer=optimizer, loss=loss, run_eagerly=False, metrics=[loss_functions.bce_dice, losses.BinaryCrossentropy()])
     return model
 
 
