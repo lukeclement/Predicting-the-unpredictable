@@ -180,6 +180,7 @@ def create_inception_net(activation, optimizer, loss, frames=4, size=64, channel
     i = layers.Input(shape=(frames, size, size, channels))
     model = models.Sequential()
     model.add(layers.Conv3D(32, (4, 7, 7), kernel_initializer=initializer, activation=activation, input_shape=(frames, size, size, channels)))
+    model.add(layers.Dropout(0.05))
     model.add(layers.Reshape((58, 58, 32)))
     model.add(layers.MaxPooling2D((3, 3)))
     model.add(layers.BatchNormalization())

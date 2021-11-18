@@ -61,10 +61,10 @@ def main():
     # )
     training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
     print(model.summary())
-    # model, history = create_network.train_model(model, training_data)
-    # model.save("Test_model")
+    # model, history = create_network.train_model(model, training_data, epochs=2)
+    # model.save("Test_model2")
     # """
-    model = models.load_model("Test_model")
+    model = models.load_model("Test_model2", custom_objects={"bce_dice": loss_functions.bce_dice})
 
     preamble = "Simulation_images/Simulation_8/img_"
     start = 20
@@ -82,10 +82,8 @@ def main():
     previous_frame[:, :, 0] = initial[0, image_frames - 1, :, :, 1]
 
     positive_counts, negative_counts = difference_graphing(expected, guess, previous_frame)
-    test_positions = long_term_prediction(model, 8, 500, image_size, timestep, image_frames, 200)
+    test_positions = long_term_prediction(model, 8, 20, image_size, timestep, image_frames, 200)
     write_gif(test_positions, 'test_gif.gif', fps=5)
-
-
     # """
 
 
@@ -119,6 +117,9 @@ def difference_graphing(expected, guess, previous_frame, plotting=True):
         plt.show()
 
         plt.imshow(expected)
+        plt.show()
+
+        plt.imshow(previous_frame)
         plt.show()
 
         plt.imshow(rounded_guess - expected)
