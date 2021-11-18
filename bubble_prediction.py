@@ -9,6 +9,8 @@ import tensorflow as tf
 import pandas as pd
 from time import time
 from array2gif import write_gif
+from numpy.random import default_rng
+import imageio
 
 
 def plot_performance(model, image_frames, image_size, timestep, name):
@@ -217,7 +219,59 @@ def explore_parameter_space(image_frames, image_size, dropout_rate, activation_f
     return parameter_data
 
 
-def long_term_prediction(model, start_sim, start_image, image_size, timestep, frames, number_to_simulate):
+def generate_sample(image, image_size, rng):
+    sample_image = np.zeros((image_size, image_size, 3))
+    random_image = rng.random((image_size, image_size))
+    sample_image[:, :, 1] = np.greater_equal(image[:, :, 1], random_image)
+    sample_image = dat_to_training.generate_rail(sample_image)
+    return sample_image
+
+
+def ensemble_prediction(
+        model, start_sim, start_image, image_size, timestep, frames, number_to_simulate, rng, ensemble_size=5, samples=200):
+    print("Starting ensemble")
+    input_images = np.zeros((ensemble_size, frames, image_size, image_size, 3))
+    for frame in range(0, frames):
+        try:
+            insert_array = np.asarray(
+                    Image.open("Simulation_images/Simulation_{}/img_{}.bmp".format(
+                        start_sim, start_image + frame * timestep
+                    ))
+                ) / 255
+        except IOError as e:
+            print("Error - either invalid simulation number or image out of range!")
+            print(e)
+            return []
+        for s in range(0, ensemble_size):
+            input_images[s, frame, :, :, :] = insert_array
+    predictions = []
+    predictions = np.zeros((number_to_simulate, ensemble_size, image_size, image_size, 3))
+    next_images = np.zeros((ensemble_size, image_size, image_size, 3))
+    for i in range(0, number_to_simulate):
+        print(i)
+        next_images[:, :, :, 1] = model(input_images)[:, :, :, 0]
+        possible_images = np.zeros((ensemble_size*samples, image_size, image_size, 3))
+        print("Generating samples...")
+        for j, image in enumerate(next_images):
+            for s in range(0, samples):
+                possible_images[j*samples + s, :, :, :] = generate_sample(image, image_size, rng)
+        print("Selecting best...")
+        unique_images, frequency = np.unique(possible_images, return_counts=True, axis=0)
+        for s in range(0, ensemble_size):
+            current_best = np.amax(frequency)
+            current_best_index, = np.where(frequency == current_best)
+            next_images[s, :, :, :] = unique_images[current_best_index[0], :, :, :]
+            unique_images = np.delete(unique_images, current_best_index[0], 0)
+            frequency = np.delete(frequency, current_best_index[0], 0)
+        for frame in range(1, frames):
+            input_images[:, frame-1, :, :, :] = input_images[:, frame, :, :, :]
+        input_images[:, frames-1, :, :, :] = next_images
+        predictions[i, :, :, :, :] = next_images
+    return predictions
+
+
+def long_term_prediction(
+        model, start_sim, start_image, image_size, timestep, frames, number_to_simulate, round_result=False):
     input_images = np.zeros((1, frames, image_size, image_size, 3))
     for frame in range(0, frames):
         try:
@@ -235,49 +289,60 @@ def long_term_prediction(model, start_sim, start_image, image_size, timestep, fr
         output_image = np.zeros((image_size, image_size, 3))
         test = model(input_images)
         output_image[:, :, 1] = model(input_images)[0, :, :, 0]
-        output_image = np.around(output_image)
+        if round_result:
+            output_image = np.around(output_image)
         dat_to_training.generate_rail(output_image)
         for frame in range(1, frames):
             input_images[0, frame-1, :, :, :] = input_images[0, frame, :, :, :]
         input_images[0, frames-1, :, :, :] = output_image
-        positions.append(np.rot90(output_image*255))
+        positions.append((output_image*255).astype(np.uint8))
     return positions
 
 
-def generate_gif(images_as_np):
+def make_gif(image, name):
     images = []
-    for picture in images_as_np:
-        images.append(Image.fromarray(np.uint8(picture*255)))
-        plt.imshow(np.uint8(picture*255))
-        plt.show()
-    images[0].save('test_gif.gif', save_all=True, append_images=images[1:], optimize=False)
+    for i in image:
+        images.append(i)
+    imageio.mimsave("{}.gif".format(name), images)
 
 
 def main():
     # activation_function = "LeakyReLU"
     tf.random.set_seed(100)
+    rng = default_rng(100)
     activation_function = layers.LeakyReLU()
     optimizer = "adam"
     loss_function = loss_functions.bce_dice
     # loss_function = losses.BinaryCrossentropy()
     image_frames = 4
-    image_size = 64
+    image_size = 32
     timestep = 5
     dropout_rate = 0.2
-    # model = models.load_model("Current_model", custom_objects={"bce_dice": loss_functions.bce_dice})
-    dat_to_training.convert_dat_files([0, 0], image_size=image_size)
-    model = create_network.create_neural_network(
-        activation_function, optimizer, loss_function, image_frames,
-        image_size=image_size, encode_size=5, allow_pooling=True,
-        allow_upsampling=True, max_transpose_layers=3, kernel_size=2,
-        dropout_rate=dropout_rate
+    model = models.load_model("Current_model", custom_objects={"bce_dice": loss_functions.bce_dice})
+    # dat_to_training.convert_dat_files([0, 0], image_size=image_size)
+    # model = create_network.create_neural_network(
+    #     activation_function, optimizer, loss_function, image_frames,
+    #     image_size=image_size, encode_size=5, allow_pooling=True,
+    #     allow_upsampling=True, max_transpose_layers=3, kernel_size=2,
+    #     dropout_rate=dropout_rate
+    # )
+    # training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
+    # model, history = create_network.train_model(model, training_data, epochs=5)
+    # model.save("Current_model")
+    number_of_ensembles = 5
+    number_of_samples = 1000
+    predictions = ensemble_prediction(
+        model, 29, 400, image_size, timestep, image_frames, 50, rng, number_of_ensembles, number_of_samples
     )
-    training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
-    model, history = create_network.train_model(model, training_data, epochs=5)
-    model.save("Current_model")
+    for a in range(0, number_of_ensembles):
+        predictions_slice = (predictions[:, a, :, :, :] * 255).astype(np.uint8)
+        make_gif(predictions_slice, "samples/{}".format(a))
+
     print(plot_performance(model, image_frames, image_size, timestep, name="Test"))
-    test_positions = long_term_prediction(model, 29, 400, image_size, timestep, image_frames, 200)
-    write_gif(test_positions, 'test_gif.gif', fps=5)
+    test_positions = long_term_prediction(model, 29, 400, image_size, timestep, image_frames, 200, round_result=False)
+    make_gif(test_positions, 'samples/without_rounding')
+    test_positions = long_term_prediction(model, 29, 400, image_size, timestep, image_frames, 200, round_result=True)
+    make_gif(test_positions, 'samples/with_rounding')
 
 
 if __name__ == "__main__":
