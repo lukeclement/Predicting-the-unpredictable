@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import pandas as pd
 from time import time
-from array2gif import write_gif
 from numpy.random import default_rng
 import imageio
 
@@ -315,7 +314,7 @@ def main():
     loss_function = loss_functions.bce_dice
     # loss_function = losses.BinaryCrossentropy()
     image_frames = 4
-    image_size = 32
+    image_size = 64
     timestep = 5
     dropout_rate = 0.1
     # model = models.load_model("Current_model", custom_objects={"bce_dice": loss_functions.bce_dice})
