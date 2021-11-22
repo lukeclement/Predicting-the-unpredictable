@@ -58,7 +58,7 @@ def generate_rail(input_image):
     return input_image
 
 
-def transform_to_numpy_array(x, y, variant, invert, image_size=64):
+def transform_to_numpy_array(x, y, variant, invert, image_size=64, multiply=3, kernel_size=7):
     """Transforms a set of x and y coordinates to a numpy array of size 64x64 by default.
     Inputs:
         x:          A 1d numpy array of x coordinates.
@@ -88,9 +88,9 @@ def transform_to_numpy_array(x, y, variant, invert, image_size=64):
     return output_array
 
 
-def convert_dat_files(variant_range, image_size=64):
-    """Converts all .dat files to numpy arrays, and saves them as .npy files.
-    These .npy files are stored in Simulation_images/Simulation_X, where X is the reference number for the simulation.
+def convert_dat_files(variant_range, image_size=64, multiply=3, kernel_size=7):
+    """Converts all .dat files to numpy arrays, and saves them as .bmp files.
+    These .bmp files are stored in Simulation_images/Simulation_X, where X is the reference number for the simulation.
     These aren't necessarily actual simulations, but can be variants of these 'base' simulations,
     where the physics remains constant.
     Input:
@@ -129,7 +129,9 @@ def convert_dat_files(variant_range, image_size=64):
                     # Finding the actual frame number
                     step_number = int(file[file.find("s_")+2:-4])
                     # Converting to array
-                    resulting_array = transform_to_numpy_array(x, y, variant, inversion, image_size=image_size)
+                    resulting_array = transform_to_numpy_array(
+                        x, y, variant, inversion, image_size=image_size, multiply=multiply, kernel_size=kernel_size
+                    )
                     # Saving to memory
                     image = Image.fromarray(resulting_array)
                     image.save("Simulation_images/Simulation_{}/img_{}.bmp".format(

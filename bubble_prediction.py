@@ -304,7 +304,6 @@ def make_gif(image, name):
         images.append(i)
     imageio.mimsave("{}.gif".format(name), images)
 
-
 def main():
     # activation_function = "LeakyReLU"
     tf.random.set_seed(100)
@@ -313,12 +312,24 @@ def main():
     optimizer = "adam"
     loss_function = loss_functions.bce_dice
     # loss_function = losses.BinaryCrossentropy()
+    # Parameter ranges
+    image_frame_range = [1, 5]
+    image_size_range = [16, 128]
+    timestep_range = [1, 50]
+    dropout_range = [0, 1]
+    encode_range = [1, 20]
+    max_transpose_range = [1, 20]
+    kernel_range = [2, 20]
+    multiply_range = [1, 10]
+    kernel_range_data = [1, 20]
+    epochs = 5
     image_frames = 4
     image_size = 64
     timestep = 5
     dropout_rate = 0.1
     # model = models.load_model("Current_model", custom_objects={"bce_dice": loss_functions.bce_dice})
-    dat_to_training.convert_dat_files([0, 0], image_size=image_size)
+    dat_to_training.convert_dat_files([0, 0], image_size=image_size, multiply=3, kernel_size=7)
+    
     model = create_network.create_neural_network(
         activation_function, optimizer, loss_function, image_frames,
         image_size=image_size, encode_size=5, allow_pooling=True,
