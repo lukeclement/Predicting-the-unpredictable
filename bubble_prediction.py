@@ -334,17 +334,17 @@ def main():
     
     while True:
         selection = rng.random((9))
-    	image_size = int(selection[0]*(image_size_range[1]-image_size_range[0]) + image_size_range[0])
-    	image_frames = int(selection[8]*(image_frame_range[1]-image_frame_range[0]) + image_frame_range[0])
-    	timestep = int(selection[7]*(timestep_range[1]-timestep_range[0]) + timestep_range[0])
-    	dropout_rate = float(selection[6]*(dropout_range[1]-dropout_range[0]) + dropout_range[0])
-    	encode_size = int(selection[5]*(encode_range[1]-encode_range[0]) + encode_range[0])
-    	max_transpose_layers = int(selection[4]*(max_transpose_range[1]-max_transpose_range[0]) + max_transpose_range[0])
-    	kernel_size = int(selection[3]*(kernel_range[1]-kernel_range[0]) + kernel_range[0])
-    	kernel_size_data = int(selection[2]*(kernel_range_data[1]-kernel_range_data[0]) + kernel_range_data[0])
-    	multiply = int(selection[1]*(multiply_range[1]-multiply_range[0]) + multiply_range[0])
-    	
-    	try:
+        image_size = int(selection[0]*(image_size_range[1]-image_size_range[0]) + image_size_range[0])
+        image_frames = int(selection[8]*(image_frame_range[1]-image_frame_range[0]) + image_frame_range[0])
+        timestep = int(selection[7]*(timestep_range[1]-timestep_range[0]) + timestep_range[0])
+        dropout_rate = float(selection[6]*(dropout_range[1]-dropout_range[0]) + dropout_range[0])
+        encode_size = int(selection[5]*(encode_range[1]-encode_range[0]) + encode_range[0])
+        max_transpose_layers = int(selection[4]*(max_transpose_range[1]-max_transpose_range[0]) + max_transpose_range[0])
+        kernel_size = int(selection[3]*(kernel_range[1]-kernel_range[0]) + kernel_range[0])
+        kernel_size_data = int(selection[2]*(kernel_range_data[1]-kernel_range_data[0]) + kernel_range_data[0])
+        multiply = int(selection[1]*(multiply_range[1]-multiply_range[0]) + multiply_range[0])
+        
+        try:
             dat_to_training.convert_dat_files([0, 0], image_size=image_size, multiply=multiply, kernel_size=kernel_size_data)
     
             model = create_network.create_neural_network(
@@ -358,8 +358,8 @@ def main():
             model.save("models/{};{};{};{};{};{};{};{};{}".format(
                 image_size, image_frames, timestep, dropout_rate, encode_size, max_transpose_layers, kernel_size, kernel_size_data, multiply
             ))
-    	except:
-    	    print("Fail!")
+        except:
+            print("Fail!")
     number_of_ensembles = 10
     number_of_samples = 500
     predictions = ensemble_prediction(
