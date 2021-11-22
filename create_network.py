@@ -50,7 +50,6 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
         3, 1, activation=activation, kernel_initializer=initializer,
         input_shape=(input_frames, image_size, image_size, channels)
     ))
-    model.add(layers.Dropout(rate=dropout_rate))
     # Encoding the image
     while current_axis_size > target_axis_size:
         if current_frames > 1:
@@ -82,6 +81,7 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
                 model.add(layers.Conv2D(64, kernel_size, activation=activation, kernel_initializer=initializer))
                 current_axis_size -= (kernel_size - 1)
     # Now decoding the image using transpose operations
+    model.add(layers.Dropout(rate=dropout_rate))
     # model.add(layers.Conv2DTranspose(64, kernel_size, activation=activation))
     # current_axis_size += (kernel_size - 1)
     # Some variables to keep track of in the while loop
@@ -120,7 +120,8 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
     # Final adjustments
     model.add(layers.Conv2DTranspose(1, 1, activation='sigmoid', kernel_initializer=initializer))
     print(model.summary(line_length=100))
-    model.compile(optimizer=optimizer, loss=loss, run_eagerly=False, metrics=[loss_functions.bce_dice, losses.BinaryCrossentropy()])
+    # model.compile(optimizer=optimizer, loss=loss, run_eagerly=False, metrics=[loss_functions.bce_dice, losses.BinaryCrossentropy()])
+    model.compile(optimizer=optimizer, loss=loss, run_eagerly=False)
     return model
 
 

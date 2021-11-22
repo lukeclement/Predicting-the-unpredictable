@@ -319,6 +319,7 @@ def main():
     dropout_rate = 0.1
     # model = models.load_model("Current_model", custom_objects={"bce_dice": loss_functions.bce_dice})
     dat_to_training.convert_dat_files([0, 0], image_size=image_size)
+    exit()
     model = create_network.create_neural_network(
         activation_function, optimizer, loss_function, image_frames,
         image_size=image_size, encode_size=5, allow_pooling=True,
@@ -328,8 +329,8 @@ def main():
     training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
     model, history = create_network.train_model(model, training_data, epochs=2)
     model.save("Current_model")
-    number_of_ensembles = 5
-    number_of_samples = 1000
+    number_of_ensembles = 10
+    number_of_samples = 500
     predictions = ensemble_prediction(
         model, 29, 400, image_size, timestep, image_frames, 50, rng, number_of_ensembles, number_of_samples
     )
@@ -338,9 +339,9 @@ def main():
         make_gif(predictions_slice, "samples/{}".format(a))
 
     print(plot_performance(model, image_frames, image_size, timestep, name="Test"))
-    test_positions = long_term_prediction(model, 29, 400, image_size, timestep, image_frames, 200, round_result=False)
+    test_positions = long_term_prediction(model, 29, 20, image_size, timestep, image_frames, 200, round_result=False)
     make_gif(test_positions, 'samples/without_rounding')
-    test_positions = long_term_prediction(model, 29, 400, image_size, timestep, image_frames, 200, round_result=True)
+    test_positions = long_term_prediction(model, 29, 20, image_size, timestep, image_frames, 200, round_result=True)
     make_gif(test_positions, 'samples/with_rounding')
 
 

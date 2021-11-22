@@ -69,13 +69,15 @@ def transform_to_numpy_array(x, y, variant, invert, image_size=64):
     Output:
         A numpy array of shape (image_size, image_size) with elements 1 or 0 for the bubble edge.
     """
+    multiply = 3
+    kernel_size = 7
     h, x_edge, y_edge = np.histogram2d(
         ((-1)**(not invert))*x, y + variant / (image_size / 2),
-        range=[[-1, 1], [-1, 1]], bins=((image_size+1)*3, (image_size+1)*3)
+        range=[[-1, 1], [-1, 1]], bins=(image_size*multiply + kernel_size - 1, image_size*multiply + kernel_size - 1)
     )
-    kernel = np.ones((6, 6))
+    kernel = np.ones((kernel_size, kernel_size))
     h = convolve2d(h, kernel, mode='valid')
-    h = h[::3, ::3]
+    h = h[::multiply, ::multiply]
     # Preparing memory for the output array, then filling the bubble edge
     output_array = np.zeros((image_size, image_size, 3))
     output_array[:, :, 1] = np.minimum(h, np.zeros((image_size, image_size)) + 1)
