@@ -319,7 +319,6 @@ def main():
     dropout_rate = 0.1
     # model = models.load_model("Current_model", custom_objects={"bce_dice": loss_functions.bce_dice})
     dat_to_training.convert_dat_files([0, 0], image_size=image_size)
-    exit()
     model = create_network.create_neural_network(
         activation_function, optimizer, loss_function, image_frames,
         image_size=image_size, encode_size=5, allow_pooling=True,
