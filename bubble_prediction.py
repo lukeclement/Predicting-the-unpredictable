@@ -323,22 +323,43 @@ def main():
     multiply_range = [1, 10]
     kernel_range_data = [1, 20]
     epochs = 5
+    
+    
+    
     image_frames = 4
     image_size = 64
     timestep = 5
     dropout_rate = 0.1
     # model = models.load_model("Current_model", custom_objects={"bce_dice": loss_functions.bce_dice})
-    dat_to_training.convert_dat_files([0, 0], image_size=image_size, multiply=3, kernel_size=7)
     
-    model = create_network.create_neural_network(
-        activation_function, optimizer, loss_function, image_frames,
-        image_size=image_size, encode_size=5, allow_pooling=True,
-        allow_upsampling=True, max_transpose_layers=3, kernel_size=2,
-        dropout_rate=dropout_rate
-    )
-    training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
-    model, history = create_network.train_model(model, training_data, epochs=2)
-    model.save("Current_model")
+    while True:
+        selection = rng.random((9))
+    	image_size = int(selection[0]*(image_size_range[1]-image_size_range[0]) + image_size_range[0])
+    	image_frames = int(selection[8]*(image_frame_range[1]-image_frame_range[0]) + image_frame_range[0])
+    	timestep = int(selection[7]*(timestep_range[1]-timestep_range[0]) + timestep_range[0])
+    	dropout_rate = float(selection[6]*(dropout_range[1]-dropout_range[0]) + dropout_range[0])
+    	encode_size = int(selection[5]*(encode_range[1]-encode_range[0]) + encode_range[0])
+    	max_transpose_layers = int(selection[4]*(max_transpose_range[1]-max_transpose_range[0]) + max_transpose_range[0])
+    	kernel_size = int(selection[3]*(kernel_range[1]-kernel_range[0]) + kernel_range[0])
+    	kernel_size_data = int(selection[2]*(kernel_range_data[1]-kernel_range_data[0]) + kernel_range_data[0])
+    	multiply = int(selection[1]*(multiply_range[1]-multiply_range[0]) + multiply_range[0])
+    	
+    	try:
+            dat_to_training.convert_dat_files([0, 0], image_size=image_size, multiply=multiply, kernel_size=kernel_size_data)
+    
+            model = create_network.create_neural_network(
+                activation_function, optimizer, loss_function, image_frames,
+                image_size=image_size, encode_size=encode_size, allow_pooling=True,
+                allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
+                dropout_rate=dropout_rate
+            )
+            training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
+            model, history = create_network.train_model(model, training_data, epochs=epochs)
+            model.save("models/{};{};{};{};{};{};{};{};{}".format(
+                image_size, image_frames, timestep, dropout_rate, encode_size, max_transpose_layers, kernel_size, kernel_size_data, multiply
+            ))
+    	except:
+    	    print("Fail!")
     number_of_ensembles = 10
     number_of_samples = 500
     predictions = ensemble_prediction(

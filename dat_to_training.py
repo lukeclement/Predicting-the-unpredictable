@@ -69,8 +69,6 @@ def transform_to_numpy_array(x, y, variant, invert, image_size=64, multiply=3, k
     Output:
         A numpy array of shape (image_size, image_size) with elements 1 or 0 for the bubble edge.
     """
-    multiply = 3
-    kernel_size = 7
     h, x_edge, y_edge = np.histogram2d(
         ((-1)**(not invert))*x, y + variant / (image_size / 2),
         range=[[-1, 1], [-1, 1]], bins=(image_size*multiply + kernel_size - 1, image_size*multiply + kernel_size - 1)
