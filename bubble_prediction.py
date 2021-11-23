@@ -296,15 +296,16 @@ def long_term_prediction(
             output_image = np.zeros((frames, image_size, image_size, 3))
             output_image[:, :, :, 1] = model(input_images)[0, :, :, :, 0]
             for frame in range(0, frames):
-                if round_result:
-                    output_image[frame] = np.around(output_image[frame])
                 dat_to_training.generate_rail(output_image[frame])
             future_frames[i%frames] = output_image
             for frame in range(0, min(i+1, frames)):
                 averaging_arrays[frame, :, :, :] = future_frames[frame, (i-frame)%frames, :, :, :]
             for frame in range(1, frames):
                 input_images[0, frame-1, :, :, :] = input_images[0, frame, :, :, :]
-            input_images[0, frames-1, :, :, :] = np.average(averaging_arrays, axis=0)
+            if round_result:
+            	input_images[0, frames-1, :, :, :] = np.around(np.average(averaging_arrays, axis=0))
+            else:
+            	input_images[0, frames-1, :, :, :] = np.average(averaging_arrays, axis=0)
             positions.append((input_images[0, frames-1, :, :, :]*255).astype(np.uint8))
         else:
             output_image = np.zeros((frames, image_size, image_size, 3))
@@ -345,10 +346,10 @@ def main():
     kernel_range = [2, 20]
     multiply_range = [1, 4]
     kernel_range_data = [1, 15]
-    epochs = 5
+    epochs = 20
 
     image_frames = 4
-    image_size = 64
+    image_size = 45
     timestep = 5
     dropout_rate = 0.1
     encode_size = 2
@@ -356,8 +357,9 @@ def main():
     kernel_size = 3
     multiply = 3
     kernel_size_data = 7
+    #model = models.load_model("models/Special")
     try:
-        # dat_to_training.convert_dat_files([0, 0], image_size=image_size, multiply=multiply, kernel_size=kernel_size_data)
+        dat_to_training.convert_dat_files([0, 0], image_size=image_size, multiply=multiply, kernel_size=kernel_size_data)
 
         model = create_network.create_neural_network(
             activation_function, optimizer, loss_function, image_frames,
@@ -413,10 +415,14 @@ def main():
     axes["K"].imshow(expected_images[0, 2, :, :, :])
     axes["L"].imshow(expected_images[0, 3, :, :, :])
     plt.savefig("Hey_look_at_me.png", dpi=500)
-    testing = long_term_prediction(model, 8, 20, image_size, timestep, image_frames, 200, round_result=False, extra=True)
+    testing = long_term_prediction(model, 3, 20, image_size, timestep, image_frames, 200, round_result=False, extra=True)
     make_gif(testing, 'samples/without_rounding_with_extras')
-    testing = long_term_prediction(model, 8, 20, image_size, timestep, image_frames, 200, round_result=False, extra=False)
+    testing = long_term_prediction(model, 3, 20, image_size, timestep, image_frames, 200, round_result=False, extra=False)
     make_gif(testing, 'samples/without_rounding_without_extras')
+    testing = long_term_prediction(model, 3, 20, image_size, timestep, image_frames, 200, round_result=True, extra=True)
+    make_gif(testing, 'samples/with_rounding_with_extras')
+    testing = long_term_prediction(model, 3, 20, image_size, timestep, image_frames, 200, round_result=True, extra=False)
+    make_gif(testing, 'samples/with_rounding_without_extras')
 
 
     # number_of_ensembles = 10
