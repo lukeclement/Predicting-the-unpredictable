@@ -323,31 +323,19 @@ def main():
     kernel_range = [2, 20]
     multiply_range = [1, 4]
     kernel_range_data = [1, 15]
-    epochs = 5
+    epochs = 1
 
     image_frames = 4
     image_size = 64
     timestep = 5
     dropout_rate = 0.1
-    # model = models.load_model("Current_model", custom_objects={"bce_dice": loss_functions.bce_dice})
-
-    # selection = rng.random((9))
-    # image_size = int(selection[0]*(image_size_range[1]-image_size_range[0]) + image_size_range[0])
-    # image_frames = int(selection[8]*(image_frame_range[1]-image_frame_range[0]) + image_frame_range[0])
-    # timestep = int(selection[7]*(timestep_range[1]-timestep_range[0]) + timestep_range[0])
-    # dropout_rate = float(selection[6]*(dropout_range[1]-dropout_range[0]) + dropout_range[0])
-    # encode_size = int(selection[5]*(encode_range[1]-encode_range[0]) + encode_range[0])
-    # max_transpose_layers = int(selection[4]*(max_transpose_range[1]-max_transpose_range[0]) + max_transpose_range[0])
-    # kernel_size = int(selection[3]*(kernel_range[1]-kernel_range[0]) + kernel_range[0])
-    # kernel_size_data = int(selection[2]*(kernel_range_data[1]-kernel_range_data[0]) + kernel_range_data[0])
-    # multiply = int(selection[1]*(multiply_range[1]-multiply_range[0]) + multiply_range[0])
-    # dropout_rate = 0
-    # image_size = 64
-    # print("models/{};{};{};{:};{};{};{};{};{}".format(
-    #         image_size, image_frames, timestep, int(dropout_rate*100), encode_size, max_transpose_layers, kernel_size, kernel_size_data, multiply
-    #     ))
+    encode_size = 5
+    max_transpose_layers = 7
+    kernel_size = 4
+    multiply = 3
+    kernel_size_data = 7
     try:
-        dat_to_training.convert_dat_files([0, 0], image_size=image_size, multiply=multiply, kernel_size=kernel_size_data)
+        # dat_to_training.convert_dat_files([0, 0], image_size=image_size, multiply=multiply, kernel_size=kernel_size_data)
 
         model = create_network.create_neural_network(
             activation_function, optimizer, loss_function, image_frames,
@@ -357,25 +345,67 @@ def main():
         )
         training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
         model, history = create_network.train_model(model, training_data, epochs=epochs)
-        model.save("models/{};{};{};{};{};{};{};{};{}(bce)".format(
-            image_size, image_frames, timestep, int(dropout_rate*100), encode_size, max_transpose_layers, kernel_size, kernel_size_data, multiply
-        ))
-    except:
+        model.save("models/Special")
+    except Exception as e:
         print("Fail!")
-    number_of_ensembles = 10
-    number_of_samples = 500
-    predictions = ensemble_prediction(
-        model, 29, 400, image_size, timestep, image_frames, 50, rng, number_of_ensembles, number_of_samples
+        print(e)
+    output_images = np.zeros((1, image_frames, image_size, image_size, 1))
+    input_images = np.zeros((1, image_frames, image_size, image_size, 3))
+    expected_images = np.zeros((1, image_frames, image_size, image_size, 1))
+    for frame in range(0, image_frames):
+        try:
+            input_images[0, frame, :, :, :] = np.asarray(
+                Image.open("Simulation_images/Simulation_{}/img_{}.bmp".format(
+                    2, 20 + frame * timestep
+                ))
+            ) / 255
+            expected_images[0, frame, :, :, 0] = np.asarray(
+                Image.open("Simulation_images/Simulation_{}/img_{}.bmp".format(
+                    2, 20 + (frame + image_frames) * timestep
+                ))
+            )[:, :, 1] / 255
+        except IOError as e:
+            print("Error - either invalid simulation number or image out of range!")
+            print(e)
+    output_images = model(input_images)
+    axes = plt.figure(constrained_layout=True).subplot_mosaic(
+        """
+        ABCD
+        EFGH
+        IJKL
+        """
     )
-    for a in range(0, number_of_ensembles):
-        predictions_slice = (predictions[:, a, :, :, :] * 255).astype(np.uint8)
-        make_gif(predictions_slice, "samples/{}".format(a))
+    # Input
+    axes["A"].imshow(input_images[0, 0, :, :, :])
+    axes["B"].imshow(input_images[0, 1, :, :, :])
+    axes["C"].imshow(input_images[0, 2, :, :, :])
+    axes["D"].imshow(input_images[0, 3, :, :, :])
+    # Prediction
+    axes["E"].imshow(output_images[0, 0, :, :, :])
+    axes["F"].imshow(output_images[0, 1, :, :, :])
+    axes["G"].imshow(output_images[0, 2, :, :, :])
+    axes["H"].imshow(output_images[0, 3, :, :, :])
+    # Actual
+    axes["I"].imshow(expected_images[0, 0, :, :, :])
+    axes["J"].imshow(expected_images[0, 1, :, :, :])
+    axes["K"].imshow(expected_images[0, 2, :, :, :])
+    axes["L"].imshow(expected_images[0, 3, :, :, :])
+    plt.savefig("Hey_look_at_me.png", dpi=500)
 
-    print(plot_performance(model, image_frames, image_size, timestep, name="Test"))
-    test_positions = long_term_prediction(model, 8, 20, image_size, timestep, image_frames, 200, round_result=False)
-    make_gif(test_positions, 'samples/without_rounding')
-    test_positions = long_term_prediction(model, 8, 20, image_size, timestep, image_frames, 200, round_result=True)
-    make_gif(test_positions, 'samples/with_rounding')
+    # number_of_ensembles = 10
+    # number_of_samples = 500
+    # predictions = ensemble_prediction(
+    #     model, 29, 400, image_size, timestep, image_frames, 50, rng, number_of_ensembles, number_of_samples
+    # )
+    # for a in range(0, number_of_ensembles):
+    #     predictions_slice = (predictions[:, a, :, :, :] * 255).astype(np.uint8)
+    #     make_gif(predictions_slice, "samples/{}".format(a))
+
+    # print(plot_performance(model, image_frames, image_size, timestep, name="Test"))
+    # test_positions = long_term_prediction(model, 8, 20, image_size, timestep, image_frames, 200, round_result=False)
+    # make_gif(test_positions, 'samples/without_rounding')
+    # test_positions = long_term_prediction(model, 8, 20, image_size, timestep, image_frames, 200, round_result=True)
+    # make_gif(test_positions, 'samples/with_rounding')
 
 
 if __name__ == "__main__":

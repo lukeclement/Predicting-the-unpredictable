@@ -148,11 +148,11 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
     print(len(simulation_names))
     total = 0
     sub_total = 0
-    for simulation in simulation_names[:]:
+    for simulation in simulation_names[:1]:
         files = glob.glob("{}/*".format(simulation))
         number_of_files = len(files)
         sub_total += len(files)
-        for i in range(3, number_of_files-timestep*frames):
+        for i in range(3, number_of_files-timestep*frames*2):
             total += 1
             data_sources.append("{}/img_{}.bmp".format(simulation, i))
             refs.append([simulation, i])
@@ -161,13 +161,13 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
         int(np.floor(len(data_sources)*(1-validation_split))), frames, image_size, image_size, 3
     ), dtype="float16")
     answers_array = np.zeros((
-        int(np.floor(len(data_sources)*(1-validation_split))), image_size, image_size, 1
+        int(np.floor(len(data_sources)*(1-validation_split))), frames, image_size, image_size, 1
     ), dtype="float16")
     questions_array_valid = np.zeros((
         int(np.ceil(len(data_sources)*validation_split)), frames, image_size, image_size, 3
     ), dtype="float16")
     answers_array_valid = np.zeros((
-        int(np.ceil(len(data_sources)*validation_split)), image_size, image_size, 1
+        int(np.ceil(len(data_sources)*validation_split)), frames, image_size, image_size, 1
     ), dtype="float16")
     print("Running...")
     print(np.shape(questions_array))
@@ -178,17 +178,19 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
                 questions_array[index-1*int(np.floor(index*validation_split) + 1), int(frame / timestep), :, :, :] = np.asarray(
                     Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
                 ) / 255
-            answers_array[index-1*int(np.floor(index*validation_split) + 1), :, :, 0] = np.asarray(
-                Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + timestep * frames))
-            )[:, :, 1] / 255
+            for frame in range(frames*timestep, frames * timestep * 2, timestep):
+                answers_array[index-1*int(np.floor(index*validation_split) + 1), :, :, :, 0] = np.asarray(
+                    Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
+                )[:, :, 1] / 255
         else:
             for frame in range(0, frames * timestep, timestep):
                 questions_array_valid[int(index*validation_split), int(frame / timestep), :, :, :] = np.asarray(
                     Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
                 ) / 255
-            answers_array_valid[int(index*validation_split), :, :, 0] = np.asarray(
-                Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + timestep * frames))
-            )[:, :, 1] / 255
+            for frame in range(frames*timestep, frames * timestep * 2, timestep):
+                answers_array_valid[int(index*validation_split), :, :, :, 0] = np.asarray(
+                    Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
+                )[:, :, 1] / 255
 
     print("Converting to datasets...")
     batch_size = 8
