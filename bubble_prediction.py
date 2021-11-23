@@ -307,21 +307,21 @@ def make_gif(image, name):
 def main():
     # activation_function = "LeakyReLU"
     tf.random.set_seed(100)
-    rng = default_rng(100)
+    rng = default_rng(200)
     activation_function = layers.LeakyReLU()
     optimizer = "adam"
-    loss_function = loss_functions.bce_dice
-    # loss_function = losses.BinaryCrossentropy()
+    # loss_function = loss_functions.bce_dice
+    loss_function = losses.BinaryCrossentropy()
     # Parameter ranges
     image_frame_range = [1, 5]
-    image_size_range = [16, 128]
-    timestep_range = [1, 50]
-    dropout_range = [0, 1]
+    image_size_range = [50, 70]
+    timestep_range = [1, 20]
+    dropout_range = [0, 0.5]
     encode_range = [1, 20]
-    max_transpose_range = [1, 20]
+    max_transpose_range = [1, 5]
     kernel_range = [2, 20]
-    multiply_range = [1, 10]
-    kernel_range_data = [1, 20]
+    multiply_range = [1, 4]
+    kernel_range_data = [1, 15]
     epochs = 5
     
     
@@ -343,6 +343,11 @@ def main():
         kernel_size = int(selection[3]*(kernel_range[1]-kernel_range[0]) + kernel_range[0])
         kernel_size_data = int(selection[2]*(kernel_range_data[1]-kernel_range_data[0]) + kernel_range_data[0])
         multiply = int(selection[1]*(multiply_range[1]-multiply_range[0]) + multiply_range[0])
+        dropout_rate = 0
+        image_size = 64
+        print("models/{};{};{};{:};{};{};{};{};{}".format(
+                image_size, image_frames, timestep, int(dropout_rate*100), encode_size, max_transpose_layers, kernel_size, kernel_size_data, multiply
+            ))
         
         try:
             dat_to_training.convert_dat_files([0, 0], image_size=image_size, multiply=multiply, kernel_size=kernel_size_data)
@@ -355,8 +360,8 @@ def main():
             )
             training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
             model, history = create_network.train_model(model, training_data, epochs=epochs)
-            model.save("models/{};{};{};{};{};{};{};{};{}".format(
-                image_size, image_frames, timestep, dropout_rate, encode_size, max_transpose_layers, kernel_size, kernel_size_data, multiply
+            model.save("models/{};{};{};{};{};{};{};{};{}(bce)".format(
+                image_size, image_frames, timestep, int(dropout_rate*100), encode_size, max_transpose_layers, kernel_size, kernel_size_data, multiply
             ))
         except:
             print("Fail!")
