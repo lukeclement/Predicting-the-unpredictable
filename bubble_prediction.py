@@ -304,6 +304,7 @@ def make_gif(image, name):
         images.append(i)
     imageio.mimsave("{}.gif".format(name), images)
 
+
 def main():
     # activation_function = "LeakyReLU"
     tf.random.set_seed(100)
@@ -323,48 +324,44 @@ def main():
     multiply_range = [1, 4]
     kernel_range_data = [1, 15]
     epochs = 5
-    
-    
-    
+
     image_frames = 4
     image_size = 64
     timestep = 5
     dropout_rate = 0.1
     # model = models.load_model("Current_model", custom_objects={"bce_dice": loss_functions.bce_dice})
-    
-    while True:
-        selection = rng.random((9))
-        image_size = int(selection[0]*(image_size_range[1]-image_size_range[0]) + image_size_range[0])
-        image_frames = int(selection[8]*(image_frame_range[1]-image_frame_range[0]) + image_frame_range[0])
-        timestep = int(selection[7]*(timestep_range[1]-timestep_range[0]) + timestep_range[0])
-        dropout_rate = float(selection[6]*(dropout_range[1]-dropout_range[0]) + dropout_range[0])
-        encode_size = int(selection[5]*(encode_range[1]-encode_range[0]) + encode_range[0])
-        max_transpose_layers = int(selection[4]*(max_transpose_range[1]-max_transpose_range[0]) + max_transpose_range[0])
-        kernel_size = int(selection[3]*(kernel_range[1]-kernel_range[0]) + kernel_range[0])
-        kernel_size_data = int(selection[2]*(kernel_range_data[1]-kernel_range_data[0]) + kernel_range_data[0])
-        multiply = int(selection[1]*(multiply_range[1]-multiply_range[0]) + multiply_range[0])
-        dropout_rate = 0
-        image_size = 64
-        print("models/{};{};{};{:};{};{};{};{};{}".format(
-                image_size, image_frames, timestep, int(dropout_rate*100), encode_size, max_transpose_layers, kernel_size, kernel_size_data, multiply
-            ))
-        
-        try:
-            dat_to_training.convert_dat_files([0, 0], image_size=image_size, multiply=multiply, kernel_size=kernel_size_data)
-    
-            model = create_network.create_neural_network(
-                activation_function, optimizer, loss_function, image_frames,
-                image_size=image_size, encode_size=encode_size, allow_pooling=True,
-                allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
-                dropout_rate=dropout_rate
-            )
-            training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
-            model, history = create_network.train_model(model, training_data, epochs=epochs)
-            model.save("models/{};{};{};{};{};{};{};{};{}(bce)".format(
-                image_size, image_frames, timestep, int(dropout_rate*100), encode_size, max_transpose_layers, kernel_size, kernel_size_data, multiply
-            ))
-        except:
-            print("Fail!")
+
+    # selection = rng.random((9))
+    # image_size = int(selection[0]*(image_size_range[1]-image_size_range[0]) + image_size_range[0])
+    # image_frames = int(selection[8]*(image_frame_range[1]-image_frame_range[0]) + image_frame_range[0])
+    # timestep = int(selection[7]*(timestep_range[1]-timestep_range[0]) + timestep_range[0])
+    # dropout_rate = float(selection[6]*(dropout_range[1]-dropout_range[0]) + dropout_range[0])
+    # encode_size = int(selection[5]*(encode_range[1]-encode_range[0]) + encode_range[0])
+    # max_transpose_layers = int(selection[4]*(max_transpose_range[1]-max_transpose_range[0]) + max_transpose_range[0])
+    # kernel_size = int(selection[3]*(kernel_range[1]-kernel_range[0]) + kernel_range[0])
+    # kernel_size_data = int(selection[2]*(kernel_range_data[1]-kernel_range_data[0]) + kernel_range_data[0])
+    # multiply = int(selection[1]*(multiply_range[1]-multiply_range[0]) + multiply_range[0])
+    # dropout_rate = 0
+    # image_size = 64
+    # print("models/{};{};{};{:};{};{};{};{};{}".format(
+    #         image_size, image_frames, timestep, int(dropout_rate*100), encode_size, max_transpose_layers, kernel_size, kernel_size_data, multiply
+    #     ))
+    try:
+        dat_to_training.convert_dat_files([0, 0], image_size=image_size, multiply=multiply, kernel_size=kernel_size_data)
+
+        model = create_network.create_neural_network(
+            activation_function, optimizer, loss_function, image_frames,
+            image_size=image_size, encode_size=encode_size, allow_pooling=True,
+            allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
+            dropout_rate=dropout_rate
+        )
+        training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
+        model, history = create_network.train_model(model, training_data, epochs=epochs)
+        model.save("models/{};{};{};{};{};{};{};{};{}(bce)".format(
+            image_size, image_frames, timestep, int(dropout_rate*100), encode_size, max_transpose_layers, kernel_size, kernel_size_data, multiply
+        ))
+    except:
+        print("Fail!")
     number_of_ensembles = 10
     number_of_samples = 500
     predictions = ensemble_prediction(
@@ -375,9 +372,9 @@ def main():
         make_gif(predictions_slice, "samples/{}".format(a))
 
     print(plot_performance(model, image_frames, image_size, timestep, name="Test"))
-    test_positions = long_term_prediction(model, 29, 20, image_size, timestep, image_frames, 200, round_result=False)
+    test_positions = long_term_prediction(model, 8, 20, image_size, timestep, image_frames, 200, round_result=False)
     make_gif(test_positions, 'samples/without_rounding')
-    test_positions = long_term_prediction(model, 29, 20, image_size, timestep, image_frames, 200, round_result=True)
+    test_positions = long_term_prediction(model, 8, 20, image_size, timestep, image_frames, 200, round_result=True)
     make_gif(test_positions, 'samples/with_rounding')
 
 
