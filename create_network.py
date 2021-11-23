@@ -57,17 +57,17 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
             current_axis_size = np.floor(current_axis_size / 2)
         if current_axis_size - (kernel_size - 1) < target_axis_size:
             if current_frames > 1:
-                model.add(layers.Conv3D(64, (2, 2, 2), activation=activation, kernel_initializer=initializer))
+                model.add(layers.Conv3D(32, (2, 2, 2), activation=activation, kernel_initializer=initializer))
                 current_axis_size -= 1
                 current_frames -= 1
             else:
-                model.add(layers.Conv3D(64, (1, 2, 2), activation=activation, kernel_initializer=initializer))
+                model.add(layers.Conv3D(32, (1, 2, 2), activation=activation, kernel_initializer=initializer))
                 current_axis_size -= 1
         else:
-            model.add(layers.Conv3D(64, (1, kernel_size, kernel_size), activation=activation, kernel_initializer=initializer))
+            model.add(layers.Conv3D(32, (1, kernel_size, kernel_size), activation=activation, kernel_initializer=initializer))
             current_axis_size -= (kernel_size - 1)
     while current_frames > 1:
-        model.add(layers.Conv3D(64, (2, 1, 1), activation=activation, kernel_initializer=initializer))
+        model.add(layers.Conv3D(32, (2, 1, 1), activation=activation, kernel_initializer=initializer))
         current_frames -= 1
     # Now decoding the image using transpose operations
     # model.add(layers.Dropout(rate=dropout_rate))
@@ -99,18 +99,18 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
                 current_axis_size += 1
             elif current_axis_size + kernel_size - 1 + leap_correction > image_size:
                 # Within a few jumps of full size
-                model.add(layers.Conv3DTranspose(64, (1, kernel_size, kernel_size),
+                model.add(layers.Conv3DTranspose(32, (1, kernel_size, kernel_size),
                                                  activation=activation, kernel_initializer=initializer))
                 current_axis_size += kernel_size - 1
             else:
                 # Full size far away but too close for upsampling
                 model.add(layers.Conv3DTranspose(
-                    64, (1, kernel_size + leap_correction, kernel_size + leap_correction),
+                    32, (1, kernel_size + leap_correction, kernel_size + leap_correction),
                     activation=activation, kernel_initializer=initializer
                 ))
                 current_axis_size += kernel_size - 1 + leap_correction
         else:
-            model.add(layers.Conv3DTranspose(64, (2, kernel_size, kernel_size),
+            model.add(layers.Conv3DTranspose(32, (2, kernel_size, kernel_size),
                                              activation=activation, kernel_initializer=initializer))
             current_axis_size += kernel_size - 1
             current_frames += 1

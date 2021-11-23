@@ -148,7 +148,7 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
     print(len(simulation_names))
     total = 0
     sub_total = 0
-    for simulation in simulation_names[:1]:
+    for simulation in simulation_names[:3]:
         files = glob.glob("{}/*".format(simulation))
         number_of_files = len(files)
         sub_total += len(files)
@@ -178,8 +178,8 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
                 questions_array[index-1*int(np.floor(index*validation_split) + 1), int(frame / timestep), :, :, :] = np.asarray(
                     Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
                 ) / 255
-            for frame in range(frames*timestep, frames * timestep * 2, timestep):
-                answers_array[index-1*int(np.floor(index*validation_split) + 1), :, :, :, 0] = np.asarray(
+            for frame in range(frames * timestep, frames * timestep * 2, timestep):
+                answers_array[index-1*int(np.floor(index*validation_split) + 1), int(frame / timestep) - frames, :, :, 0] = np.asarray(
                     Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
                 )[:, :, 1] / 255
         else:
@@ -187,8 +187,8 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
                 questions_array_valid[int(index*validation_split), int(frame / timestep), :, :, :] = np.asarray(
                     Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
                 ) / 255
-            for frame in range(frames*timestep, frames * timestep * 2, timestep):
-                answers_array_valid[int(index*validation_split), :, :, :, 0] = np.asarray(
+            for frame in range(frames * timestep, frames * timestep * 2, timestep):
+                answers_array_valid[int(index*validation_split), int(frame / timestep) - frames, :, :, 0] = np.asarray(
                     Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
                 )[:, :, 1] / 255
 

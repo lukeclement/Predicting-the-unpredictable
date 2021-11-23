@@ -271,7 +271,7 @@ def ensemble_prediction(
 
 
 def long_term_prediction(
-        model, start_sim, start_image, image_size, timestep, frames, number_to_simulate, round_result=False):
+        model, start_sim, start_image, image_size, timestep, frames, number_to_simulate, round_result=False, extra=True):
     input_images = np.zeros((1, frames, image_size, image_size, 3))
     for frame in range(0, frames):
         try:
@@ -285,16 +285,38 @@ def long_term_prediction(
             print(e)
             return []
     positions = []
+
+    future_frames = np.zeros((frames, frames, image_size, image_size, 3))
     for i in range(0, number_to_simulate):
-        output_image = np.zeros((image_size, image_size, 3))
-        output_image[:, :, 1] = model(input_images)[0, :, :, 0]
-        if round_result:
-            output_image = np.around(output_image)
-        dat_to_training.generate_rail(output_image)
-        for frame in range(1, frames):
-            input_images[0, frame-1, :, :, :] = input_images[0, frame, :, :, :]
-        input_images[0, frames-1, :, :, :] = output_image
-        positions.append((output_image*255).astype(np.uint8))
+        if extra:
+            if i < frames:
+                averaging_arrays = np.zeros((i+1, image_size, image_size, 3))
+            else:
+                averaging_arrays = np.zeros((frames, image_size, image_size, 3))
+            output_image = np.zeros((frames, image_size, image_size, 3))
+            output_image[:, :, :, 1] = model(input_images)[0, :, :, :, 0]
+            for frame in range(0, frames):
+                if round_result:
+                    output_image[frame] = np.around(output_image[frame])
+                dat_to_training.generate_rail(output_image[frame])
+            future_frames[i%frames] = output_image
+            for frame in range(0, min(i+1, frames)):
+                averaging_arrays[frame, :, :, :] = future_frames[frame, (i-frame)%frames, :, :, :]
+            for frame in range(1, frames):
+                input_images[0, frame-1, :, :, :] = input_images[0, frame, :, :, :]
+            input_images[0, frames-1, :, :, :] = np.average(averaging_arrays, axis=0)
+            positions.append((input_images[0, frames-1, :, :, :]*255).astype(np.uint8))
+        else:
+            output_image = np.zeros((frames, image_size, image_size, 3))
+            output_image[:, :, :, 1] = model(input_images)[0, :, :, :, 0]
+            for frame in range(0, frames):
+                if round_result:
+                    output_image[frame] = np.around(output_image[frame])
+                dat_to_training.generate_rail(output_image[frame])
+            for frame in range(1, frames):
+                input_images[0, frame-1, :, :, :] = input_images[0, frame, :, :, :]
+            input_images[0, frames-1, :, :, :] = output_image[0]
+            positions.append((input_images[0, frames-1, :, :, :]*255).astype(np.uint8))
     return positions
 
 
@@ -311,8 +333,8 @@ def main():
     rng = default_rng(200)
     activation_function = layers.LeakyReLU()
     optimizer = "adam"
-    # loss_function = loss_functions.bce_dice
-    loss_function = losses.BinaryCrossentropy()
+    loss_function = loss_functions.bce_dice
+    # loss_function = losses.BinaryCrossentropy()
     # Parameter ranges
     image_frame_range = [1, 5]
     image_size_range = [50, 70]
@@ -323,15 +345,15 @@ def main():
     kernel_range = [2, 20]
     multiply_range = [1, 4]
     kernel_range_data = [1, 15]
-    epochs = 1
+    epochs = 5
 
     image_frames = 4
     image_size = 64
     timestep = 5
     dropout_rate = 0.1
-    encode_size = 5
+    encode_size = 2
     max_transpose_layers = 7
-    kernel_size = 4
+    kernel_size = 3
     multiply = 3
     kernel_size_data = 7
     try:
@@ -356,12 +378,12 @@ def main():
         try:
             input_images[0, frame, :, :, :] = np.asarray(
                 Image.open("Simulation_images/Simulation_{}/img_{}.bmp".format(
-                    2, 20 + frame * timestep
+                    8, 20 + frame * timestep
                 ))
             ) / 255
             expected_images[0, frame, :, :, 0] = np.asarray(
                 Image.open("Simulation_images/Simulation_{}/img_{}.bmp".format(
-                    2, 20 + (frame + image_frames) * timestep
+                    8, 20 + (frame + image_frames) * timestep
                 ))
             )[:, :, 1] / 255
         except IOError as e:
@@ -391,6 +413,11 @@ def main():
     axes["K"].imshow(expected_images[0, 2, :, :, :])
     axes["L"].imshow(expected_images[0, 3, :, :, :])
     plt.savefig("Hey_look_at_me.png", dpi=500)
+    testing = long_term_prediction(model, 8, 20, image_size, timestep, image_frames, 200, round_result=False, extra=True)
+    make_gif(testing, 'samples/without_rounding_with_extras')
+    testing = long_term_prediction(model, 8, 20, image_size, timestep, image_frames, 200, round_result=False, extra=False)
+    make_gif(testing, 'samples/without_rounding_without_extras')
+
 
     # number_of_ensembles = 10
     # number_of_samples = 500
