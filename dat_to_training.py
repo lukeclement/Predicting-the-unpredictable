@@ -143,7 +143,7 @@ def create_multiframe_data(leading_steps, loss_steps, timestep, validation_split
     print(simulation_names)
     data_sources = []
     refs = []
-    for simulation in simulation_names[:1]:
+    for simulation in simulation_names[:]:
         files = glob.glob("{}/*".format(simulation))
         number_of_files = len(files)
         for i in range(5, number_of_files - timestep * (leading_steps + loss_steps)):
@@ -177,7 +177,8 @@ def create_multiframe_data(leading_steps, loss_steps, timestep, validation_split
             ) / 255
             answers_array[index, int(frame / timestep), :, :, :] = answer
     print("Saving...")
-    return [questions_array, answers_array]
+    questions_array = tf.data.Dataset.from_tensor_slices((questions_array, answers_array)).batch(32).prefetch(buffer_size=1000)
+    return questions_array
 
 
 def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
