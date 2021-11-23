@@ -1,6 +1,8 @@
 import numpy as np
 import loss_functions
-from tensorflow.keras import layers, models, Model, initializers, activations
+import dat_to_training
+from keras.engine import data_adapter
+from tensorflow.keras import layers, models, Model, initializers, activations, losses, metrics
 import tensorflow as tf
 
 
@@ -143,6 +145,84 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
     model.compile(optimizer=optimizer, loss=loss)
     return model
 
+
+class CustomModel(Model):
+    custom_steps = 4
+    loss_tracker = metrics.Mean(name="loss")
+    bce_metric = metrics.BinaryCrossentropy(name="BCE")
+
+    def __init__(self, model):
+        super(CustomModel, self).__init__()
+        self.input_model = model
+
+    def call(self, inputs, training=None, mask=None):
+        return self.input_model(inputs)
+
+    def train_step(self, data):
+        x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
+        xold = x
+        with tf.GradientTape() as tape:
+            y_pred = self(x, training=True)
+            y_true = y[:, 0, :, :, 1:2]
+            loss = losses.binary_crossentropy(y_true, y_pred)
+            rail = y[:, 0, :, :, ::2]
+            y_pred = tf.concat([y_pred, rail], 3)
+            y_pred = tf.reshape(y_pred, shape=(tf.shape(y_pred)[0], 1, 64, 64, 3))
+            x = x[:, 1:, :, :, :]
+            x = tf.concat([x, y_pred], 1)
+            if self.custom_steps > 1:
+                for i in range(0, self.custom_steps-1):
+                    y_pred = self(x, training=True)
+                    y_true = y[:, i+1, :, :, 1:2]
+                    loss = tf.math.add(loss, losses.binary_crossentropy(y_true, y_pred))
+                    y_pred = tf.concat([y_pred, rail], 3)
+                    y_pred = tf.reshape(y_pred, shape=(tf.shape(y_pred)[0], 1, 64, 64, 3))
+                    x = x[:, 1:, :, :, :]
+                    x = tf.concat([x, y_pred], 1)
+
+        # Run backwards pass.
+        self.optimizer.minimize(loss, self.trainable_variables, tape=tape)
+        # Collect metrics to return
+        y_pred = self(xold, training=False)
+        self.loss_tracker.update_state(loss)
+        self.bce_metric.update_state(y[:, 0, :, :, 1:2], y_pred)
+        loss_result = self.loss_tracker.result()
+        bce_result = self.bce_metric.result()
+        self.loss_tracker.reset_state()
+        self.bce_metric.reset_state()
+        return {"loss": loss_result, "BCE": bce_result}
+
+    def test_step(self, data):
+        x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
+        xold = x
+        y_pred = self(x, training=False)
+        y_true = y[:, 0, :, :, 1:2]
+        loss = losses.binary_crossentropy(y_true, y_pred)
+        rail = y[:, 0, :, :, ::2]
+        y_pred = tf.concat([y_pred, rail], 3)
+        y_pred = tf.reshape(y_pred, shape=(tf.shape(y_pred)[0], 1, 64, 64, 3))
+        x = x[:, 1:, :, :, :]
+        x = tf.concat([x, y_pred], 1)
+        if self.custom_steps > 1:
+            for i in range(0, self.custom_steps - 1):
+                y_pred = self(x, training=False)
+                y_true = y[:, i + 1, :, :, 1:2]
+                loss = tf.math.add(loss, losses.binary_crossentropy(y_true, y_pred))
+                y_pred = tf.concat([y_pred, rail], 3)
+                y_pred = tf.reshape(y_pred, shape=(tf.shape(y_pred)[0], 1, 64, 64, 3))
+                x = x[:, 1:, :, :, :]
+                x = tf.concat([x, y_pred], 1)
+
+        y_pred = self(xold, training=False)
+        self.loss_tracker.update_state(loss)
+        self.bce_metric.update_state(y[:, 0, :, :, 1:2], y_pred)
+        loss_result = self.loss_tracker.result()
+        bce_result = self.bce_metric.result()
+        self.loss_tracker.reset_state()
+        self.bce_metric.reset_state()
+        return {"loss": loss_result, "BCE": bce_result}
+
+
 def inception_cell(model, activation, axis, initializer):
     shape = model.output_shape
     li = list(shape)
@@ -197,9 +277,13 @@ def create_inception_net(activation, optimizer, loss, frames=4, size=64, channel
     model.add(layers.Conv2DTranspose(32, (6, 6), activation=activation, kernel_initializer=initializer))
     model.add(layers.Conv2D(1, (3, 3), activation=activations.sigmoid, kernel_initializer=initializer))
 
-    # model.compile(optimizer=optimizer, loss=loss, metrics=pixel_prediction(i))
+    model = CustomModel(model)
+
     model.compile(optimizer=optimizer, loss=loss)
+
+    # model.compile(optimizer=optimizer, loss=loss, metrics=pixel_prediction(i))
     # model.compile(optimizer=optimizer, loss=loss, metrics=[mass_preservation])
+
     return model
 
 def train_model(model, training_images, validation_split=0.1, epochs=2):

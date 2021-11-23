@@ -3,7 +3,9 @@ import os
 import numpy as np
 import tensorflow as tf
 from PIL import Image
+from scipy.signal import convolve2d
 import psutil
+
 
 def read_file(file_path):
     """Takes in a filepath and extracts a set of x and y coordinates of the bubble edge.
@@ -47,8 +49,8 @@ def generate_rail(input_image):
     """
     image_size = np.shape(input_image)[0]
     for i in range(0, image_size):
-        if i < image_size/2:
-            rail = i / (image_size / 2)
+        if i < image_size:
+            rail = i / (image_size)
         else:
             rail = 2 - i / (image_size / 2)
         runway = np.zeros(image_size) + rail
@@ -69,8 +71,11 @@ def transform_to_numpy_array(x, y, variant, invert, image_size=64):
     """
     h, x_edge, y_edge = np.histogram2d(
         ((-1)**(not invert))*x, y + variant / (image_size / 2),
-        range=[[-1, 1], [-1, 1]], bins=(image_size, image_size)
+        range=[[-1, 1], [-1, 1]], bins=((image_size+1)*3, (image_size+1)*3)
     )
+    kernel = np.ones((6, 6))
+    h = convolve2d(h, kernel, mode='valid')
+    h = h[::3, ::3]
     # Preparing memory for the output array, then filling the bubble edge
     output_array = np.zeros((image_size, image_size, 3))
     output_array[:, :, 1] = np.minimum(h, np.zeros((image_size, image_size)) + 1)
@@ -133,15 +138,57 @@ def convert_dat_files(variant_range, image_size=64):
         simulation_index += 1
 
 
+def create_multiframe_data(leading_steps, loss_steps, timestep, validation_split=0.1, image_size=64):
+    simulation_names = glob.glob("Simulation_images/*")
+    print(simulation_names)
+    data_sources = []
+    refs = []
+    for simulation in simulation_names[:1]:
+        files = glob.glob("{}/*".format(simulation))
+        number_of_files = len(files)
+        for i in range(5, number_of_files - timestep * (leading_steps + loss_steps)):
+            data_sources.append("{}/img_{}.bmp".format(simulation, i))
+            refs.append([simulation, i])
+
+    print("Generating arrays of size {}...".format(len(data_sources)))
+    questions_array = np.zeros((len(data_sources), leading_steps, image_size, image_size, 3), dtype="float16")
+    answers_array = np.zeros((len(data_sources), loss_steps, image_size, image_size, 3), dtype="float16")
+    print("Running...")
+    print(np.shape(questions_array))
+    print(np.shape(answers_array))
+    for index, file in enumerate(data_sources):
+        for frame in range(0, leading_steps * timestep, timestep):
+            question = np.asarray(
+                Image.open(
+                    "{}/img_{}.bmp".format(
+                        refs[index][0], refs[index][1] + frame
+                    )
+                )
+            ) / 255
+            questions_array[index, int(frame / timestep), :, :, :] = question
+
+        for frame in range(0, loss_steps * timestep, timestep):
+            answer = np.asarray(
+                Image.open(
+                    "{}/img_{}.bmp".format(
+                        refs[index][0], refs[index][1] + timestep * leading_steps + frame
+                    )
+                )
+            ) / 255
+            answers_array[index, int(frame / timestep), :, :, :] = answer
+    print("Saving...")
+    return [questions_array, answers_array]
+
+
 def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
     simulation_names = glob.glob("Simulation_images/*")
     print(simulation_names)
     data_sources = []
     refs = []
-    for simulation in simulation_names[:]:
+    for simulation in simulation_names[:2]:
         files = glob.glob("{}/*".format(simulation))
         number_of_files = len(files)
-        for i in range(0, number_of_files-timestep*frames):
+        for i in range(5, number_of_files-timestep*frames):
             data_sources.append("{}/img_{}.bmp".format(simulation, i))
             refs.append([simulation, i])
 
