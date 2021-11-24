@@ -328,6 +328,13 @@ def make_gif(image, name):
     imageio.mimsave("{}.gif".format(name), images)
 
 
+def generate_random_value(rng, allowed_range, i=True):
+    target = rng.random(1)*(allowed_range[1]-allowed_range[0]) + allowed_range[0]
+    if i:
+        return int(target)
+    return target
+
+
 def main():
     # activation_function = "LeakyReLU"
     tf.random.set_seed(100)
@@ -338,7 +345,7 @@ def main():
     # loss_function = losses.BinaryCrossentropy()
     # Parameter ranges
     image_frame_range = [1, 5]
-    image_size_range = [50, 70]
+    image_size_range = [20, 70]
     timestep_range = [1, 20]
     dropout_range = [0, 0.5]
     encode_range = [1, 20]
@@ -346,7 +353,7 @@ def main():
     kernel_range = [2, 20]
     multiply_range = [1, 4]
     kernel_range_data = [1, 15]
-    epochs = 20
+    epochs = 10
 
     image_frames = 4
     image_size = 45
@@ -357,22 +364,40 @@ def main():
     kernel_size = 3
     multiply = 3
     kernel_size_data = 7
+    while True:
     #model = models.load_model("models/Special")
-    try:
-        dat_to_training.convert_dat_files([0, 0], image_size=image_size, multiply=multiply, kernel_size=kernel_size_data)
+        try:
+            first = True
+            while(image_frames * (image_size**2) > 4 * (45**2)  or first):
+                first = False
+                image_frames = generate_random_value(rng, image_frame_range)
+                image_size = generate_random_value(rng, image_size_range)
+            timestep = generate_random_value(rng, timestep_range)
+            dropout = 0
+            encode_size = generate_random_value(rng, encode_range)
+            max_transpose_layers = generate_random_value(rng, max_transpose_range)
+            kernel_size = generate_random_value(rng, kernel_range)
+            multiply = generate_random_value(rng, multiply_range)
+            kernel_size_data = generate_random_value(rng, kernel_range_data)
+            print("frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};muli_{};keDat_{};".format(
+                image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, multiply, kernel_size_data
+            ))
+            dat_to_training.convert_dat_files([0, 0], image_size=image_size, multiply=multiply, kernel_size=kernel_size_data)
 
-        model = create_network.create_neural_network(
-            activation_function, optimizer, loss_function, image_frames,
-            image_size=image_size, encode_size=encode_size, allow_pooling=True,
-            allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
-            dropout_rate=dropout_rate
-        )
-        training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
-        model, history = create_network.train_model(model, training_data, epochs=epochs)
-        model.save("models/Special")
-    except Exception as e:
-        print("Fail!")
-        print(e)
+            model = create_network.create_neural_network(
+                activation_function, optimizer, loss_function, image_frames,
+                image_size=image_size, encode_size=encode_size, allow_pooling=True,
+                allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
+                dropout_rate=dropout_rate
+            )
+            training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
+            model, history = create_network.train_model(model, training_data, epochs=epochs)
+            model.save("models/Special-frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};muli_{};keDat_{};".format(
+                image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, multiply, kernel_size_data
+            ))
+        except Exception as e:
+            print("Fail!")
+            print(e)
     output_images = np.zeros((1, image_frames, image_size, image_size, 1))
     input_images = np.zeros((1, image_frames, image_size, image_size, 3))
     expected_images = np.zeros((1, image_frames, image_size, image_size, 1))
