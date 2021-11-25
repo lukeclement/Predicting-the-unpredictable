@@ -147,7 +147,7 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
 
 
 class CustomModel(Model):
-    custom_steps = 4
+    custom_steps = 2
     loss_tracker = metrics.Mean(name="loss")
     bce_metric = metrics.BinaryCrossentropy(name="BCE")
 
@@ -156,27 +156,22 @@ class CustomModel(Model):
         self.input_model = model
 
     def call(self, inputs, training=None, mask=None):
-        return self.input_model(inputs)
+        y_pred = self.input_model(inputs)
+        return tf.reshape(y_pred, shape=(tf.shape(y_pred)[0], 1, 64, 64, 1))
 
     def train_step(self, data):
         x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
         xold = x
         with tf.GradientTape() as tape:
             y_pred = self(x, training=True)
-            y_true = y[:, 0, :, :, 1:2]
-            loss = losses.binary_crossentropy(y_true, y_pred)
-            rail = y[:, 0, :, :, ::2]
-            y_pred = tf.concat([y_pred, rail], 3)
-            y_pred = tf.reshape(y_pred, shape=(tf.shape(y_pred)[0], 1, 64, 64, 3))
+            loss = losses.binary_crossentropy(y[:, 0, :, :, :], y_pred)
             x = x[:, 1:, :, :, :]
             x = tf.concat([x, y_pred], 1)
             if self.custom_steps > 1:
                 for i in range(0, self.custom_steps-1):
                     y_pred = self(x, training=True)
-                    y_true = y[:, i+1, :, :, 1:2]
+                    y_true = y[:, i+1, :, :, :]
                     loss = tf.math.add(loss, losses.binary_crossentropy(y_true, y_pred))
-                    y_pred = tf.concat([y_pred, rail], 3)
-                    y_pred = tf.reshape(y_pred, shape=(tf.shape(y_pred)[0], 1, 64, 64, 3))
                     x = x[:, 1:, :, :, :]
                     x = tf.concat([x, y_pred], 1)
 
@@ -185,37 +180,31 @@ class CustomModel(Model):
         # Collect metrics to return
         y_pred = self(xold, training=False)
         self.loss_tracker.update_state(loss)
-        self.bce_metric.update_state(y[:, 0, :, :, 1:2], y_pred)
+        self.bce_metric.update_state(y[:, 0, :, :, :], y_pred)
         loss_result = self.loss_tracker.result()
         bce_result = self.bce_metric.result()
-        self.loss_tracker.reset_state()
-        self.bce_metric.reset_state()
         return {"loss": loss_result, "BCE": bce_result}
 
     def test_step(self, data):
+        self.loss_tracker.reset_state()
+        self.bce_metric.reset_state()
         x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
         xold = x
         y_pred = self(x, training=False)
-        y_true = y[:, 0, :, :, 1:2]
-        loss = losses.binary_crossentropy(y_true, y_pred)
-        rail = y[:, 0, :, :, ::2]
-        y_pred = tf.concat([y_pred, rail], 3)
-        y_pred = tf.reshape(y_pred, shape=(tf.shape(y_pred)[0], 1, 64, 64, 3))
-        x = x[:, 1:, :, :, :]
+        loss = losses.binary_crossentropy(y[:, 0, :, :, :], y_pred)
+        x = x[:, 1:, :, :]
         x = tf.concat([x, y_pred], 1)
         if self.custom_steps > 1:
             for i in range(0, self.custom_steps - 1):
                 y_pred = self(x, training=False)
-                y_true = y[:, i + 1, :, :, 1:2]
+                y_true = y[:, i + 1, :, :, :]
                 loss = tf.math.add(loss, losses.binary_crossentropy(y_true, y_pred))
-                y_pred = tf.concat([y_pred, rail], 3)
-                y_pred = tf.reshape(y_pred, shape=(tf.shape(y_pred)[0], 1, 64, 64, 3))
                 x = x[:, 1:, :, :, :]
                 x = tf.concat([x, y_pred], 1)
 
         y_pred = self(xold, training=False)
         self.loss_tracker.update_state(loss)
-        self.bce_metric.update_state(y[:, 0, :, :, 1:2], y_pred)
+        self.bce_metric.update_state(y[:, 0, :, :, :], y_pred)
         loss_result = self.loss_tracker.result()
         bce_result = self.bce_metric.result()
         self.loss_tracker.reset_state()
@@ -246,6 +235,7 @@ def inception_cell(model, activation, axis, initializer):
 
     return model
 
+
 def create_inception_net(activation, optimizer, loss, frames=4, size=64, channels=3):
     """Creates the CNN.
     Inputs:
@@ -257,9 +247,17 @@ def create_inception_net(activation, optimizer, loss, frames=4, size=64, channel
         The model, ready to be fitted!
     """
     initializer = initializers.HeNormal()
-    i = layers.Input(shape=(frames, size, size, channels))
+
     model = models.Sequential()
-    model.add(layers.Conv3D(32, (4, 7, 7), kernel_initializer=initializer, activation=activation, input_shape=(frames, size, size, channels)))
+
+    # input_tensor = layers.Input(shape=(frames, size, size))
+    # constant = layers.Input(shape=(frames, size, size), tensor=rail)
+
+    # merged_input = layers.concatenate([input_tensor, constant], axis=0)
+
+    # model.add(merged_input)
+
+    model.add(layers.Conv3D(32, (4, 7, 7), kernel_initializer=initializer, activation=activation, input_shape=(frames, size, size, 1)))
     model.add(layers.Dropout(0.05))
     model.add(layers.Reshape((58, 58, 32)))
     model.add(layers.MaxPooling2D((3, 3)))
@@ -275,10 +273,10 @@ def create_inception_net(activation, optimizer, loss, frames=4, size=64, channel
     model = inception_cell(model, activation=activation, axis=2, initializer=initializer)
     model.add(layers.Conv2DTranspose(32, (6, 6), activation=activation, kernel_initializer=initializer))
     model.add(layers.Conv2DTranspose(32, (6, 6), activation=activation, kernel_initializer=initializer))
-    model.add(layers.Conv2D(1, (3, 3), activation=activations.sigmoid, kernel_initializer=initializer, dtype=tf.float16))
+    model.add(layers.Conv2D(1, (3, 3), activation=activations.sigmoid, kernel_initializer=initializer))
 
     model = CustomModel(model)
-    optimizer = tf.keras.mixed_precision.LossScaleOptimizer(optimizer)
+    # optimizer = tf.keras.mixed_precision.LossScaleOptimizer(optimizer)
     model.compile(optimizer=optimizer, loss=loss)
 
     # model.compile(optimizer=optimizer, loss=loss, metrics=pixel_prediction(i))
@@ -298,15 +296,10 @@ def train_model(model, training_images, validation_split=0.1, epochs=2):
         model:              The fitted model.
         history:            The history of changes to important variables, like loss.
     """
-    X = training_images[0]
-    Y = training_images[1]
-    # X_t = training_images[2]
-    # Y_t = training_images[3]
-    # X = da.from_array(np.asarray(X), chunks=1000)
-    # Y = da.from_array(np.asarray(Y), chunks=1000)
-    # X_t = da.from_array(np.asarray(X_t), chunks=1000)
-    # Y_t = da.from_array(np.asarray(Y_t), chunks=1000)
-    history = model.fit(X, Y, validation_split=validation_split, epochs=epochs, shuffle=True)
-    # history = model.fit(training_images, epochs=epochs, shuffle=True)
+    # X = training_images[0]
+    # Y = training_images[1]
+    # history = model.fit(X, Y, validation_split=validation_split, epochs=epochs, shuffle=True)
+
+    history = model.fit(training_images, epochs=epochs, shuffle=True)
 
     return model, history

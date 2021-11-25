@@ -52,17 +52,22 @@ def main():
     optimizer = optimizers.Adam()
     loss_function = losses.BinaryCrossentropy()
     image_frames = 4
+    loss_frames = 2
     image_size = 64
     timestep = 5
 
     # print("creating data")
     # dat_to_training.convert_dat_files([0, 0], image_size=image_size)
 
-    training_data = dat_to_training.create_multiframe_data(image_frames, image_frames, timestep, image_size=image_size)
-    rail = dat_to_training.generate_rail(training_data[0][0, 0])
-    rail = rail[:, :, 2]
-    model = create_network.create_inception_net(activation_function, optimizer, loss_function)
+    # rail = dat_to_training.generate_rail(training_data[0][0, 0])
+    # rail_array = np.zeros((image_frames, image_size, image_size))
+    # rail_array[:] = rail[:, :, 2]
+    # rail_array = tf.convert_to_tensor(rail_array)
 
+    training_data = dat_to_training.create_small_multiframe_data(image_frames, loss_frames, timestep, image_size=image_size)
+
+    model = create_network.create_inception_net(activation_function, optimizer, loss_function)
+    # print(model.summary())
     model, history = create_network.train_model(model, training_data, epochs=2)
     today = date.today()
     dt_string = today.strftime("%d_%m_%Y_%H_%M")
