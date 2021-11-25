@@ -71,13 +71,17 @@ def transform_to_numpy_array(x, y, variant, invert, image_size=64, multiply=3, k
     """
     h, x_edge, y_edge = np.histogram2d(
         ((-1)**(not invert))*x, y + variant / (image_size / 2),
-        range=[[-1, 1], [-1, 1]], bins=(image_size*multiply + kernel_size - 1, image_size*multiply + kernel_size - 1)
+        # range=[[-1, 1], [-1, 1]], bins=(image_size*multiply + kernel_size - 1, image_size*multiply + kernel_size - 1)
+        range=[[-1, 1], [-1, 1]], bins=(512, 512)
     )
-    kernel = np.ones((kernel_size, kernel_size))
-    h = convolve2d(h, kernel, mode='valid')
-    h = h[::multiply, ::multiply]
+    kernel = np.ones((kernel_size, kernel_size))/(kernel_size*4)
+    h = convolve2d(h, kernel, mode='same')
+    h = h[::int(512/image_size), ::int(512/image_size)]
+    h = h*10
+
     # Preparing memory for the output array, then filling the bubble edge
-    output_array = np.zeros((image_size, image_size, 3))
+    output_array = np.zeros((image_size, image_size, 1))
+    # print(np.max(h))
     output_array[:, :, 1] = np.minimum(h, np.zeros((image_size, image_size)) + 1)
     # Adding the central rail
     output_array = generate_rail(output_array)
