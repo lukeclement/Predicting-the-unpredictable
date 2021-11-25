@@ -89,6 +89,14 @@ def make_gifs(index, model, parameters):
     )
     bubble_prediction.make_gif(testing, 'desktop_models/model_gifs_fixed_thicc/without_rounding_without_extras_{}'.format(index))
     testing = bubble_prediction.long_term_prediction(
+        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=False, extra=True, jump=True
+    )
+    bubble_prediction.make_gif(testing, 'desktop_models/model_gifs_fixed_thicc/without_rounding_with_jump_{}'.format(index))
+    testing = bubble_prediction.long_term_prediction(
+        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=True, extra=True, jump=True
+    )
+    bubble_prediction.make_gif(testing, 'desktop_models/model_gifs_fixed_thicc/with_rounding_with_jump_{}'.format(index))
+    testing = bubble_prediction.long_term_prediction(
         model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=True, extra=True
     )
     bubble_prediction.make_gif(testing, 'desktop_models/model_gifs_fixed_thicc/with_rounding_with_extras_{}'.format(index))
