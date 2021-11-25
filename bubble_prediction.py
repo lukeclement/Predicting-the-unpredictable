@@ -25,7 +25,7 @@ def plot_performance(model, image_frames, image_size, timestep, name):
     guess = model(initial)[0]
     print(np.shape(expected))
     print(np.shape(guess))
-    difference = np.abs(np.around(guess)-expected)
+    difference = np.abs(np.around(guess) - expected)
 
     axes = plt.figure(constrained_layout=True).subplot_mosaic(
         """
@@ -51,8 +51,7 @@ def plot_performance(model, image_frames, image_size, timestep, name):
     axes["A"].imshow(previous_frame)
     rounded_guess = np.around(guess)
 
-    axes["F"].imshow(rounded_guess - expected)\
-
+    axes["F"].imshow(rounded_guess - expected)
     axes["G"].imshow(expected - previous_frame)
     axes["H"].imshow(rounded_guess - previous_frame)
 
@@ -85,14 +84,14 @@ def plot_performance(model, image_frames, image_size, timestep, name):
     positive_rgb = np.zeros((image_size, image_size, 3), dtype=int)
     positive_rgb[positive_correct[:, :, 0] == 0, :] = 0
     for i in range(0, 3):
-        positive_rgb[positive_correct[:, :, 0] == i+1, i] = 255
+        positive_rgb[positive_correct[:, :, 0] == i + 1, i] = 255
 
     axes["I"].imshow(positive_rgb)
 
     negative_rgb = np.zeros((image_size, image_size, 3), dtype=int)
     negative_rgb[negative_correct[:, :, 0] == 0, :] = 0
     for i in range(0, 3):
-        negative_rgb[negative_correct[:, :, 0] == i+1, i] = 255
+        negative_rgb[negative_correct[:, :, 0] == i + 1, i] = 255
 
     axes["J"].imshow(negative_rgb)
 
@@ -105,6 +104,7 @@ def plot_performance(model, image_frames, image_size, timestep, name):
 
     # plt.subplots_adjust(wspace=0, hspace=0)
     plt.savefig("{}.png".format(name), dpi=500, bbox_inches='tight')
+
     return np.sum(difference)
 
 
@@ -213,8 +213,8 @@ def explore_parameter_space(image_frames, image_size, dropout_rate, activation_f
         "Trainable parameters": parameters
     })
     parameter_data.to_csv("Parameter_tests/Trainable_parameters_for_S{}-T{}-F{}-D{:.2f}".format(
-                        image_size, "any", image_frames, dropout_rate
-                    ).replace(".", "_")+".csv", index=False)
+        image_size, "any", image_frames, dropout_rate
+    ).replace(".", "_") + ".csv", index=False)
     return parameter_data
 
 
@@ -227,16 +227,17 @@ def generate_sample(image, image_size, rng):
 
 
 def ensemble_prediction(
-        model, start_sim, start_image, image_size, timestep, frames, number_to_simulate, rng, ensemble_size=5, samples=200):
+        model, start_sim, start_image, image_size, timestep, frames, number_to_simulate, rng, ensemble_size=5,
+        samples=200):
     print("Starting ensemble")
     input_images = np.zeros((ensemble_size, frames, image_size, image_size, 3))
     for frame in range(0, frames):
         try:
             insert_array = np.asarray(
-                    Image.open("Simulation_images/Simulation_{}/img_{}.bmp".format(
-                        start_sim, start_image + frame * timestep
-                    ))
-                ) / 255
+                Image.open("Simulation_images/Simulation_{}/img_{}.bmp".format(
+                    start_sim, start_image + frame * timestep
+                ))
+            ) / 255
         except IOError as e:
             print("Error - either invalid simulation number or image out of range!")
             print(e)
@@ -249,11 +250,11 @@ def ensemble_prediction(
     for i in range(0, number_to_simulate):
         print(i)
         next_images[:, :, :, 1] = model(input_images)[:, :, :, 0]
-        possible_images = np.zeros((ensemble_size*samples, image_size, image_size, 3))
+        possible_images = np.zeros((ensemble_size * samples, image_size, image_size, 3))
         print("Generating samples...")
         for j, image in enumerate(next_images):
             for s in range(0, samples):
-                possible_images[j*samples + s, :, :, :] = generate_sample(image, image_size, rng)
+                possible_images[j * samples + s, :, :, :] = generate_sample(image, image_size, rng)
         print("Selecting best...")
         unique_images, frequency = np.unique(possible_images, return_counts=True, axis=0)
         print(len(frequency))
@@ -264,22 +265,23 @@ def ensemble_prediction(
             unique_images = np.delete(unique_images, current_best_index[0], 0)
             frequency = np.delete(frequency, current_best_index[0], 0)
         for frame in range(1, frames):
-            input_images[:, frame-1, :, :, :] = input_images[:, frame, :, :, :]
-        input_images[:, frames-1, :, :, :] = next_images
+            input_images[:, frame - 1, :, :, :] = input_images[:, frame, :, :, :]
+        input_images[:, frames - 1, :, :, :] = next_images
         predictions[i, :, :, :, :] = next_images
     return predictions
 
 
 def long_term_prediction(
-        model, start_sim, start_image, image_size, timestep, frames, number_to_simulate, round_result=False, extra=True):
+        model, start_sim, start_image, image_size, timestep, frames, number_to_simulate, round_result=False,
+        extra=True):
     input_images = np.zeros((1, frames, image_size, image_size, 3))
     for frame in range(0, frames):
         try:
             input_images[0, frame, :, :, :] = np.asarray(
-                    Image.open("Simulation_images/Simulation_{}/img_{}.bmp".format(
-                        start_sim, start_image + frame*timestep
-                    ))
-                ) / 255
+                Image.open("Simulation_images/Simulation_{}/img_{}.bmp".format(
+                    start_sim, start_image + frame * timestep
+                ))
+            ) / 255
         except IOError as e:
             print("Error - either invalid simulation number or image out of range!")
             print(e)
@@ -290,23 +292,25 @@ def long_term_prediction(
     for i in range(0, number_to_simulate):
         if extra:
             if i < frames:
-                averaging_arrays = np.zeros((i+1, image_size, image_size, 3))
+                averaging_arrays = np.zeros((i + 1, image_size, image_size, 3))
             else:
                 averaging_arrays = np.zeros((frames, image_size, image_size, 3))
             output_image = np.zeros((frames, image_size, image_size, 3))
             output_image[:, :, :, 1] = model(input_images)[0, :, :, :, 0]
             for frame in range(0, frames):
                 dat_to_training.generate_rail(output_image[frame])
-            future_frames[i%frames] = output_image
-            for frame in range(0, min(i+1, frames)):
-                averaging_arrays[frame, :, :, :] = future_frames[frame, (i-frame)%frames, :, :, :]
+            future_frames[i % frames] = output_image
+            for frame in range(0, min(i + 1, frames)):
+                averaging_arrays[frame, :, :, :] = future_frames[frame, (i - frame) % frames, :, :, :]
             for frame in range(1, frames):
-                input_images[0, frame-1, :, :, :] = input_images[0, frame, :, :, :]
+                input_images[0, frame - 1, :, :, :] = input_images[0, frame, :, :, :]
             if round_result:
-            	input_images[0, frames-1, :, :, :] = np.around(np.average(averaging_arrays, axis=0))
+                input_images[0, frames - 1, :, :, 1] = np.around(np.average(averaging_arrays, axis=0)[:, :, 1])
+                input_images[0, frames - 1, :, :, 0] = np.average(averaging_arrays, axis=0)[:, :, 0]
+                input_images[0, frames - 1, :, :, 2] = np.average(averaging_arrays, axis=0)[:, :, 2]
             else:
-            	input_images[0, frames-1, :, :, :] = np.average(averaging_arrays, axis=0)
-            positions.append((input_images[0, frames-1, :, :, :]*255).astype(np.uint8))
+                input_images[0, frames - 1, :, :, :] = np.average(averaging_arrays, axis=0)
+            positions.append((input_images[0, frames - 1, :, :, :] * 255).astype(np.uint8))
         else:
             output_image = np.zeros((frames, image_size, image_size, 3))
             output_image[:, :, :, 1] = model(input_images)[0, :, :, :, 0]
@@ -315,9 +319,9 @@ def long_term_prediction(
                     output_image[frame] = np.around(output_image[frame])
                 dat_to_training.generate_rail(output_image[frame])
             for frame in range(1, frames):
-                input_images[0, frame-1, :, :, :] = input_images[0, frame, :, :, :]
-            input_images[0, frames-1, :, :, :] = output_image[0]
-            positions.append((input_images[0, frames-1, :, :, :]*255).astype(np.uint8))
+                input_images[0, frame - 1, :, :, :] = input_images[0, frame, :, :, :]
+            input_images[0, frames - 1, :, :, :] = output_image[0]
+            positions.append((input_images[0, frames - 1, :, :, :] * 255).astype(np.uint8))
     return positions
 
 
@@ -329,7 +333,7 @@ def make_gif(image, name):
 
 
 def generate_random_value(rng, allowed_range, i=True):
-    target = rng.random(1)*(allowed_range[1]-allowed_range[0]) + allowed_range[0]
+    target = rng.random(1) * (allowed_range[1] - allowed_range[0]) + allowed_range[0]
     if i:
         return int(target)
     return target
@@ -365,10 +369,9 @@ def main():
     multiply = 3
     kernel_size_data = 7
     while True:
-    #model = models.load_model("models/Special")
         try:
             first = True
-            while(image_frames * (image_size**2) > 4 * (45**2)  or first):
+            while image_frames * (image_size ** 2) > 4 * (45 ** 2) or first:
                 first = False
                 image_frames = generate_random_value(rng, image_frame_range)
                 image_size = generate_random_value(rng, image_size_range)
@@ -380,9 +383,11 @@ def main():
             multiply = generate_random_value(rng, multiply_range)
             kernel_size_data = generate_random_value(rng, kernel_range_data)
             print("frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};muli_{};keDat_{};".format(
-                image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, multiply, kernel_size_data
+                image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, multiply,
+                kernel_size_data
             ))
-            dat_to_training.convert_dat_files([0, 0], image_size=image_size, multiply=multiply, kernel_size=kernel_size_data)
+            dat_to_training.convert_dat_files([0, 0], image_size=image_size, multiply=multiply,
+                                              kernel_size=kernel_size_data)
 
             model = create_network.create_neural_network(
                 activation_function, optimizer, loss_function, image_frames,
@@ -392,9 +397,11 @@ def main():
             )
             training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
             model, history = create_network.train_model(model, training_data, epochs=epochs)
-            model.save("models/Special-frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};muli_{};keDat_{};".format(
-                image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, multiply, kernel_size_data
-            ))
+            model.save(
+                "models/Special-frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};muli_{};keDat_{};".format(
+                    image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size,
+                    multiply, kernel_size_data
+                ))
         except Exception as e:
             print("Fail!")
             print(e)
@@ -440,15 +447,17 @@ def main():
     axes["K"].imshow(expected_images[0, 2, :, :, :])
     axes["L"].imshow(expected_images[0, 3, :, :, :])
     plt.savefig("Hey_look_at_me.png", dpi=500)
-    testing = long_term_prediction(model, 3, 20, image_size, timestep, image_frames, 200, round_result=False, extra=True)
+    testing = long_term_prediction(model, 3, 20, image_size, timestep, image_frames, 200, round_result=False,
+                                   extra=True)
     make_gif(testing, 'samples/without_rounding_with_extras')
-    testing = long_term_prediction(model, 3, 20, image_size, timestep, image_frames, 200, round_result=False, extra=False)
+    testing = long_term_prediction(model, 3, 20, image_size, timestep, image_frames, 200, round_result=False,
+                                   extra=False)
     make_gif(testing, 'samples/without_rounding_without_extras')
     testing = long_term_prediction(model, 3, 20, image_size, timestep, image_frames, 200, round_result=True, extra=True)
     make_gif(testing, 'samples/with_rounding_with_extras')
-    testing = long_term_prediction(model, 3, 20, image_size, timestep, image_frames, 200, round_result=True, extra=False)
+    testing = long_term_prediction(model, 3, 20, image_size, timestep, image_frames, 200, round_result=True,
+                                   extra=False)
     make_gif(testing, 'samples/with_rounding_without_extras')
-
 
     # number_of_ensembles = 10
     # number_of_samples = 500

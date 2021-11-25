@@ -67,7 +67,7 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
             model.add(layers.Conv3D(32, (1, kernel_size, kernel_size), activation=activation, kernel_initializer=initializer))
             current_axis_size -= (kernel_size - 1)
     while current_frames > 1:
-        model.add(layers.Conv3D(32, (2, 1, 1), activation=activation, kernel_initializer=initializer))
+        model.add(layers.Conv3D(64, (2, 1, 1), activation=activation, kernel_initializer=initializer))
         current_frames -= 1
     # Now decoding the image using transpose operations
     # model.add(layers.Dropout(rate=dropout_rate))
