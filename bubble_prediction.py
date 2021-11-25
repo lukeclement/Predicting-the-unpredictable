@@ -273,7 +273,7 @@ def ensemble_prediction(
 
 def long_term_prediction(
         model, start_sim, start_image, image_size, timestep, frames, number_to_simulate, round_result=False,
-        extra=True):
+        extra=True, jump=False):
     input_images = np.zeros((1, frames, image_size, image_size, 3))
     for frame in range(0, frames):
         try:
@@ -287,7 +287,19 @@ def long_term_prediction(
             print(e)
             return []
     positions = []
-
+    if jump:
+        for i in range(0, number_to_simulate):
+            output_image = np.zeros((frames, image_size, image_size, 3))
+            output_image[:, :, :, 1] = model(input_images)[0, :, :, :, 0]
+            for frame in range(0, frames):
+                dat_to_training.generate_rail(output_image[frame])
+            for frame in range(0, frames):
+                if round_result:
+                    input_images[0, frame, :, :, :] = np.around(output_image[0, frame, :, :, :])
+                else:
+                    input_images[0, frame, :, :, :] = output_image[0, frame, :, :, :]
+                positions.append((input_images[0, frame, :, :, :] * 255).astype(np.uint8))
+        return positions
     future_frames = np.zeros((frames, frames, image_size, image_size, 3))
     for i in range(0, number_to_simulate):
         if extra:
@@ -368,43 +380,44 @@ def main():
     kernel_size = 3
     multiply = 3
     kernel_size_data = 7
-    while True:
-        try:
-            first = True
-            while image_frames * (image_size ** 2) > 4 * (45 ** 2) or first:
-                first = False
-                image_frames = generate_random_value(rng, image_frame_range)
-                image_size = generate_random_value(rng, image_size_range)
-            timestep = generate_random_value(rng, timestep_range)
-            dropout = 0
-            encode_size = generate_random_value(rng, encode_range)
-            max_transpose_layers = generate_random_value(rng, max_transpose_range)
-            kernel_size = generate_random_value(rng, kernel_range)
-            multiply = generate_random_value(rng, multiply_range)
-            kernel_size_data = generate_random_value(rng, kernel_range_data)
-            print("frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};muli_{};keDat_{};".format(
-                image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, multiply,
-                kernel_size_data
-            ))
-            dat_to_training.convert_dat_files([0, 0], image_size=image_size, multiply=multiply,
-                                              kernel_size=kernel_size_data)
+    dropout = 0
+    # while True:
+    try:
+        # first = True
+        # while image_frames * (image_size ** 2) > 4 * (45 ** 2) or first:
+        #     first = False
+        #     image_frames = generate_random_value(rng, image_frame_range)
+        #     image_size = generate_random_value(rng, image_size_range)
+        # timestep = generate_random_value(rng, timestep_range)
+        # dropout = 0
+        # encode_size = generate_random_value(rng, encode_range)
+        # max_transpose_layers = generate_random_value(rng, max_transpose_range)
+        # kernel_size = generate_random_value(rng, kernel_range)
+        # multiply = generate_random_value(rng, multiply_range)
+        # kernel_size_data = generate_random_value(rng, kernel_range_data)
+        print("frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};muli_{};keDat_{};".format(
+            image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, multiply,
+            kernel_size_data
+        ))
+        dat_to_training.convert_dat_files([0, 0], image_size=image_size, multiply=multiply,
+                                          kernel_size=kernel_size_data)
 
-            model = create_network.create_neural_network(
-                activation_function, optimizer, loss_function, image_frames,
-                image_size=image_size, encode_size=encode_size, allow_pooling=True,
-                allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
-                dropout_rate=dropout_rate
-            )
-            training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
-            model, history = create_network.train_model(model, training_data, epochs=epochs)
-            model.save(
-                "models/Special-frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};muli_{};keDat_{};".format(
-                    image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size,
-                    multiply, kernel_size_data
-                ))
-        except Exception as e:
-            print("Fail!")
-            print(e)
+        model = create_network.create_neural_network(
+            activation_function, optimizer, loss_function, image_frames,
+            image_size=image_size, encode_size=encode_size, allow_pooling=True,
+            allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
+            dropout_rate=dropout_rate
+        )
+        training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
+        model, history = create_network.train_model(model, training_data, epochs=epochs)
+        model.save(
+            "models/Special-frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};muli_{};keDat_{};".format(
+                image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size,
+                multiply, kernel_size_data
+            ))
+    except Exception as e:
+        print("Fail!")
+        print(e)
     output_images = np.zeros((1, image_frames, image_size, image_size, 1))
     input_images = np.zeros((1, image_frames, image_size, image_size, 3))
     expected_images = np.zeros((1, image_frames, image_size, image_size, 1))

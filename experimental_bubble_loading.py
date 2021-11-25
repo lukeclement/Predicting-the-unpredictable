@@ -49,7 +49,7 @@ def main():
         kernel_datas.append(parameters[8])
         model = models.load_model(model_file, custom_objects={"bce_dice": loss_functions.bce_dice})
         print(model_file)
-        dat_to_training.convert_dat_files([0, 0], parameters[1], parameters[7], parameters[8])
+        dat_to_training.convert_dat_files([0, 0], parameters[1], 3, 7)
         data = dat_to_training.create_training_data(
             parameters[0], parameters[2], validation_split=0.1, image_size=parameters[1]
         )
@@ -59,23 +59,7 @@ def main():
         print(parameters_line)
         number = int(parameters_line.split(":")[1].replace(",", ""))
         trainable_parameters.append(number)
-
-        testing = bubble_prediction.long_term_prediction(
-            model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=False, extra=True
-        )
-        bubble_prediction.make_gif(testing, 'desktop_models/model_gifs/without_rounding_with_extras_{}'.format(index))
-        testing = bubble_prediction.long_term_prediction(
-            model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=False, extra=False
-        )
-        bubble_prediction.make_gif(testing, 'desktop_models/model_gifs/without_rounding_without_extras_{}'.format(index))
-        testing = bubble_prediction.long_term_prediction(
-            model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=True, extra=True
-        )
-        bubble_prediction.make_gif(testing, 'desktop_models/model_gifs/with_rounding_with_extras_{}'.format(index))
-        testing = bubble_prediction.long_term_prediction(
-            model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=True, extra=False
-        )
-        bubble_prediction.make_gif(testing, 'desktop_models/model_gifs/with_rounding_without_extras_{}'.format(index))
+        make_gifs(index, model, parameters)
         loss_values.append(loss)
         index += 1
     model_data = pd.DataFrame({
@@ -91,8 +75,28 @@ def main():
         "Loss": loss_values,
         "Trainable parameters": trainable_parameters
     })
-    model_data.to_csv("Model_quality.csv")
+    # model_data.to_csv("Model_quality.csv")
+    model_data.to_csv("Model_quality_fixed_thicc.csv")
 
 
-if __name__=="__main__":
+def make_gifs(index, model, parameters):
+    testing = bubble_prediction.long_term_prediction(
+        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=False, extra=True
+    )
+    bubble_prediction.make_gif(testing, 'desktop_models/model_gifs_fixed_thicc/without_rounding_with_extras_{}'.format(index))
+    testing = bubble_prediction.long_term_prediction(
+        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=False, extra=False
+    )
+    bubble_prediction.make_gif(testing, 'desktop_models/model_gifs_fixed_thicc/without_rounding_without_extras_{}'.format(index))
+    testing = bubble_prediction.long_term_prediction(
+        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=True, extra=True
+    )
+    bubble_prediction.make_gif(testing, 'desktop_models/model_gifs_fixed_thicc/with_rounding_with_extras_{}'.format(index))
+    testing = bubble_prediction.long_term_prediction(
+        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=True, extra=False
+    )
+    bubble_prediction.make_gif(testing, 'desktop_models/model_gifs_fixed_thicc/with_rounding_without_extras_{}'.format(index))
+
+
+if __name__ == "__main__":
     main()
