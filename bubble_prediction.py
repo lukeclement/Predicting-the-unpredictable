@@ -295,9 +295,11 @@ def long_term_prediction(
                 dat_to_training.generate_rail(output_image[frame])
             for frame in range(0, frames):
                 if round_result:
-                    input_images[0, frame, :, :, :] = np.around(output_image[0, frame, :, :, :])
+                    input_images[0, frame, :, :, 1] = np.around(output_image[frame, :, :, 1])
+                    input_images[0, frame, :, :, 0] = output_image[frame, :, :, 0]
+                    input_images[0, frame, :, :, 2] = output_image[frame, :, :, 2]
                 else:
-                    input_images[0, frame, :, :, :] = output_image[0, frame, :, :, :]
+                    input_images[0, frame, :, :, :] = output_image[frame, :, :, :]
                 positions.append((input_images[0, frame, :, :, :] * 255).astype(np.uint8))
         return positions
     future_frames = np.zeros((frames, frames, image_size, image_size, 3))
