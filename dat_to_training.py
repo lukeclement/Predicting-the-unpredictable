@@ -6,6 +6,8 @@ from PIL import Image
 from scipy.signal import convolve2d
 import psutil
 
+BASE_SIZE = 512
+
 
 def read_file(file_path):
     """Takes in a filepath and extracts a set of x and y coordinates of the bubble edge.
@@ -58,7 +60,7 @@ def generate_rail(input_image):
     return input_image
 
 
-def transform_to_numpy_array(x, y, variant, invert, image_size=64, multiply=3, kernel_size=7):
+def transform_to_numpy_array(x, y, variant, invert, image_size=64):
     """Transforms a set of x and y coordinates to a numpy array of size 64x64 by default.
     Inputs:
         x:          A 1d numpy array of x coordinates.
@@ -70,27 +72,22 @@ def transform_to_numpy_array(x, y, variant, invert, image_size=64, multiply=3, k
         A numpy array of shape (image_size, image_size) with elements 1 or 0 for the bubble edge.
     """
     h, x_edge, y_edge = np.histogram2d(
-        ((-1)**(not invert))*x, y + variant / (image_size / 2),
+        ((-1)**(not invert))*x, y + variant / (BASE_SIZE / 2),
         # range=[[-1, 1], [-1, 1]], bins=(image_size*multiply + kernel_size - 1, image_size*multiply + kernel_size - 1)
-        range=[[-1, 1], [-1, 1]], bins=(512, 512)
+        range=[[-1, 1], [-1, 1]], bins=(BASE_SIZE, BASE_SIZE)
     )
-    kernel = np.ones((kernel_size, kernel_size))/(kernel_size*4)
-    h = convolve2d(h, kernel, mode='same')
-    h = h[::int(512/image_size), ::int(512/image_size)]
-    h = h*10
 
     # Preparing memory for the output array, then filling the bubble edge
-    output_array = np.zeros((image_size, image_size, 1))
     # print(np.max(h))
-    output_array[:, :, 1] = np.minimum(h, np.zeros((image_size, image_size)) + 1)
+    output_array = np.minimum(h, np.zeros((BASE_SIZE, BASE_SIZE)) + 1)
     # Adding the central rail
-    output_array = generate_rail(output_array)
+    # output_array = generate_rail(output_array)
     output_array = 255*output_array
     output_array = output_array.astype(np.uint8)
     return output_array
 
 
-def convert_dat_files(variant_range, image_size=64, multiply=3, kernel_size=7):
+def convert_dat_files(variant_range):
     """Converts all .dat files to numpy arrays, and saves them as .bmp files.
     These .bmp files are stored in Simulation_images/Simulation_X, where X is the reference number for the simulation.
     These aren't necessarily actual simulations, but can be variants of these 'base' simulations,
@@ -132,7 +129,7 @@ def convert_dat_files(variant_range, image_size=64, multiply=3, kernel_size=7):
                     step_number = int(file[file.find("s_")+2:-4])
                     # Converting to array
                     resulting_array = transform_to_numpy_array(
-                        x, y, variant, inversion, image_size=image_size, multiply=multiply, kernel_size=kernel_size
+                        x, y, variant, inversion
                     )
                     # Saving to memory
                     image = Image.fromarray(resulting_array)
@@ -144,7 +141,7 @@ def convert_dat_files(variant_range, image_size=64, multiply=3, kernel_size=7):
         simulation_index += 1
 
 
-def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
+def create_training_data(frames, timestep, validation_split=0.1, image_size=64, focus=1):
     print(tf.executing_eagerly())
     simulation_names = glob.glob("Simulation_images/*")
     data_sources = []
@@ -178,24 +175,25 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
     print(np.shape(questions_array))
     print(np.shape(answers_array))
     for index, file in enumerate(data_sources):
+        print("{:.2f}%".format(index*100/float(len(data_sources))))
         if index % int(1.0/validation_split) == 0:
             for frame in range(0, frames * timestep, timestep):
-                questions_array[index-1*int(np.floor(index*validation_split) + 1), int(frame / timestep), :, :, :] = np.asarray(
-                    Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
-                ) / 255
+                questions_array[index-1*int(np.floor(index*validation_split) + 1), int(frame / timestep), :, :, :] = process_bmp(
+                    "{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame), image_size, focus=focus
+                )
             for frame in range(frames * timestep, frames * timestep * 2, timestep):
-                answers_array[index-1*int(np.floor(index*validation_split) + 1), int(frame / timestep) - frames, :, :, 0] = np.asarray(
-                    Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
-                )[:, :, 1] / 255
+                answers_array[index-1*int(np.floor(index*validation_split) + 1), int(frame / timestep) - frames, :, :, 0] = process_bmp(
+                    "{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame), image_size, focus=focus
+                )[:, :, 1]
         else:
             for frame in range(0, frames * timestep, timestep):
-                questions_array_valid[int(index*validation_split), int(frame / timestep), :, :, :] = np.asarray(
-                    Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
-                ) / 255
+                questions_array_valid[int(index*validation_split), int(frame / timestep), :, :, :] = process_bmp(
+                    "{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame), image_size, focus=focus
+                )
             for frame in range(frames * timestep, frames * timestep * 2, timestep):
-                answers_array_valid[int(index*validation_split), int(frame / timestep) - frames, :, :, 0] = np.asarray(
-                    Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
-                )[:, :, 1] / 255
+                answers_array_valid[int(index*validation_split), int(frame / timestep) - frames, :, :, 0] = process_bmp(
+                    "{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame), image_size, focus=focus
+                )[:, :, 1]
 
     print("Converting to datasets...")
     batch_size = 8
@@ -205,44 +203,18 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
     validation_data = tf.data.Dataset.from_tensor_slices((questions_array_valid, answers_array_valid))
     validation_data = validation_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
     return [testing_data, validation_data]
-    # return [questions_array, answers_array]
-
-    # Previous tensorflow method.
-    # questions = []
-    # questions_valid = []
-    # answers = []
-    # answers_valid = []
-    # validation_point = len(data_sources)/(1-validation_split)
-    # for index, file in enumerate(data_sources):
-    #     if index < validation_point:
-    #         extract_bmp(answers, frames, index, questions, refs, timestep, image_size)
-    #     else:
-    #         extract_bmp(answers_valid, frames, index, questions_valid, refs, timestep, image_size)
-    # questions_final = tf.data.Dataset.from_tensors(questions)
-    # answers_final = tf.data.Dataset.from_tensors(answers)
-    # questions_final_valid = tf.data.Dataset.from_tensors(questions_valid)
-    # answers_final_valid = tf.data.Dataset.from_tensors(answers_valid)
-    # # print(answers_final)
-    # print(questions_final)
-    # m_0 = psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2
-    # print(tf.data.Dataset.zip((questions_final, answers_final)))
-    # m_1 = psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2
-    # print(m_1 - m_0)
-    # return [
-    #     tf.data.Dataset.zip((questions_final, answers_final)),
-    #     tf.data.Dataset.zip((questions_final_valid, answers_final_valid))
-    # ]
 
 
-def extract_bmp(answers, frames, index, questions, refs, timestep, image_size):
-    new_question_dataset = []
-    for frame in range(0, frames * timestep, timestep):
-        source = tf.io.read_file("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
-        data = tf.cast(tf.io.decode_bmp(source), tf.float16)
-        new_question_dataset.append(data / 255)
-    question = tf.stack(new_question_dataset)
-    source = tf.io.read_file("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frames * timestep))
-    data = tf.cast(tf.io.decode_bmp(source), tf.float16) / 255
-    answer = [data[:, :, 2]]
-    questions.append(question)
-    answers.append(tf.reshape(answer, [image_size, image_size, 1]))
+def process_bmp(filename, image_size, focus=1):
+    h = np.asarray(Image.open(filename)) / 255
+    kernel_size = int((BASE_SIZE/image_size)*focus)
+    kernel = np.ones((kernel_size, kernel_size)) / (kernel_size * 4)
+    h = convolve2d(h, kernel, mode='same')
+    h = h[::int(512 / image_size), ::int(512 / image_size)]
+    h = h * 10
+
+    output_array = np.zeros((image_size, image_size, 3))
+    # print(np.max(h))
+    output_array[:, :, 1] = np.minimum(h, np.zeros((image_size, image_size)) + 1)
+    output_array = generate_rail(output_array)
+    return output_array
