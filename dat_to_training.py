@@ -143,7 +143,7 @@ def create_multiframe_data(leading_steps, loss_steps, timestep, validation_split
     print(simulation_names)
     data_sources = []
     refs = []
-    for simulation in simulation_names[:]:
+    for simulation in simulation_names[:1]:
         files = glob.glob("{}/*".format(simulation))
         number_of_files = len(files)
         for i in range(5, number_of_files - timestep * (leading_steps + loss_steps)):
@@ -177,8 +177,51 @@ def create_multiframe_data(leading_steps, loss_steps, timestep, validation_split
             ) / 255
             answers_array[index, int(frame / timestep), :, :, :] = answer
     print("Saving...")
-    questions_array = tf.data.Dataset.from_tensor_slices((questions_array, answers_array)).batch(32).prefetch(buffer_size=1000)
-    return questions_array
+    # questions_array = tf.data.Dataset.from_tensor_slices((questions_array, answers_array)).batch(32).prefetch(buffer_size=1000)
+    return [questions_array, answers_array]
+
+
+def create_small_multiframe_data(leading_steps, loss_steps, timestep, validation_split=0.1, image_size=64):
+    simulation_names = glob.glob("Simulation_images/*")
+    print(simulation_names)
+    data_sources = []
+    refs = []
+    for simulation in simulation_names[:1]:
+        files = glob.glob("{}/*".format(simulation))
+        number_of_files = len(files)
+        for i in range(5, number_of_files - timestep * (leading_steps + loss_steps)):
+            data_sources.append("{}/img_{}.bmp".format(simulation, i))
+            refs.append([simulation, i])
+
+    print("Generating arrays of size {}...".format(len(data_sources)))
+    questions_array = np.zeros((len(data_sources), leading_steps, image_size, image_size), dtype="float16")
+    answers_array = np.zeros((len(data_sources), loss_steps, image_size, image_size), dtype="float16")
+    print("Running...")
+    print(np.shape(questions_array))
+    print(np.shape(answers_array))
+    for index, file in enumerate(data_sources):
+        for frame in range(0, leading_steps * timestep, timestep):
+            question = np.asarray(
+                Image.open(
+                    "{}/img_{}.bmp".format(
+                        refs[index][0], refs[index][1] + frame
+                    )
+                )
+            ) / 255
+            questions_array[index, int(frame / timestep), :, :] = question[:, :, 1]
+
+        for frame in range(0, loss_steps * timestep, timestep):
+            answer = np.asarray(
+                Image.open(
+                    "{}/img_{}.bmp".format(
+                        refs[index][0], refs[index][1] + timestep * leading_steps + frame
+                    )
+                )
+            ) / 255
+            answers_array[index, int(frame / timestep), :, :] = answer[:, :, 1]
+    print("Saving...")
+    # questions_array = tf.data.Dataset.from_tensor_slices((questions_array, answers_array)).batch(32).prefetch(buffer_size=1000)
+    return [questions_array, answers_array]
 
 
 def create_training_data(frames, timestep, validation_split=0.1, image_size=64):

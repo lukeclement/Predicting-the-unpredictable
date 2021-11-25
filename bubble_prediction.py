@@ -58,9 +58,11 @@ def main():
     # print("creating data")
     # dat_to_training.convert_dat_files([0, 0], image_size=image_size)
 
+    training_data = dat_to_training.create_multiframe_data(image_frames, image_frames, timestep, image_size=image_size)
+    rail = dat_to_training.generate_rail(training_data[0][0, 0])
+    rail = rail[:, :, 2]
     model = create_network.create_inception_net(activation_function, optimizer, loss_function)
 
-    training_data = dat_to_training.create_multiframe_data(image_frames, image_frames, timestep, image_size=image_size)
     model, history = create_network.train_model(model, training_data, epochs=2)
     today = date.today()
     dt_string = today.strftime("%d_%m_%Y_%H_%M")
@@ -71,7 +73,7 @@ def main():
 
     """
     print("Loading Model")
-    model = models.load_model("thick_bubble_1", custom_objects={"bce_dice": loss_functions.bce_dice})
+    model = models.load_model("saved_models/23_11_2021_00_00", custom_objects={"bce_dice": loss_functions.bce_dice})
     for i in range(20):
         evaluate_model(image_frames, image_size, model, timestep, str(i), 400)
 

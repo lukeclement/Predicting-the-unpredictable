@@ -275,10 +275,10 @@ def create_inception_net(activation, optimizer, loss, frames=4, size=64, channel
     model = inception_cell(model, activation=activation, axis=2, initializer=initializer)
     model.add(layers.Conv2DTranspose(32, (6, 6), activation=activation, kernel_initializer=initializer))
     model.add(layers.Conv2DTranspose(32, (6, 6), activation=activation, kernel_initializer=initializer))
-    model.add(layers.Conv2D(1, (3, 3), activation=activations.sigmoid, kernel_initializer=initializer))
+    model.add(layers.Conv2D(1, (3, 3), activation=activations.sigmoid, kernel_initializer=initializer, dtype=tf.float16))
 
     model = CustomModel(model)
-
+    optimizer = tf.keras.mixed_precision.LossScaleOptimizer(optimizer)
     model.compile(optimizer=optimizer, loss=loss)
 
     # model.compile(optimizer=optimizer, loss=loss, metrics=pixel_prediction(i))
