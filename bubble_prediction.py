@@ -367,7 +367,7 @@ def main():
     timestep_range = [1, 21]
     dropout_range = [0, 0.5]
     encode_range = [1, 21]
-    max_transpose_range = [1, 8]
+    max_transpose_range = [1, 10]
     kernel_range = [2, 10]
     focus_range = [1, 5]
     epochs = 10
@@ -386,13 +386,6 @@ def main():
     focus = 1
     dropout = 0
     # dat_to_training.convert_dat_files([0, 0])
-    frames = []
-    sizes = []
-    times = []
-    encodes = []
-    max_transpose = []
-    kernel = []
-    focal = []
 
     trainable_parameters = []
     for i in range(0, 2000):
@@ -411,59 +404,22 @@ def main():
             print("frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};focus_{};".format(
                 image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, focus
             ))
-            frames.append(image_frames)
-            sizes.append(image_size)
-            times.append(timestep)
-            encodes.append(encode_size)
-            max_transpose.append(max_transpose_layers)
-            kernel.append(kernel_size)
-            focal.append(focus)
             model = create_network.create_neural_network(
                 activation_function, optimizer, loss_function, image_frames,
                 image_size=image_size, encode_size=encode_size, allow_pooling=True,
                 allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
                 dropout_rate=dropout_rate
             )
-            # training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size,
-            #                                                      focus=focus)
-            parameters_line = create_network.interpret_model_summary(model)
-            print(parameters_line)
-            number = int(parameters_line.split(":")[1].replace(",", ""))
-            trainable_parameters.append(number)
-            # model, history = create_network.train_model(model, training_data, epochs=epochs)
-            # model.save(
-            #     "models/Proper-frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};focus_{};".format(
-            #         image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, focus
-            #     ))
+            training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size,
+                                                                 focus=focus)
+            model, history = create_network.train_model(model, training_data, epochs=epochs)
+            model.save(
+                "models/Proper-frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};focus_{};".format(
+                    image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, focus
+                ))
         except Exception as e:
             print("Fail!")
             print(e)
-    plt.xlabel("Frames")
-    plt.ylabel("Trainable parameters")
-    plt.scatter(frames, trainable_parameters)
-    plt.savefig("Space_search_frames.png")
-    plt.clf()
-    plt.xlabel("Sizes")
-    plt.ylabel("Trainable parameters")
-    plt.scatter(sizes, trainable_parameters)
-    plt.savefig("Space_search_sizes.png")
-    plt.clf()
-    plt.xlabel("Encode sizes")
-    plt.ylabel("Trainable parameters")
-    plt.scatter(encodes, trainable_parameters)
-    plt.savefig("Space_search_encodes.png")
-    plt.clf()
-    plt.xlabel("Max transpose layers")
-    plt.ylabel("Trainable parameters")
-    plt.scatter(max_transpose, trainable_parameters)
-    plt.savefig("Space_search_transpose.png")
-    plt.clf()
-    plt.xlabel("Kernel size")
-    plt.ylabel("Trainable parameters")
-    plt.scatter(kernel, trainable_parameters)
-    plt.savefig("Space_search_kernel.png")
-    plt.clf()
-
 
     output_images = np.zeros((1, image_frames, image_size, image_size, 1))
     input_images = np.zeros((1, image_frames, image_size, image_size, 3))

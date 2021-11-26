@@ -162,7 +162,7 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
     print("Loading data...")
     source_array = np.zeros((len(data_sources), image_size, image_size, 3))
     for index, data in enumerate(data_sources):
-        print("{:.2f}%".format(index*100/float(len(data_sources))))
+        print_progress(index, len(data_sources))
         source_array[index, :, :, :] = process_bmp(data, image_size, focus=focus)
 
     questions_array = np.zeros((
@@ -227,14 +227,23 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
     return [testing_data, validation_data]
 
 
+def print_progress(pos, total):
+    buffer = ""
+    for i in range(0, 20):
+        if float(i)/20. > pos / float(total):
+            buffer += "|"
+        else:
+            buffer += "="
+    print("{}{:.2f}%".format(buffer, pos * 100 / float(total)), end="\r")
+
+
 def process_bmp(filename, image_size, focus=1):
     h = np.asarray(Image.open(filename)) / 255
     kernel_size = int((BASE_SIZE/image_size)*focus)
     kernel = np.ones((kernel_size, kernel_size)) / (kernel_size * 4)
     h = convolve2d(h, kernel, mode='same')
-    h = h[::int(512 / image_size), ::int(512 / image_size)]
+    h = h[::int(BASE_SIZE / image_size), ::int(BASE_SIZE / image_size)]
     h = h * 10
-
     output_array = np.zeros((image_size, image_size, 3))
     # print(np.max(h))
     output_array[:, :, 1] = np.minimum(h, np.zeros((image_size, image_size)) + 1)
