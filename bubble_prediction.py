@@ -385,8 +385,17 @@ def main():
     kernel_size_data = 7
     focus = 1
     dropout = 0
-    dat_to_training.convert_dat_files([0, 0])
-    while True:
+    # dat_to_training.convert_dat_files([0, 0])
+    frames = []
+    sizes = []
+    times = []
+    encodes = []
+    max_transpose = []
+    kernel = []
+    focal = []
+
+    trainable_parameters = []
+    for i in range(0, 2000):
         try:
             first = True
             while image_frames * (image_size ** 2) > 4 * (45 ** 2) or first:
@@ -402,6 +411,13 @@ def main():
             print("frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};focus_{};".format(
                 image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, focus
             ))
+            frames.append(image_frames)
+            sizes.append(image_size)
+            times.append(timestep)
+            encodes.append(encode_size)
+            max_transpose.append(max_transpose_layers)
+            kernel.append(kernel_size)
+            focal.append(focus)
             model = create_network.create_neural_network(
                 activation_function, optimizer, loss_function, image_frames,
                 image_size=image_size, encode_size=encode_size, allow_pooling=True,
@@ -412,6 +428,8 @@ def main():
             #                                                      focus=focus)
             parameters_line = create_network.interpret_model_summary(model)
             print(parameters_line)
+            number = int(parameters_line.split(":")[1].replace(",", ""))
+            trainable_parameters.append(number)
             # model, history = create_network.train_model(model, training_data, epochs=epochs)
             # model.save(
             #     "models/Proper-frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};focus_{};".format(
@@ -420,6 +438,33 @@ def main():
         except Exception as e:
             print("Fail!")
             print(e)
+    plt.xlabel("Frames")
+    plt.ylabel("Trainable parameters")
+    plt.scatter(frames, trainable_parameters)
+    plt.savefig("Space_search_frames.png")
+    plt.clf()
+    plt.xlabel("Sizes")
+    plt.ylabel("Trainable parameters")
+    plt.scatter(sizes, trainable_parameters)
+    plt.savefig("Space_search_sizes.png")
+    plt.clf()
+    plt.xlabel("Encode sizes")
+    plt.ylabel("Trainable parameters")
+    plt.scatter(encodes, trainable_parameters)
+    plt.savefig("Space_search_encodes.png")
+    plt.clf()
+    plt.xlabel("Max transpose layers")
+    plt.ylabel("Trainable parameters")
+    plt.scatter(max_transpose, trainable_parameters)
+    plt.savefig("Space_search_transpose.png")
+    plt.clf()
+    plt.xlabel("Kernel size")
+    plt.ylabel("Trainable parameters")
+    plt.scatter(kernel, trainable_parameters)
+    plt.savefig("Space_search_kernel.png")
+    plt.clf()
+
+
     output_images = np.zeros((1, image_frames, image_size, image_size, 1))
     input_images = np.zeros((1, image_frames, image_size, image_size, 3))
     expected_images = np.zeros((1, image_frames, image_size, image_size, 1))
