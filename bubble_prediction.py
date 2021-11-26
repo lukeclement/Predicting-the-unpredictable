@@ -362,18 +362,18 @@ def main():
     loss_function = loss_functions.bce_dice
     # loss_function = losses.BinaryCrossentropy()
     # Parameter ranges
-    image_frame_range = [1, 5]
+    image_frame_range = [1, 6]
     image_size_range = [20, 70]
-    timestep_range = [1, 20]
+    timestep_range = [1, 21]
     dropout_range = [0, 0.5]
-    encode_range = [1, 20]
-    max_transpose_range = [1, 5]
-    kernel_range = [2, 20]
-    multiply_range = [1, 5]
-    kernel_range_data = [1, 15]
+    encode_range = [1, 21]
+    max_transpose_range = [1, 8]
+    kernel_range = [2, 10]
+    focus_range = [1, 5]
     epochs = 10
 
-    allowed_sizes = [16, 32, 64, 128, 256]
+    allowed_sizes = [12, 15, 18, 20, 27, 30, 36, 45, 54, 60, 90, 108, 135, 180, 270]
+
     image_frames = 4
     image_size = 32
     timestep = 5
@@ -385,40 +385,42 @@ def main():
     kernel_size_data = 7
     focus = 1
     dropout = 0
+    dat_to_training.convert_dat_files([0, 0])
     while True:
         try:
             first = True
-            while image_frames * (image_size ** 2) > 3 * (64 ** 2) or first:
+            while image_frames * (image_size ** 2) > 4 * (45 ** 2) or first:
                 first = False
-                image_size = allowed_sizes[generate_random_value(rng, [0, 4])]
+                image_size = allowed_sizes[generate_random_value(rng, [0, 14])]
                 image_frames = generate_random_value(rng, image_frame_range)
             timestep = generate_random_value(rng, timestep_range)
             dropout = 0
             encode_size = generate_random_value(rng, encode_range)
             max_transpose_layers = generate_random_value(rng, max_transpose_range)
             kernel_size = generate_random_value(rng, kernel_range)
-            focus = generate_random_value(rng, multiply_range)
+            focus = generate_random_value(rng, focus_range)
             print("frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};focus_{};".format(
                 image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, focus
             ))
-            # dat_to_training.convert_dat_files([0, 0])
-
             model = create_network.create_neural_network(
                 activation_function, optimizer, loss_function, image_frames,
                 image_size=image_size, encode_size=encode_size, allow_pooling=True,
                 allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
                 dropout_rate=dropout_rate
             )
-            training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size,
-                                                                 focus=focus)
-            model, history = create_network.train_model(model, training_data, epochs=epochs)
-            model.save(
-                "models/Proper-frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};focus_{};".format(
-                    image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, focus
-                ))
+            # training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size,
+            #                                                      focus=focus)
+            parameters_line = create_network.interpret_model_summary(model)
+            print(parameters_line)
+            # model, history = create_network.train_model(model, training_data, epochs=epochs)
+            # model.save(
+            #     "models/Proper-frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};focus_{};".format(
+            #         image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, focus
+            #     ))
         except Exception as e:
             print("Fail!")
             print(e)
+            exit()
     output_images = np.zeros((1, image_frames, image_size, image_size, 1))
     input_images = np.zeros((1, image_frames, image_size, image_size, 3))
     expected_images = np.zeros((1, image_frames, image_size, image_size, 1))

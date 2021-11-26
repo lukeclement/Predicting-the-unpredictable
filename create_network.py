@@ -117,7 +117,7 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
 
     # Final adjustments
     model.add(layers.Conv3DTranspose(1, 1, activation='sigmoid', kernel_initializer=initializer))
-    print(model.summary(line_length=100))
+    # print(model.summary(line_length=100))
     # model.compile(optimizer=optimizer, loss=loss, run_eagerly=False, metrics=[loss_functions.bce_dice, losses.BinaryCrossentropy()])
     model.compile(optimizer=optimizer, loss=loss, run_eagerly=False)
     return model

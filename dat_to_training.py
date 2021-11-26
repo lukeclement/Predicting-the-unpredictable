@@ -6,7 +6,7 @@ from PIL import Image
 from scipy.signal import convolve2d
 import psutil
 
-BASE_SIZE = 512
+BASE_SIZE = 540
 
 
 def read_file(file_path):
@@ -150,7 +150,8 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
     total = 0
     sub_total = 0
     print(simulation_names[-1])
-    for simulation in simulation_names[:-1]:
+    print("Gathering references...")
+    for simulation in simulation_names[:1]:
         files = glob.glob("{}/*".format(simulation))
         number_of_files = len(files)
         sub_total += len(files)
@@ -158,6 +159,11 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
             total += 1
             data_sources.append("{}/img_{}.bmp".format(simulation, i))
             refs.append([simulation, i])
+    print("Loading data...")
+    source_array = np.zeros((len(data_sources), image_size, image_size, 3))
+    for index, data in enumerate(data_sources):
+        print("{:.2f}%".format(index*100/float(len(data_sources))))
+        source_array[index, :, :, :] = process_bmp(data, image_size, focus=focus)
 
     questions_array = np.zeros((
         int(np.floor(len(data_sources)*(1-validation_split))), frames, image_size, image_size, 3
@@ -171,29 +177,45 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
     answers_array_valid = np.zeros((
         int(np.ceil(len(data_sources)*validation_split)), frames, image_size, image_size, 1
     ), dtype="float16")
-    print("Running...")
+    print("Getting training data with shapes:")
     print(np.shape(questions_array))
     print(np.shape(answers_array))
+
     for index, file in enumerate(data_sources):
-        print("{:.2f}%".format(index*100/float(len(data_sources))))
         if index % int(1.0/validation_split) == 0:
             for frame in range(0, frames * timestep, timestep):
-                questions_array[index-1*int(np.floor(index*validation_split) + 1), int(frame / timestep), :, :, :] = process_bmp(
-                    "{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame), image_size, focus=focus
-                )
+                target_file = "{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame)
+                array_index = index-1*int(np.floor(index*validation_split) + 1)
+                try:
+                    location = data_sources.index(target_file)
+                    questions_array[array_index, int(frame / timestep), :, :, :] = source_array[location, :, :, :]
+                except:
+                    questions_array[array_index, int(frame / timestep), :, :, :] = process_bmp(target_file, image_size, focus=focus)
             for frame in range(frames * timestep, frames * timestep * 2, timestep):
-                answers_array[index-1*int(np.floor(index*validation_split) + 1), int(frame / timestep) - frames, :, :, 0] = process_bmp(
-                    "{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame), image_size, focus=focus
-                )[:, :, 1]
+                target_file = "{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame)
+                array_index = index - 1 * int(np.floor(index * validation_split) + 1)
+                try:
+                    location = data_sources.index(target_file)
+                    answers_array[array_index, int(frame / timestep) - frames, :, :, 0] = source_array[location, :, :, 1]
+                except:
+                    answers_array[array_index, int(frame / timestep) - frames, :, :, 0] = process_bmp(target_file, image_size, focus=focus)[:, :, 1]
         else:
             for frame in range(0, frames * timestep, timestep):
-                questions_array_valid[int(index*validation_split), int(frame / timestep), :, :, :] = process_bmp(
-                    "{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame), image_size, focus=focus
-                )
+                target_file = "{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame)
+                array_index = int(index*validation_split)
+                try:
+                    location = data_sources.index(target_file)
+                    questions_array_valid[array_index, int(frame / timestep), :, :, :] = source_array[location, :, :, :]
+                except:
+                    questions_array_valid[array_index, int(frame / timestep), :, :, :] = process_bmp(target_file, image_size, focus=focus)
             for frame in range(frames * timestep, frames * timestep * 2, timestep):
-                answers_array_valid[int(index*validation_split), int(frame / timestep) - frames, :, :, 0] = process_bmp(
-                    "{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame), image_size, focus=focus
-                )[:, :, 1]
+                target_file = "{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame)
+                array_index = int(index*validation_split)
+                try:
+                    location = data_sources.index(target_file)
+                    answers_array_valid[array_index, int(frame / timestep) - frames, :, :, 0] = source_array[location, :, :, 1]
+                except:
+                    answers_array_valid[array_index, int(frame / timestep) - frames, :, :, 0] = process_bmp(target_file, image_size, focus=focus)[:, :, 1]
 
     print("Converting to datasets...")
     batch_size = 8
