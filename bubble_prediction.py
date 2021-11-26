@@ -368,7 +368,7 @@ def main():
     dropout_range = [0, 0.5]
     encode_range = [1, 20]
     max_transpose_range = [1, 5]
-    kernel_range = [2, 20]
+    kernel_range = [2, 10]
     multiply_range = [1, 5]
     kernel_range_data = [1, 15]
     epochs = 10
@@ -385,6 +385,7 @@ def main():
     kernel_size_data = 7
     focus = 1
     dropout = 0
+    dat_to_training.convert_dat_files([0, 0])
     while True:
         try:
             first = True
