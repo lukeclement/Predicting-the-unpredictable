@@ -5,6 +5,7 @@ import tensorflow as tf
 from PIL import Image
 from scipy.signal import convolve2d
 import psutil
+from tqdm import tqdm
 
 BASE_SIZE = 540
 
@@ -151,7 +152,7 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
     sub_total = 0
     print(simulation_names[-1])
     print("Gathering references...")
-    for simulation in simulation_names[:1]:
+    for simulation in simulation_names[:-1]:
         files = glob.glob("{}/*".format(simulation))
         number_of_files = len(files)
         sub_total += len(files)
@@ -161,10 +162,12 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
             refs.append([simulation, i])
     print("Loading data...")
     source_array = np.zeros((len(data_sources), image_size, image_size, 3))
+    pbar = tqdm(total=len(data_sources))
     for index, data in enumerate(data_sources):
-        print_progress(index, len(data_sources))
+        # print_progress(index, len(data_sources))
+        pbar.update(1)
         source_array[index, :, :, :] = process_bmp(data, image_size, focus=focus)
-
+    pbar.close()
     questions_array = np.zeros((
         int(np.floor(len(data_sources)*(1-validation_split))), frames, image_size, image_size, 3
     ), dtype="float16")
@@ -234,6 +237,7 @@ def print_progress(pos, total):
             buffer += "|"
         else:
             buffer += "="
+    print("hi")
     print("{}{:.2f}%".format(buffer, pos * 100 / float(total)), end="\r")
 
 

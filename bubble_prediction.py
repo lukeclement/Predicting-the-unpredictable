@@ -373,6 +373,7 @@ def main():
     epochs = 10
 
     allowed_sizes = [12, 15, 18, 20, 27, 30, 36, 45, 54, 60, 90, 108, 135, 180, 270]
+    allowed_sizes = [30, 36, 45, 54, 60, 90, 108, 135, 180, 270]
 
     image_frames = 4
     image_size = 32
@@ -393,7 +394,7 @@ def main():
             first = True
             while image_frames * (image_size ** 2) > 4 * (45 ** 2) or first:
                 first = False
-                image_size = allowed_sizes[generate_random_value(rng, [0, 14])]
+                image_size = allowed_sizes[generate_random_value(rng, [0, len(allowed_sizes)])]
                 image_frames = generate_random_value(rng, image_frame_range)
             timestep = generate_random_value(rng, timestep_range)
             dropout = 0
