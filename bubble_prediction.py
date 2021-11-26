@@ -420,7 +420,6 @@ def main():
         except Exception as e:
             print("Fail!")
             print(e)
-            exit()
     output_images = np.zeros((1, image_frames, image_size, image_size, 1))
     input_images = np.zeros((1, image_frames, image_size, image_size, 3))
     expected_images = np.zeros((1, image_frames, image_size, image_size, 1))
