@@ -356,7 +356,7 @@ def generate_random_value(rng, allowed_range, i=True):
 def main():
     # activation_function = "LeakyReLU"
     tf.random.set_seed(100)
-    rng = default_rng(200)
+    rng = default_rng(69420)
     activation_function = layers.LeakyReLU()
     optimizer = "adam"
     loss_function = loss_functions.bce_dice
@@ -369,11 +369,12 @@ def main():
     encode_range = [1, 21]
     max_transpose_range = [1, 10]
     kernel_range = [2, 10]
-    focus_range = [1, 5]
+    focus_range = [1, 2]
     epochs = 10
 
     allowed_sizes = [12, 15, 18, 20, 27, 30, 36, 45, 54, 60, 90, 108, 135, 180, 270]
     allowed_sizes = [30, 36, 45, 54, 60, 90, 108, 135, 180, 270]
+    allowed_sizes = [45, 54, 60, 90, 108, 135, 180, 270]
 
     image_frames = 4
     image_size = 32
@@ -386,7 +387,7 @@ def main():
     kernel_size_data = 7
     focus = 1
     dropout = 0
-    # dat_to_training.convert_dat_files([0, 0])
+    #dat_to_training.convert_dat_files([0, 0])
 
     trainable_parameters = []
     for i in range(0, 2000):
