@@ -264,8 +264,8 @@ def process_bmp(filename, image_size, focus=1):
     h = convolve2d(h, kernel, mode='same')
     h = h[::int(BASE_SIZE / image_size), ::int(BASE_SIZE / image_size)]
     output_array = np.zeros((image_size, image_size, 3))
-    normalisation = np.max(h)
-    h = h / normalisation
+    # normalisation = np.max(h)
+    h = np.tanh(0.5 * h)
     # print(np.max(h))
     # output_array[:, :, 1] = np.minimum(h, np.zeros((image_size, image_size)) + 1)
     output_array[:, :, 1] = h

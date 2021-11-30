@@ -370,8 +370,8 @@ def main():
     rng = default_rng(69420)
     activation_function = layers.LeakyReLU()
     optimizer = "adam"
-    # loss_function = losses.mean_squared_error
-    loss_function = loss_functions.bce_dice
+    loss_function = losses.mean_squared_error
+    # loss_function = loss_functions.bce_dice
     # loss_function = losses.BinaryCrossentropy()
     # Parameter ranges
     image_frame_range = [1, 6]
@@ -425,7 +425,6 @@ def main():
         )
         training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size,
                                                              focus=focus)
-
         model, history = create_network.train_model(model, training_data, epochs=epochs)
         model.save(
             "models/Proper-frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};focus_{};".format(
