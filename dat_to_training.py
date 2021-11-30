@@ -152,6 +152,7 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
     sub_total = 0
     print(simulation_names[-1])
     print("Gathering references...")
+    print(simulation_names[:2])
     for simulation in simulation_names[:2]:
         files = glob.glob("{}/*".format(simulation))
         number_of_files = len(files)
@@ -265,7 +266,8 @@ def process_bmp(filename, image_size, focus=1):
     h = h[::int(BASE_SIZE / image_size), ::int(BASE_SIZE / image_size)]
     output_array = np.zeros((image_size, image_size, 3))
     # normalisation = np.max(h)
-    h = np.tanh(0.5 * h)
+    # h = np.tanh(0.5 * h)
+    h = 1/(1+np.exp(-h))
     # print(np.max(h))
     # output_array[:, :, 1] = np.minimum(h, np.zeros((image_size, image_size)) + 1)
     output_array[:, :, 1] = h

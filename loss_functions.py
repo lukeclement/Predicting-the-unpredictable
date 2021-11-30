@@ -2,29 +2,62 @@ import tensorflow as tf
 from tensorflow.keras import backend as k, losses
 
 
+def relative_diff(y_true, y_pred):
+    return k.sum(k.sqrt(k.abs(y_true-y_pred)))
+
+
+def tester_loss(y_true, y_pred):
+    total_guess = k.sum(y_pred, axis=[2, 3, 4])
+    total_actual = k.sum(y_true, axis=[2, 3, 4])
+    axis_a_sum_pred = k.sum(y_pred, axis=[3, 4])
+    axis_a_sum_true = k.sum(y_true, axis=[3, 4])
+    axis_b_sum_pred = k.sum(y_pred, axis=[2, 4])
+    axis_b_sum_true = k.sum(y_true, axis=[2, 4])
+    diff_a = k.abs(axis_a_sum_pred - axis_a_sum_true)
+    diff_b = k.abs(axis_b_sum_pred - axis_b_sum_true)
+    total_diff = k.sum(diff_a + diff_b, axis=1)
+    mse = losses.mean_squared_logarithmic_error(y_true, y_pred)
+    c = 0.0
+    if k.sum(y_pred) < 4.0:
+        c = 9999999.0
+    return mse + k.mean(total_diff) + c
+
+
+def absolute_diff(y_true, y_pred):
+    frame_differences = k.sum(k.abs(y_true-y_pred), axis=[2, 3, 4])
+    return k.mean(frame_differences)
+
+
+def dice_coef(y_true, y_pred, smooth=1):
+    intersection = k.sum(y_true * y_pred, axis=[2, 3, 4])
+    union = k.sum(y_true, axis=[2, 3, 4]) + k.sum(y_pred, axis=[2, 3, 4])
+    dice = k.mean((2. * intersection + smooth) / (union + smooth), axis=1)
+    dice_t = k.sum(dice, axis=0)
+    return dice_t
+
+
 def iou_coef(y_true, y_pred, smooth=1):
-    # print(y_true)
-    intersection = k.sum(k.abs(y_true * y_pred), axis=[1, 2, 3])
-    union = k.sum(y_true, [1, 2, 3]) + k.sum(y_pred, [1, 2, 3]) - intersection
-    iou = k.mean((intersection + smooth) / (union + smooth), axis=0)
-    return iou
+    intersection = k.sum(k.abs(y_true * y_pred), axis=[2, 3, 4])
+    union = k.sum(y_true, [2, 3, 4]) + k.sum(y_pred, [2, 3, 4]) - intersection
+    iou = k.mean((intersection + smooth) / (union + smooth), axis=1)
+    iou_t = k.sum(iou, axis=0)
+    return iou_t
+
+
+def mse_dice(y_true, y_pred):
+    mse = losses.mean_squared_logarithmic_error(y_true, y_pred)
+    di = k.log(dice_coef(y_true, y_pred))
+    iou = k.log(iou_coef(y_true, y_pred))
+    return mse - di - iou
 
 
 def bce_dice(y_true, y_pred):
     bce = losses.binary_crossentropy(y_true, y_pred)
-    # bce = losses.MeanSquaredError(y_true, y_pred)
     di = k.log(dice_coef(y_true, y_pred))
     iou = k.log(iou_coef(y_true, y_pred))
     # com = k.log(com_coef(y_true, y_pred))
     # return bce - di - iou + com
     return bce - di - iou
-
-
-def dice_coef(y_true, y_pred, smooth=1):
-    intersection = k.sum(y_true * y_pred, axis=[1, 2, 3])
-    union = k.sum(y_true, axis=[1, 2, 3]) + k.sum(y_pred, axis=[1, 2, 3])
-    dice = k.mean((2. * intersection + smooth) / (union + smooth), axis=0)
-    return dice
 
 
 def com_coef(y_true, y_pred):

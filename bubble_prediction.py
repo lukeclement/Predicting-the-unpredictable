@@ -370,9 +370,16 @@ def main():
     rng = default_rng(69420)
     activation_function = layers.LeakyReLU()
     optimizer = "adam"
-    loss_function = losses.mean_squared_error
-    # loss_function = loss_functions.bce_dice
+    # loss_function = losses.mean_squared_logarithmic_error
+    # loss_function = losses.cosine_similarity
+    # loss_function = losses.log_cosh
+    # loss_function = losses.huber
+    loss_function = loss_functions.bce_dice
+    # loss_function = losses.categorical_crossentropy
     # loss_function = losses.BinaryCrossentropy()
+    # loss_function = losses.sparse_categorical_crossentropy
+    # loss_function = loss_functions.mse_dice
+    # loss_function = loss_functions.tester_loss
     # Parameter ranges
     image_frame_range = [1, 6]
     image_size_range = [20, 70]
@@ -382,7 +389,7 @@ def main():
     max_transpose_range = [1, 10]
     kernel_range = [2, 10]
     focus_range = [1, 2]
-    epochs = 2
+    epochs = 10
 
     allowed_sizes = [12, 15, 18, 20, 27, 30, 36, 45, 54, 60, 90, 108, 135, 180, 270]
     allowed_sizes = [30, 36, 45, 54, 60, 90, 108, 135, 180, 270]
@@ -423,6 +430,8 @@ def main():
             allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
             dropout_rate=dropout_rate
         )
+        parameters_line = create_network.interpret_model_summary(model)
+        print(parameters_line)
         training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size,
                                                              focus=focus)
         model, history = create_network.train_model(model, training_data, epochs=epochs)
@@ -441,11 +450,11 @@ def main():
         try:
             input_images[0, frame, :, :, :] = dat_to_training.process_bmp(
                 "Simulation_images/Simulation_{}/img_{}.bmp".format(
-                    8, 20 + frame * timestep
+                    6, 20 + frame * timestep
                 ), image_size, focus)
             expected_images[0, frame, :, :, 0] = dat_to_training.process_bmp(
                 "Simulation_images/Simulation_{}/img_{}.bmp".format(
-                    8, 20 + (frame + image_frames) * timestep
+                    6, 20 + (frame + image_frames) * timestep
                 ), image_size, focus)[:, :, 1]
         except IOError as e:
             print("Error - either invalid simulation number or image out of range!")
