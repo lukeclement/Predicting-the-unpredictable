@@ -19,9 +19,9 @@ def get_parameters(filename):
 
 
 def main():
-    model_list = glob.glob("desktop_models/models/Special-*")
+    model_list = glob.glob("desktop_models/models/Proper-*")
     primary_key = []
-    # Formatted Special-frame_1;size_21;time_5;drop_0;encode_19;maxTrans_1;kernel_13;muli_2;keDat_5;
+    # Formatted Proper-frame_1;size_45;time_16;drop_0;encode_10;maxTrans_3;kernel_4;focus_1;
     frames = []
     sizes = []
     times = []
@@ -29,7 +29,6 @@ def main():
     max_transpose = []
     kernel = []
     multis = []
-    kernel_datas = []
 
     trainable_parameters = []
 
@@ -46,12 +45,11 @@ def main():
         max_transpose.append(parameters[5])
         kernel.append(parameters[6])
         multis.append(parameters[7])
-        kernel_datas.append(parameters[8])
         model = models.load_model(model_file, custom_objects={"bce_dice": loss_functions.bce_dice})
         print(model_file)
-        dat_to_training.convert_dat_files([0, 0], parameters[1], 3, 7)
+        # dat_to_training.convert_dat_files([0, 0], parameters[1], 3, 7)
         data = dat_to_training.create_training_data(
-            parameters[0], parameters[2], validation_split=0.1, image_size=parameters[1]
+            parameters[0], parameters[2], validation_split=0.5, image_size=parameters[1], focus=parameters[7]
         )
 
         loss = model.evaluate(data[1])
@@ -70,40 +68,44 @@ def main():
         "Encode size": encodes,
         "Max transpose layers": max_transpose,
         "Kernel size": kernel,
-        "Multiplier": multis,
-        "Kernel size for data": kernel_datas,
+        "Focus": multis,
         "Loss": loss_values,
         "Trainable parameters": trainable_parameters
     })
     # model_data.to_csv("Model_quality.csv")
-    model_data.to_csv("Model_quality_fixed_thicc.csv")
+    model_data.to_csv("Model_quality_proper.csv")
 
 
 def make_gifs(index, model, parameters):
     testing = bubble_prediction.long_term_prediction(
-        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=False, extra=True
+        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=False, extra=True, focus=parameters[7]
     )
     bubble_prediction.make_gif(testing, 'desktop_models/model_gifs_fixed_thicc/without_rounding_with_extras_{}'.format(index))
     testing = bubble_prediction.long_term_prediction(
-        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=False, extra=False
+        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=False, extra=False, focus=parameters[7]
     )
     bubble_prediction.make_gif(testing, 'desktop_models/model_gifs_fixed_thicc/without_rounding_without_extras_{}'.format(index))
     testing = bubble_prediction.long_term_prediction(
-        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=False, extra=True, jump=True
+        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=False, extra=True, jump=True, focus=parameters[7]
     )
     bubble_prediction.make_gif(testing, 'desktop_models/model_gifs_fixed_thicc/without_rounding_with_jump_{}'.format(index))
     testing = bubble_prediction.long_term_prediction(
-        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=True, extra=True, jump=True
+        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=True, extra=True, jump=True, focus=parameters[7]
     )
     bubble_prediction.make_gif(testing, 'desktop_models/model_gifs_fixed_thicc/with_rounding_with_jump_{}'.format(index))
     testing = bubble_prediction.long_term_prediction(
-        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=True, extra=True
+        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=True, extra=True, focus=parameters[7]
     )
     bubble_prediction.make_gif(testing, 'desktop_models/model_gifs_fixed_thicc/with_rounding_with_extras_{}'.format(index))
     testing = bubble_prediction.long_term_prediction(
-        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=True, extra=False
+        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=True, extra=False, focus=parameters[7]
     )
     bubble_prediction.make_gif(testing, 'desktop_models/model_gifs_fixed_thicc/with_rounding_without_extras_{}'.format(index))
+    testing = bubble_prediction.long_term_prediction(
+        model, 3, 20, parameters[1], parameters[2], parameters[0], 400, round_result=True, extra=False, dry_run=True, focus=parameters[7]
+    )
+    bubble_prediction.make_gif(testing, 'desktop_models/model_gifs_fixed_thicc/raw_sim_{}'.format(index))
+
 
 
 if __name__ == "__main__":

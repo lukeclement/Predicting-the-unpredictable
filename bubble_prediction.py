@@ -273,7 +273,7 @@ def ensemble_prediction(
 
 def long_term_prediction(
         model, start_sim, start_image, image_size, timestep, frames, number_to_simulate, round_result=False,
-        extra=True, jump=False, focus=1):
+        extra=True, jump=False, focus=1, dry_run=False):
     input_images = np.zeros((1, frames, image_size, image_size, 3))
     for frame in range(0, frames):
         try:
@@ -287,6 +287,17 @@ def long_term_prediction(
             print(e)
             return []
     positions = []
+    if dry_run:
+        try:
+            for i in range(0, number_to_simulate):
+                positions.append((dat_to_training.process_bmp(
+                    "Simulation_images/Simulation_{}/img_{}.bmp".format(
+                        start_sim, start_image + i * timestep
+                    ), image_size, focus=focus
+                ) * 255).astype(np.uint8))
+        except:
+            return positions
+        return positions
     if jump:
         for i in range(0, number_to_simulate):
             output_image = np.zeros((frames, image_size, image_size, 3))
@@ -359,6 +370,7 @@ def main():
     rng = default_rng(69420)
     activation_function = layers.LeakyReLU()
     optimizer = "adam"
+    # loss_function = losses.mean_squared_error
     loss_function = loss_functions.bce_dice
     # loss_function = losses.BinaryCrossentropy()
     # Parameter ranges
@@ -370,14 +382,14 @@ def main():
     max_transpose_range = [1, 10]
     kernel_range = [2, 10]
     focus_range = [1, 2]
-    epochs = 10
+    epochs = 2
 
     allowed_sizes = [12, 15, 18, 20, 27, 30, 36, 45, 54, 60, 90, 108, 135, 180, 270]
     allowed_sizes = [30, 36, 45, 54, 60, 90, 108, 135, 180, 270]
     allowed_sizes = [45, 54, 60, 90, 108, 135, 180, 270]
 
     image_frames = 4
-    image_size = 32
+    image_size = 54
     timestep = 5
     dropout_rate = 0.1
     encode_size = 2
@@ -390,38 +402,38 @@ def main():
     #dat_to_training.convert_dat_files([0, 0])
 
     trainable_parameters = []
-    for i in range(0, 2000):
-        try:
-            first = True
-            while image_frames * (image_size ** 2) > 4 * (45 ** 2) or first:
-                first = False
-                image_size = allowed_sizes[generate_random_value(rng, [0, len(allowed_sizes)])]
-                image_frames = generate_random_value(rng, image_frame_range)
-            timestep = generate_random_value(rng, timestep_range)
-            dropout = 0
-            encode_size = generate_random_value(rng, encode_range)
-            max_transpose_layers = generate_random_value(rng, max_transpose_range)
-            kernel_size = generate_random_value(rng, kernel_range)
-            focus = generate_random_value(rng, focus_range)
-            print("frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};focus_{};".format(
+    try:
+        # first = True
+        # while image_frames * (image_size ** 2) > 4 * (45 ** 2) or first:
+        #     first = False
+        #     image_size = allowed_sizes[generate_random_value(rng, [0, len(allowed_sizes)])]
+        #     image_frames = generate_random_value(rng, image_frame_range)
+        # timestep = generate_random_value(rng, timestep_range)
+        # dropout = 0
+        # encode_size = generate_random_value(rng, encode_range)
+        # max_transpose_layers = generate_random_value(rng, max_transpose_range)
+        # kernel_size = generate_random_value(rng, kernel_range)
+        # focus = generate_random_value(rng, focus_range)
+        print("frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};focus_{};".format(
+            image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, focus
+        ))
+        model = create_network.create_neural_network(
+            activation_function, optimizer, loss_function, image_frames,
+            image_size=image_size, encode_size=encode_size, allow_pooling=True,
+            allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
+            dropout_rate=dropout_rate
+        )
+        training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size,
+                                                             focus=focus)
+
+        model, history = create_network.train_model(model, training_data, epochs=epochs)
+        model.save(
+            "models/Proper-frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};focus_{};".format(
                 image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, focus
             ))
-            model = create_network.create_neural_network(
-                activation_function, optimizer, loss_function, image_frames,
-                image_size=image_size, encode_size=encode_size, allow_pooling=True,
-                allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
-                dropout_rate=dropout_rate
-            )
-            training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size,
-                                                                 focus=focus)
-            model, history = create_network.train_model(model, training_data, epochs=epochs)
-            model.save(
-                "models/Proper-frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};focus_{};".format(
-                    image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, focus
-                ))
-        except Exception as e:
-            print("Fail!")
-            print(e)
+    except Exception as e:
+        print("Fail!")
+        print(e)
 
     output_images = np.zeros((1, image_frames, image_size, image_size, 1))
     input_images = np.zeros((1, image_frames, image_size, image_size, 3))
@@ -463,18 +475,31 @@ def main():
     axes["K"].imshow(expected_images[0, 2, :, :, :])
     axes["L"].imshow(expected_images[0, 3, :, :, :])
     plt.savefig("Hey_look_at_me.png", dpi=500)
-    testing = long_term_prediction(model, 3, 20, image_size, timestep, image_frames, 200, round_result=False,
-                                   extra=True, focus=focus)
+    testing = long_term_prediction(
+        model, 3, 20, image_size, timestep, image_frames, 200,
+        round_result=False, extra=True, focus=focus
+    )
     make_gif(testing, 'samples/without_rounding_with_extras')
-    testing = long_term_prediction(model, 3, 20, image_size, timestep, image_frames, 200, round_result=False,
-                                   extra=False, focus=focus)
+    testing = long_term_prediction(
+        model, 3, 20, image_size, timestep, image_frames, 200,
+        round_result=False, extra=False, focus=focus
+    )
     make_gif(testing, 'samples/without_rounding_without_extras')
-    testing = long_term_prediction(model, 3, 20, image_size, timestep, image_frames, 200, round_result=True, extra=True,
-                                   focus=focus)
+    testing = long_term_prediction(
+        model, 3, 20, image_size, timestep, image_frames, 200,
+        round_result=True, extra=True, focus=focus
+    )
     make_gif(testing, 'samples/with_rounding_with_extras')
-    testing = long_term_prediction(model, 3, 20, image_size, timestep, image_frames, 200, round_result=True,
-                                   extra=False, focus=focus)
+    testing = long_term_prediction(
+        model, 3, 20, image_size, timestep, image_frames, 200,
+        round_result=True, extra=False, focus=focus
+    )
     make_gif(testing, 'samples/with_rounding_without_extras')
+    testing = long_term_prediction(
+        model, 3, 20, image_size, timestep, image_frames, 200,
+        round_result=True, extra=False, focus=focus, dry_run=True
+    )
+    make_gif(testing, 'samples/actual_data')
 
     # number_of_ensembles = 10
     # number_of_samples = 500

@@ -152,7 +152,7 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
     sub_total = 0
     print(simulation_names[-1])
     print("Gathering references...")
-    for simulation in simulation_names[:-1]:
+    for simulation in simulation_names[:2]:
         files = glob.glob("{}/*".format(simulation))
         number_of_files = len(files)
         sub_total += len(files)
@@ -184,7 +184,9 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
     print(np.shape(questions_array))
     print(np.shape(answers_array))
 
+    pbar = tqdm(total=len(data_sources))
     for index, file in enumerate(data_sources):
+        pbar.update(1)
         if index % int(1.0/validation_split) == 0:
             for frame in range(0, frames * timestep, timestep):
                 target_file = "{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame)
@@ -220,8 +222,22 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
                 except:
                     answers_array_valid[array_index, int(frame / timestep) - frames, :, :, 0] = process_bmp(target_file, image_size, focus=focus)[:, :, 1]
 
+    pbar.close()
     print("Converting to datasets...")
     batch_size = 8
+    normalisation_options = [
+        np.max(answers_array[:, :, :, :, 0]),
+        np.max(answers_array_valid[:, :, :, :, 0]),
+        np.max(questions_array[:, :, :, :, 1]),
+        np.max(questions_array_valid[:, :, :, :, 1])
+    ]
+    normalisation_best = max(normalisation_options)
+    # answers_array[:, :, :, :, 0] = answers_array[:, :, :, :, 0] / normalisation_best
+    # answers_array_valid[:, :, :, :, 0] = answers_array_valid[:, :, :, :, 0] / normalisation_best
+    # questions_array[:, :, :, :, 1] = questions_array[:, :, :, :, 1] / normalisation_best
+    # questions_array_valid[:, :, :, :, 1] = questions_array_valid[:, :, :, :, 1] / normalisation_best
+    print(normalisation_options)
+
     testing_data = tf.data.Dataset.from_tensor_slices((questions_array, answers_array))
     testing_data = testing_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
 
@@ -244,12 +260,14 @@ def print_progress(pos, total):
 def process_bmp(filename, image_size, focus=1):
     h = np.asarray(Image.open(filename)) / 255
     kernel_size = int((BASE_SIZE/image_size)*focus)
-    kernel = np.ones((kernel_size, kernel_size)) / (kernel_size * 4)
+    kernel = np.ones((kernel_size, kernel_size))
     h = convolve2d(h, kernel, mode='same')
     h = h[::int(BASE_SIZE / image_size), ::int(BASE_SIZE / image_size)]
-    h = h * 10
     output_array = np.zeros((image_size, image_size, 3))
+    normalisation = np.max(h)
+    h = h / normalisation
     # print(np.max(h))
-    output_array[:, :, 1] = np.minimum(h, np.zeros((image_size, image_size)) + 1)
+    # output_array[:, :, 1] = np.minimum(h, np.zeros((image_size, image_size)) + 1)
+    output_array[:, :, 1] = h
     output_array = generate_rail(output_array)
     return output_array
