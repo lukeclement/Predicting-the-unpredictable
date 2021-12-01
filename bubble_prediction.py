@@ -396,7 +396,7 @@ def main():
     allowed_sizes = [45, 54, 60, 90, 108, 135, 180, 270]
 
     image_frames = 4
-    image_size = 54
+    image_size = allowed_sizes[0]
     timestep = 5
     dropout_rate = 0.1
     encode_size = 2
@@ -484,30 +484,30 @@ def main():
     axes["L"].imshow(expected_images[0, 3, :, :, :])
     plt.savefig("Hey_look_at_me.png", dpi=500)
     testing = long_term_prediction(
-        model, 3, 20, image_size, timestep, image_frames, 200,
+        model, 10, 20, image_size, timestep, image_frames, 200,
         round_result=False, extra=True, focus=focus
     )
-    make_gif(testing, 'samples/without_rounding_with_extras')
+    make_gif(testing, 'samples/without_rounding_with_extras_small')
     testing = long_term_prediction(
-        model, 3, 20, image_size, timestep, image_frames, 200,
+        model, 10, 20, image_size, timestep, image_frames, 200,
         round_result=False, extra=False, focus=focus
     )
-    make_gif(testing, 'samples/without_rounding_without_extras')
+    make_gif(testing, 'samples/without_rounding_without_extras_small')
     testing = long_term_prediction(
-        model, 3, 20, image_size, timestep, image_frames, 200,
+        model, 10, 20, image_size, timestep, image_frames, 200,
         round_result=True, extra=True, focus=focus
     )
-    make_gif(testing, 'samples/with_rounding_with_extras')
+    make_gif(testing, 'samples/with_rounding_with_extras_small')
     testing = long_term_prediction(
-        model, 3, 20, image_size, timestep, image_frames, 200,
+        model, 10, 20, image_size, timestep, image_frames, 200,
         round_result=True, extra=False, focus=focus
     )
-    make_gif(testing, 'samples/with_rounding_without_extras')
+    make_gif(testing, 'samples/with_rounding_without_extras_small')
     testing = long_term_prediction(
-        model, 3, 20, image_size, timestep, image_frames, 200,
+        model, 10, 20, image_size, timestep, image_frames, 200,
         round_result=True, extra=False, focus=focus, dry_run=True
     )
-    make_gif(testing, 'samples/actual_data')
+    make_gif(testing, 'samples/actual_data_small')
 
     # number_of_ensembles = 10
     # number_of_samples = 500
