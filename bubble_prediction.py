@@ -374,12 +374,14 @@ def main():
     # loss_function = losses.cosine_similarity
     # loss_function = losses.log_cosh
     # loss_function = losses.huber
-    loss_function = loss_functions.bce_dice
+    # loss_function = loss_functions.bce_dice
     # loss_function = losses.categorical_crossentropy
     # loss_function = losses.BinaryCrossentropy()
     # loss_function = losses.sparse_categorical_crossentropy
     # loss_function = loss_functions.mse_dice
     # loss_function = loss_functions.tester_loss
+    loss_function = loss_functions.UBERLOSS
+    # loss_function = loss_functions.ssim_loss
     # Parameter ranges
     image_frame_range = [1, 6]
     image_size_range = [20, 70]

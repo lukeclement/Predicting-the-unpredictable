@@ -2,6 +2,16 @@ import tensorflow as tf
 from tensorflow.keras import backend as k, losses
 
 
+def UBERLOSS(y_true, y_pred):
+    test = tester_loss(y_true, y_pred)
+    dice = dice_coef(y_true, y_pred)
+    iou = iou_coef(y_true, y_pred)
+    ssim = ssim_loss(y_true, y_pred)
+    mse = losses.mean_squared_logarithmic_error(y_true, y_pred)
+    bce = losses.binary_crossentropy(y_true, y_pred)
+    return bce + mse + ssim - k.log(iou) - k.log(dice)
+
+
 def relative_diff(y_true, y_pred):
     return k.sum(k.sqrt(k.abs(y_true-y_pred)))
 
@@ -42,6 +52,12 @@ def iou_coef(y_true, y_pred, smooth=1):
     iou = k.mean((intersection + smooth) / (union + smooth), axis=1)
     iou_t = k.sum(iou, axis=0)
     return iou_t
+
+
+def ssim_loss(y_true, y_pred):
+    mid_t = k.mean(y_true, axis=1)
+    mid_p = k.mean(y_pred, axis=1)
+    return 1 - tf.reduce_mean(tf.image.ssim(mid_t, mid_p, 1.0))
 
 
 def mse_dice(y_true, y_pred):
