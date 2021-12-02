@@ -10,104 +10,6 @@ import imageio
 from array2gif import write_gif
 from datetime import date
 
-
-def long_term_prediction(
-        model, start_sim, start_image, image_size, timestep, frames, number_to_simulate, round_result=False):
-    input_images = np.zeros((1, frames, image_size, image_size, 3))
-    for frame in range(0, frames):
-        try:
-            input_images[0, frame, :, :, :] = np.asarray(
-                    Image.open("Simulation_images/Simulation_{}/img_{}.bmp".format(
-                        start_sim, start_image + frame*timestep
-                    ))
-                ) / 255
-        except IOError as e:
-            print("Error - either invalid simulation number or image out of range!")
-            print(e)
-            return []
-    positions = []
-    for i in range(0, number_to_simulate):
-        output_image = np.zeros((image_size, image_size, 3))
-        output_image[:, :, 1] = model(input_images)[0, :, :, 0]
-        if round_result:
-            output_image = np.around(output_image)
-        dat_to_training.generate_rail(output_image)
-        for frame in range(1, frames):
-            input_images[0, frame-1, :, :, :] = input_images[0, frame, :, :, :]
-        input_images[0, frames-1, :, :, :] = output_image
-        positions.append((output_image*255).astype(np.uint8))
-    return positions
-
-
-def make_gif(image, name):
-    images = []
-    for i in image:
-        images.append(i)
-    imageio.mimsave("{}.gif".format(name), images)
-
-
-def main():
-    tf.random.set_seed(100)
-    activation_function = layers.LeakyReLU()
-    optimizer = optimizers.Adam()
-    loss_function = losses.BinaryCrossentropy()
-    image_frames = 4
-    loss_frames = 2
-    image_size = 64
-    timestep = 5
-
-    # print("creating data")
-    # dat_to_training.convert_dat_files([0, 0], image_size=image_size)
-
-    # rail = dat_to_training.generate_rail(training_data[0][0, 0])
-    # rail_array = np.zeros((image_frames, image_size, image_size))
-    # rail_array[:] = rail[:, :, 2]
-    # rail_array = tf.convert_to_tensor(rail_array)
-
-    training_data = dat_to_training.create_small_multiframe_data(image_frames, loss_frames, timestep, image_size=image_size)
-
-    model = create_network.create_inception_net(activation_function, optimizer, loss_function)
-    # print(model.summary())
-    model, history = create_network.train_model(model, training_data, epochs=2)
-    today = date.today()
-    dt_string = today.strftime("%d_%m_%Y_%H_%M")
-    directory = "saved_models/" + dt_string
-    model.save(directory)
-    for i in range(20):
-        evaluate_model(image_frames, image_size, model, timestep, str(i), 400)
-
-    """
-    print("Loading Model")
-    model = models.load_model("saved_models/23_11_2021_00_00", custom_objects={"bce_dice": loss_functions.bce_dice})
-    for i in range(20):
-        evaluate_model(image_frames, image_size, model, timestep, str(i), 400)
-
-    # start = 200
-    # simulation = 1
-    # preamble = "Simulation_images/Simulation_" + simulation + "/img_"
-    # initial = np.zeros((1, image_frames, image_size, image_size, 3))
-    # expected = np.zeros((image_size, image_size, 1))
-    # for frame in range(0, image_frames):
-    #     frame_to_load = "{}{}{}".format(preamble, start + frame * timestep, ".bmp")
-    #     initial[0, frame, :, :, :] = np.asarray(Image.open(frame_to_load)) / 255
-    # expected_frame = "{}{}{}".format(preamble, start + image_frames * timestep, ".bmp")
-    # expected[:, :, 0] = np.asarray(Image.open(expected_frame))[:, :, 1] / 255
-    # guess = model(initial)[0]
-    # previous_frame = np.zeros((image_size, image_size, 1))
-    # previous_frame[:, :, 0] = initial[0, image_frames - 1, :, :, 1]
-    # positive_counts, negative_counts = difference_graphing(expected, guess, previous_frame, plotting=plotting)
-
-    # """
-
-
-def evaluate_model(image_frames, image_size, model, timestep, simulation, start):
-    print("Simulation " + simulation)
-    test_positions = long_term_prediction(model, simulation, start, image_size, timestep, image_frames, 200, round_result=False)
-    make_gif(test_positions, 'gifs/without_rounding_' + simulation)
-    test_positions = long_term_prediction(model, simulation, start, image_size, timestep, image_frames, 200, round_result=True)
-    make_gif(test_positions, 'gifs/with_rounding_' + simulation)
-
-
 def difference_graphing(expected, guess, previous_frame, plotting=True):
     rounded_guess = np.around(guess)
 
@@ -127,7 +29,6 @@ def difference_graphing(expected, guess, previous_frame, plotting=True):
     negative_correct, negative_counts = real_guess_differences(negative_guess, negative_guess)
 
     if plotting:
-
         positive_rgb = difference_to_rgb(positive_correct)
         negative_rgb = difference_to_rgb(negative_correct)
 
@@ -186,6 +87,109 @@ def real_guess_differences(positive_guess, positive_real):
     positive_counts = dict(zip(unique, counts))
     return positive_correct, positive_counts
 
+
+def evaluate_model(data, image_frames, image_size, model, timestep, simulation, start):
+    print("Simulation " + str(simulation))
+    test_positions = long_term_prediction(data, model, simulation, start, image_size, timestep, image_frames, 200,
+                                          round_result=False)
+    make_gif(test_positions, 'gifs/without_rounding_' + str(simulation))
+    # test_positions = long_term_prediction(data, model, simulation, start, image_size, timestep, image_frames, 200,
+    #                                       round_result=True)
+    # make_gif(test_positions, 'gifs/with_rounding_' + simulation)
+
+
+def long_term_prediction(data, model, start_sim, start_image, image_size, timestep, frames, number_to_simulate, round_result=False):
+    input_images = data[0][0]
+    image = input_images[0, 0, :, :, :]
+    dat_to_training.generate_rail(image)
+    rail = [image[:, :, 2:]]
+    zeros = [image[:, :, 0:1]]
+    working_frames = input_images[start_image:start_image+1]
+    y_pred = model(working_frames).numpy()
+    y_pred = np.append(zeros, y_pred, 3)
+    y_pred = np.append(y_pred, rail, 3)
+    output_images = y_pred
+    y_pred_shape = np.shape(y_pred)
+    y_pred = np.reshape(y_pred, newshape=(y_pred_shape[0], 1, y_pred_shape[1], y_pred_shape[2], y_pred_shape[3]))
+    working_frames = working_frames[:, 1:, :, :, :]
+    working_frames = np.append(working_frames, y_pred, 1)
+    for i in range(0, number_to_simulate - 1):
+        y_pred = model(working_frames).numpy()
+        y_pred = np.append(zeros, y_pred, 3)
+        y_pred = np.append(y_pred, rail, 3)
+        output_images = np.append(output_images, y_pred, axis=0)
+        y_pred = np.reshape(y_pred, newshape=(y_pred_shape[0], 1, y_pred_shape[1], y_pred_shape[2], y_pred_shape[3]))
+        working_frames = working_frames[:, 1:, :, :, :]
+        working_frames = np.append(working_frames, y_pred, 1)
+    output_images = (output_images*255).astype(np.uint8)
+    return output_images
+
+
+def make_gif(image, name):
+    images = []
+    for i in image:
+        images.append(i)
+    imageio.mimsave("{}.gif".format(name), images)
+
+
+def main():
+    tf.random.set_seed(100)
+    activation_function = layers.LeakyReLU()
+    optimizer = optimizers.Adam()
+    loss_function = losses.MeanSquaredError()
+    image_frames = 4
+    loss_frames = 2
+    image_size = 60
+    timestep = 5
+    focus = 1
+
+    today = date.today()
+    dt_string = today.strftime("%d_%m_%Y_%H_%M")
+    directory = "saved_models/" + dt_string
+
+    # dat_to_training.save_training_data(focus, image_size)
+    training_data = dat_to_training.load_training_data(image_frames,
+                                                       timestep=timestep,
+                                                       image_size=image_size,
+                                                       numpy_=True,
+                                                       validation_split=0.001)
+
+    model = create_network.create_inception_net(activation_function, optimizer, loss_function)
+    model, history = create_network.train_model(model, training_data, epochs=1)
+    model.save(directory)
+    for i in range(20):
+        data = dat_to_training.load_training_data(image_frames, timestep=timestep, image_size=image_size, numpy_=True, simulation_num=i)
+        evaluate_model(data, image_frames, image_size, model, timestep, i, 400)
+
+
+
+    # """
+    # print("Loading Model")
+    # model = models.load_model(directory, custom_objects={"bce_dice": loss_functions.bce_dice})
+    # for i in range(20):
+    #     data = dat_to_training.create_training_data(image_frames, timestep=timestep, image_size=image_size, simulation_num=i, numpy_=True)
+    #     evaluate_model(data, image_frames, image_size, model, timestep, str(i), 400)
+
+    # start = 200
+    # simulation = '1'
+    # preamble = "Simulation_images/Simulation_" + simulation + "/img_"
+    # initial = np.zeros((1, image_frames, image_size, image_size, 3))
+    # expected = np.zeros((image_size, image_size, 1))
+    # for frame in range(0, image_frames):
+    #     frame_to_load = "{}{}{}".format(preamble, start + frame * timestep, ".bmp")
+    #     initial[0, frame, :, :, :] = np.asarray(Image.open(frame_to_load)) / 255
+    # expected_frame = "{}{}{}".format(preamble, start + image_frames * timestep, ".bmp")
+    # expected[:, :, 0] = np.asarray(Image.open(expected_frame))[:, :, 1] / 255
+    # # guess = model(initial)[0]
+    # previous_frame = np.zeros((image_size, image_size, 1))
+    # previous_frame[:, :, 0] = initial[0, image_frames - 1, :, :, 1]
+    # plt.imshow(previous_frame)
+    # plt.show()
+    # positive_counts, negative_counts = difference_graphing(expected, guess, previous_frame, plotting=plotting)
+    # x, y = dat_to_training.read_file("Simulation_data/r0.54eps18.6/boundaries_840.dat")
+    # plt.plot(x, y)
+    # plt.show()
+    # """
 
 if __name__ == "__main__":
     main()

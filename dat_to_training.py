@@ -1,10 +1,14 @@
 import glob
 import os
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from PIL import Image
 from scipy.signal import convolve2d
 import psutil
+from tqdm import tqdm
+
+BASE_SIZE = 540
 
 
 def read_file(file_path):
@@ -70,25 +74,24 @@ def transform_to_numpy_array(x, y, variant, invert, image_size=64):
         A numpy array of shape (image_size, image_size) with elements 1 or 0 for the bubble edge.
     """
     h, x_edge, y_edge = np.histogram2d(
-        ((-1)**(not invert))*x, y + variant / (image_size / 2),
-        range=[[-1, 1], [-1, 1]], bins=((image_size+1)*3, (image_size+1)*3)
+        ((-1)**(not invert))*x, y + variant / (BASE_SIZE / 2),
+        # range=[[-1, 1], [-1, 1]], bins=(image_size*multiply + kernel_size - 1, image_size*multiply + kernel_size - 1)
+        range=[[-1, 1], [-1, 1]], bins=(BASE_SIZE, BASE_SIZE)
     )
-    kernel = np.ones((6, 6))
-    h = convolve2d(h, kernel, mode='valid')
-    h = h[::3, ::3]
+
     # Preparing memory for the output array, then filling the bubble edge
-    output_array = np.zeros((image_size, image_size, 3))
-    output_array[:, :, 1] = np.minimum(h, np.zeros((image_size, image_size)) + 1)
+    # print(np.max(h))
+    output_array = np.minimum(h, np.zeros((BASE_SIZE, BASE_SIZE)) + 1)
     # Adding the central rail
-    output_array = generate_rail(output_array)
+    # output_array = generate_rail(output_array)
     output_array = 255*output_array
     output_array = output_array.astype(np.uint8)
     return output_array
 
 
-def convert_dat_files(variant_range, image_size=64):
-    """Converts all .dat files to numpy arrays, and saves them as .npy files.
-    These .npy files are stored in Simulation_images/Simulation_X, where X is the reference number for the simulation.
+def convert_dat_files(variant_range):
+    """Converts all .dat files to numpy arrays, and saves them as .bmp files.
+    These .bmp files are stored in Simulation_images/Simulation_X, where X is the reference number for the simulation.
     These aren't necessarily actual simulations, but can be variants of these 'base' simulations,
     where the physics remains constant.
     Input:
@@ -127,7 +130,9 @@ def convert_dat_files(variant_range, image_size=64):
                     # Finding the actual frame number
                     step_number = int(file[file.find("s_")+2:-4])
                     # Converting to array
-                    resulting_array = transform_to_numpy_array(x, y, variant, inversion, image_size=image_size)
+                    resulting_array = transform_to_numpy_array(
+                        x, y, variant, inversion
+                    )
                     # Saving to memory
                     image = Image.fromarray(resulting_array)
                     image.save("Simulation_images/Simulation_{}/img_{}.bmp".format(
@@ -136,6 +141,182 @@ def convert_dat_files(variant_range, image_size=64):
                     del resulting_array
                 tracking_index += 1
         simulation_index += 1
+
+
+def load_training_data(frames, timestep, validation_split=0.1, image_size=64, focus=1, simulation_num=999, numpy_=False):
+    refs = []
+    data_sources = []
+    sub_total = 0
+    total = 0
+    print("Loading training data: ")
+    training_names = glob.glob("training_images/*")
+    training_names = training_names[:6]
+    if simulation_num != 999:
+        simulation = training_names[simulation_num]
+        print("Loading simulation number: ", simulation)
+        files = glob.glob("{}/*".format(simulation))
+        number_of_files = len(files)
+        sub_total += len(files)
+        for i in range(3, number_of_files - timestep * frames * 2):
+            total += 1
+            data_sources.append("{}/img_{}.bmp".format(simulation, i))
+            refs.append([simulation, i])
+    else:
+        for simulation in training_names:
+            files = glob.glob("{}/*".format(simulation))
+            number_of_files = len(files)
+            sub_total += len(files)
+            for i in range(3, number_of_files - timestep * frames * 2):
+                total += 1
+                data_sources.append("{}/img_{}.bmp".format(simulation, i))
+                refs.append([simulation, i])
+
+    source_array = np.zeros((len(data_sources), image_size, image_size, 3))
+    index = 0
+    pbar = tqdm(total=len(data_sources))
+    if simulation_num != 999:
+        training_directory = glob.glob(training_names[simulation_num] + "/*")
+        number_of_files = len(training_directory)
+        for i in range(3, number_of_files - timestep * frames * 2):
+            training_data = np.load(training_directory[i])
+            source_array[index, :, :, :] = training_data
+            index += 1
+            pbar.update(1)
+    else:
+        for simulation in training_names:
+            training_directory = glob.glob(simulation+"/*")
+            number_of_files = len(training_directory)
+            for i in range(3, number_of_files - timestep * frames * 2):
+                training_data = np.load(training_directory[i])
+                source_array[index, :, :, :] = training_data
+                index += 1
+                pbar.update(1)
+    pbar.close()
+
+    questions_array = np.zeros((
+        int(np.floor(len(data_sources)*(1-validation_split))), frames, image_size, image_size, 3
+    ), dtype="float16")
+    answers_array = np.zeros((
+        int(np.floor(len(data_sources)*(1-validation_split))), frames, image_size, image_size, 1
+    ), dtype="float16")
+    questions_array_valid = np.zeros((
+        int(np.ceil(len(data_sources)*validation_split)), frames, image_size, image_size, 3
+    ), dtype="float16")
+    answers_array_valid = np.zeros((
+        int(np.ceil(len(data_sources)*validation_split)), frames, image_size, image_size, 1
+    ), dtype="float16")
+    print("Converting training data:")
+    pbar = tqdm(total=len(data_sources))
+    for index, file in enumerate(data_sources):
+        pbar.update(1)
+        if index % int(1.0/validation_split) != 0:
+            for frame in range(0, frames * timestep, timestep):
+                target_file = "{}/img_{}.npy".format(refs[index][0], refs[index][1] + frame)
+                array_index = index-1*int(np.floor(index*validation_split) + 1)
+                try:
+                    location = data_sources.index(target_file)
+                    questions_array[array_index, int(frame / timestep), :, :, :] = source_array[location, :, :, :]
+                except:
+                    questions_array[array_index, int(frame / timestep), :, :, :] = np.load(target_file)
+            for frame in range(frames * timestep, frames * timestep * 2, timestep):
+                target_file = "{}/img_{}.npy".format(refs[index][0], refs[index][1] + frame)
+                array_index = index - 1 * int(np.floor(index * validation_split) + 1)
+                try:
+                    location = data_sources.index(target_file)
+                    answers_array[array_index, int(frame / timestep) - frames, :, :, 0] = source_array[location, :, :, 1]
+                except:
+                    answers_array[array_index, int(frame / timestep) - frames, :, :, 0] = np.load(target_file)[:, :, 1]
+        else:
+            for frame in range(0, frames * timestep, timestep):
+                target_file = "{}/img_{}.npy".format(refs[index][0], refs[index][1] + frame)
+                array_index = int(index*validation_split)
+                try:
+                    location = data_sources.index(target_file)
+                    questions_array_valid[array_index, int(frame / timestep), :, :, :] = source_array[location, :, :, :]
+                except:
+                    questions_array_valid[array_index, int(frame / timestep), :, :, :] = np.load(target_file)
+            for frame in range(frames * timestep, frames * timestep * 2, timestep):
+                target_file = "{}/img_{}.npy".format(refs[index][0], refs[index][1] + frame)
+                array_index = int(index*validation_split)
+                try:
+                    location = data_sources.index(target_file)
+                    answers_array_valid[array_index, int(frame / timestep) - frames, :, :, 0] = source_array[location, :, :, 1]
+                except:
+                    answers_array_valid[array_index, int(frame / timestep) - frames, :, :, 0] = np.load(target_file)[:, :, 1]
+    pbar.close()
+    if numpy_:
+        return [[questions_array, answers_array], [questions_array_valid, answers_array_valid]]
+
+    testing_data = tf.data.Dataset.from_tensor_slices((questions_array, answers_array))
+    # testing_data = testing_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+
+    validation_data = tf.data.Dataset.from_tensor_slices((questions_array_valid, answers_array_valid))
+    # validation_data = validation_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    return [testing_data, validation_data]
+
+
+def save_training_data(focus, image_size):
+    print("Creating training data: ")
+    simulation_names = glob.glob("Simulation_images/*")
+    data_sources = []
+    save_refs = []
+    save_counter = 0
+    total = 0
+    sub_total = 0
+    for simulation in simulation_names[:]:
+        files = glob.glob("{}/*".format(simulation))
+        number_of_files = len(files)
+        sub_total += len(files)
+        for i in range(0, number_of_files):
+            total += 1
+            data_sources.append("{}/img_{}.bmp".format(simulation, i))
+            save_refs.append([save_counter, i])
+        save_counter += 1
+    source_array = np.zeros((len(data_sources), image_size, image_size, 3))
+    pbar = tqdm(total=len(data_sources))
+    for index, data in enumerate(data_sources):
+        pbar.update(1)
+        source_array[index, :, :, :] = process_bmp(data, image_size, focus=focus)
+    pbar.close()
+    refs_length = len(save_refs)
+    print("Saving training data: ")
+    pbar = tqdm(total=len(data_sources))
+    for i in range(refs_length):
+        pbar.update(1)
+        simulation_number = save_refs[i][0]
+        image_number = save_refs[i][1]
+        image = source_array[i, :, :, :]
+        try:
+            np.save("training_images/Simulation_{}/img_{}.npy".format(simulation_number, image_number), image)
+        except:
+            os.mkdir("training_images/Simulation_{}".format(simulation_number))
+            np.save("training_images/Simulation_{}/img_{}.npy".format(simulation_number, image_number), image)
+
+    pbar.close()
+
+
+def print_progress(pos, total):
+    buffer = ""
+    for i in range(0, 20):
+        if float(i)/20. > pos / float(total):
+            buffer += "|"
+        else:
+            buffer += "="
+    print("hi")
+    print("{}{:.2f}%".format(buffer, pos * 100 / float(total)), end="\r")
+
+
+def process_bmp(filename, image_size, focus=1):
+    h = np.asarray(Image.open(filename)) / 255
+    kernel_size = int((BASE_SIZE/image_size)*focus)
+    kernel = np.ones((kernel_size, kernel_size))
+    h = convolve2d(h, kernel, mode='same')
+    h = h[::int(BASE_SIZE / image_size), ::int(BASE_SIZE / image_size)]
+    output_array = np.zeros((image_size, image_size, 3))
+    h = np.tanh(0.5 * h)
+    output_array[:, :, 1] = h
+    output_array = generate_rail(output_array)
+    return output_array
 
 
 def create_multiframe_data(leading_steps, loss_steps, timestep, validation_split=0.1, image_size=64):
@@ -220,12 +401,11 @@ def create_small_multiframe_data(leading_steps, loss_steps, timestep, validation
             ) / 255
             answers_array[index, int(frame / timestep), :, :, 0] = answer[:, :, 1]
     print("Saving...")
+    # questions_array = tf.data.Dataset.from_tensor_slices((questions_array, answers_array)).batch(32)
+    return [questions_array, answers_array]
 
-    questions_array = tf.data.Dataset.from_tensor_slices((questions_array, answers_array)).batch(32)
-    return questions_array
 
-
-def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
+def create_small_training_data(frames, timestep, validation_split=0.1, image_size=64):
     simulation_names = glob.glob("Simulation_images/*")
     print(simulation_names)
     data_sources = []
@@ -238,7 +418,7 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
             refs.append([simulation, i])
 
     print("Generating arrays of size {}...".format(len(data_sources)))
-    questions_array = np.zeros((len(data_sources), frames, image_size, image_size, 3), dtype="float16")
+    questions_array = np.zeros((len(data_sources), frames, image_size, image_size, 1), dtype="float16")
     answers_array = np.zeros((len(data_sources), image_size, image_size, 1), dtype="float16")
     print("Running...")
     print(np.shape(questions_array))
@@ -247,49 +427,17 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64):
         for frame in range(0, frames * timestep, timestep):
             questions_array[index, int(frame / timestep), :, :, :] = np.asarray(
                 Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame))
-            ) / 255
+            )[:, :, 1:2] / 255
         answers_array[index, :, :, 0] = np.asarray(
             Image.open("{}/img_{}.bmp".format(refs[index][0], refs[index][1] + timestep * frames))
         )[:, :, 1] / 255
     print("Saving...")
-    # np.save("Questions", questions_array)
-    # np.save("Answers", answers_array)
-    # for file in sims:
-    #    os.system("rm -r {}".format(file))
-    print(np.shape(questions_array))
-    print(type(questions_array[0, 0, 0, 0, 0]))
-
-    # questions_array = tf.data.Dataset.from_tensor_slices((questions_array, answers_array)).batch(32).prefetch(buffer_size=1000)
 
     questions_array = [questions_array, answers_array]
 
-    # questions_array = tf.data.Dataset.from_generator(lambda: questions_array, tf.float16, output_shapes=[None, 4, 64, 64, 3])
-    # answers_array = tf.data.Dataset.from_generator(lambda: answers_array, tf.float16, output_shapes=[None, 1, 64, 64, 3])
-    # questions_array = questions_array.concatenate(answers_array)
-
     return questions_array
 
-    questions = []
-    questions_valid = []
-    answers = []
-    answers_valid = []
-    validation_point = len(data_sources)/(1-validation_split)
-    for index, file in enumerate(data_sources):
-        if index < validation_point:
-            extract_bmp(answers, frames, index, questions, refs, timestep, image_size)
-        else:
-            extract_bmp(answers_valid, frames, index, questions_valid, refs, timestep, image_size)
-    questions_final = tf.data.Dataset.from_tensors(questions)
-    answers_final = tf.data.Dataset.from_tensors(answers)
-    questions_final_valid = tf.data.Dataset.from_tensors(questions_valid)
-    answers_final_valid = tf.data.Dataset.from_tensors(answers_valid)
-    # print(answers_final)
-    print(questions_final)
-    m_0 = psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2
-    print(tf.data.Dataset.zip((questions_final, answers_final)))
-    m_1 = psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2
-    print(m_1 - m_0)
-    return [tf.data.Dataset.zip((questions_final, answers_final)), tf.data.Dataset.zip((questions_final, answers_final))]
+
 
 
 def extract_bmp(answers, frames, index, questions, refs, timestep, image_size):

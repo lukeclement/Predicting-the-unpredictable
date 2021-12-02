@@ -2,7 +2,7 @@ import numpy as np
 import loss_functions
 import dat_to_training
 from keras.engine import data_adapter
-from tensorflow.keras import layers, models, Model, initializers, activations, losses, metrics
+from tensorflow.keras import layers, models, Model, initializers, activations, losses, metrics, backend
 import tensorflow as tf
 
 
@@ -36,9 +36,8 @@ def pixel_prediction(input_data):
         negative_guess[guess_difference < 0] = 1
         negative_correct, negative_counts = metric_differences(negative_guess, negative_guess)
         return {**positive_counts, **negative_counts}
+
     return update_state
-
-
 
 
 def interpret_model_summary(model):
@@ -87,8 +86,8 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
             # current_frames -= 1
             # current_axis_size -= 1
             model.add(layers.Conv3D(32, input_frames, activation=activation))
-            current_frames -= input_frames-1
-            current_axis_size -= input_frames-1
+            current_frames -= input_frames - 1
+            current_axis_size -= input_frames - 1
         elif current_frames == 1:
             # Reshaping the image to be the correct dimensions
             current_frames -= 1
@@ -151,27 +150,46 @@ class CustomModel(Model):
     loss_tracker = metrics.Mean(name="loss")
     bce_metric = metrics.BinaryCrossentropy(name="BCE")
 
+
+    def cubic_loss(self, y_true, y_pred):
+        constant = tf.fill(tf.shape(y_true), 1.005)
+        se = (y_pred - y_true) * (y_pred - y_true)
+        dominator = constant - y_true
+        bce = losses.binary_crossentropy(y_true, y_pred)
+        loss = 0.143*backend.log(40*backend.mean(se / dominator)+1)+bce
+        return loss
+
     def __init__(self, model):
         super(CustomModel, self).__init__()
         self.input_model = model
 
     def call(self, inputs, training=None, mask=None):
-        y_pred = self.input_model(inputs)
-        return tf.reshape(y_pred, shape=(tf.shape(y_pred)[0], 1, 64, 64, 1))
+        return self.input_model(inputs)
 
     def train_step(self, data):
         x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
         xold = x
+        rail = x[:, 0, :, :, 2:]
+        zeros = x[:, 0, :, :, 0:1]
+        lf = self.cubic_loss
         with tf.GradientTape() as tape:
             y_pred = self(x, training=True)
-            loss = losses.binary_crossentropy(y[:, 0, :, :, :], y_pred)
+            y_true = y[:, 0, :, :, :]
+            loss = lf(y_true, y_pred)
+            y_pred = tf.concat([zeros, y_pred], 3)
+            y_pred = tf.concat([y_pred, rail], 3)
+            y_pred_shape = tf.shape(y_pred)
+            y_pred = tf.reshape(y_pred, shape=(y_pred_shape[0], 1, y_pred_shape[1], y_pred_shape[2], y_pred_shape[3]))
             x = x[:, 1:, :, :, :]
             x = tf.concat([x, y_pred], 1)
             if self.custom_steps > 1:
-                for i in range(0, self.custom_steps-1):
+                for i in range(0, self.custom_steps - 1):
                     y_pred = self(x, training=True)
-                    y_true = y[:, i+1, :, :, :]
-                    loss = tf.math.add(loss, losses.binary_crossentropy(y_true, y_pred))
+                    y_true = y[:, i + 1, :, :, :]
+                    loss = tf.math.add(loss, lf(y_true, y_pred))
+                    y_pred = tf.concat([zeros, y_pred], 3)
+                    y_pred = tf.concat([y_pred, rail], 3)
+                    y_pred = tf.reshape(y_pred, shape=(y_pred_shape[0], 1, y_pred_shape[1], y_pred_shape[2], y_pred_shape[3]))
                     x = x[:, 1:, :, :, :]
                     x = tf.concat([x, y_pred], 1)
 
@@ -190,15 +208,26 @@ class CustomModel(Model):
         self.bce_metric.reset_state()
         x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
         xold = x
+        rail = x[:, 0, :, :, 2:]
+        zeros = x[:, 0, :, :, 0:1]
         y_pred = self(x, training=False)
-        loss = losses.binary_crossentropy(y[:, 0, :, :, :], y_pred)
-        x = x[:, 1:, :, :]
+        y_true = y[:, 0, :, :, :]
+        lf = self.cubic_loss
+        loss = lf(y_true, y_pred)
+        y_pred = tf.concat([zeros, y_pred], 3)
+        y_pred = tf.concat([y_pred, rail], 3)
+        y_pred_shape = tf.shape(y_pred)
+        y_pred = tf.reshape(y_pred, shape=(y_pred_shape[0], 1, y_pred_shape[1], y_pred_shape[2], y_pred_shape[3]))
+        x = x[:, 1:, :, :, :]
         x = tf.concat([x, y_pred], 1)
         if self.custom_steps > 1:
             for i in range(0, self.custom_steps - 1):
                 y_pred = self(x, training=False)
                 y_true = y[:, i + 1, :, :, :]
-                loss = tf.math.add(loss, losses.binary_crossentropy(y_true, y_pred))
+                loss = tf.math.add(loss, lf(y_true, y_pred))
+                y_pred = tf.concat([zeros, y_pred], 3)
+                y_pred = tf.concat([y_pred, rail], 3)
+                y_pred = tf.reshape(y_pred, shape=(y_pred_shape[0], 1, y_pred_shape[1], y_pred_shape[2], y_pred_shape[3]))
                 x = x[:, 1:, :, :, :]
                 x = tf.concat([x, y_pred], 1)
 
@@ -219,24 +248,29 @@ def inception_cell(model, activation, axis, initializer):
     shape = tuple(li)
     input_tower = layers.Input(shape=shape)
 
-    tower_1 = layers.Conv2D(32, (1, 1), padding='same', activation=activation, kernel_initializer=initializer)(input_tower)
+    tower_1 = layers.Conv2D(32, (1, 1), padding='same', activation=activation, kernel_initializer=initializer)(
+        input_tower)
 
-    tower_2 = layers.Conv2D(32, (1, 1), padding='same', activation=activation, kernel_initializer=initializer)(input_tower)
+    tower_2 = layers.Conv2D(32, (1, 1), padding='same', activation=activation, kernel_initializer=initializer)(
+        input_tower)
     tower_2 = layers.Conv2D(32, (3, 3), padding='same', activation=activation, kernel_initializer=initializer)(tower_2)
 
-    tower_3 = layers.Conv2D(32, (1, 1), padding='same', activation=activation, kernel_initializer=initializer)(input_tower)
+    tower_3 = layers.Conv2D(32, (1, 1), padding='same', activation=activation, kernel_initializer=initializer)(
+        input_tower)
     tower_3 = layers.Conv2D(32, (5, 5), padding='same', activation=activation, kernel_initializer=initializer)(tower_3)
 
     # tower_4 = layers.MaxPooling2D((3, 3), strides=1)(input_tower)
-    tower_4 = layers.Conv2D(32, (3, 3), padding='same', activation=activation, kernel_initializer=initializer)(input_tower)
+    tower_4 = layers.Conv2D(32, (3, 3), padding='same', activation=activation, kernel_initializer=initializer)(
+        input_tower)
 
     merged = layers.concatenate([tower_1, tower_2, tower_3, tower_4], axis=axis)
+
     model.add(Model(input_tower, merged))
 
     return model
 
 
-def create_inception_net(activation, optimizer, loss, frames=4, size=64, channels=3):
+def create_inception_net(activation, optimizer, loss, frames=4, size=60, channels=3):
     """Creates the CNN.
     Inputs:
         activation: The activation function used on the neurons (string)
@@ -257,23 +291,25 @@ def create_inception_net(activation, optimizer, loss, frames=4, size=64, channel
 
     # model.add(merged_input)
 
-    model.add(layers.Conv3D(32, (4, 7, 7), kernel_initializer=initializer, activation=activation, input_shape=(frames, size, size, 1)))
-    model.add(layers.Dropout(0.05))
-    model.add(layers.Reshape((58, 58, 32)))
+    model.add(layers.Conv3D(32, (4, 7, 7), kernel_initializer=initializer, activation=activation,
+                            input_shape=(frames, size, size, 3)))
+    model.add(layers.Reshape((54, 54, 32)))
     model.add(layers.MaxPooling2D((3, 3)))
     model.add(layers.BatchNormalization())
     model = inception_cell(model, activation=activation, axis=1, initializer=initializer)
     model = inception_cell(model, activation=activation, axis=2, initializer=initializer)
-
+    model.add(layers.Dropout(0.05))
     model.add(layers.Conv2D(32, (1, 1), activation=activation, kernel_initializer=initializer))
     model.add(layers.Conv2D(32, (3, 3), activation=activation, kernel_initializer=initializer))
 
     model.add(layers.Conv2D(32, (5, 5), activation=activation, kernel_initializer=initializer, strides=(5, 5)))
     model = inception_cell(model, activation=activation, axis=1, initializer=initializer)
     model = inception_cell(model, activation=activation, axis=2, initializer=initializer)
-    model.add(layers.Conv2DTranspose(32, (6, 6), activation=activation, kernel_initializer=initializer))
-    model.add(layers.Conv2DTranspose(32, (6, 6), activation=activation, kernel_initializer=initializer))
+    model.add(layers.Conv2DTranspose(32, (4, 4), activation=activation, kernel_initializer=initializer))
+    model.add(layers.Conv2DTranspose(32, (4, 4), activation=activation, kernel_initializer=initializer))
     model.add(layers.Conv2D(1, (3, 3), activation=activations.sigmoid, kernel_initializer=initializer))
+
+    print(model.summary())
 
     model = CustomModel(model)
     # optimizer = tf.keras.mixed_precision.LossScaleOptimizer(optimizer)
@@ -283,6 +319,7 @@ def create_inception_net(activation, optimizer, loss, frames=4, size=64, channel
     # model.compile(optimizer=optimizer, loss=loss, metrics=[mass_preservation])
 
     return model
+
 
 def train_model(model, training_images, validation_split=0.1, epochs=2):
     """Trains the model. This can take a while!
@@ -296,10 +333,10 @@ def train_model(model, training_images, validation_split=0.1, epochs=2):
         model:              The fitted model.
         history:            The history of changes to important variables, like loss.
     """
-    # X = training_images[0]
-    # Y = training_images[1]
-    # history = model.fit(X, Y, validation_split=validation_split, epochs=epochs, shuffle=True)
+    X = training_images[0]
+    Y = training_images[1]
+    history = model.fit(X[0], X[1], validation_split=validation_split, epochs=epochs, shuffle=True)
 
-    history = model.fit(training_images, epochs=epochs, shuffle=True)
+    # history = model.fit(training_images[0], epochs=epochs, shuffle=True)
 
     return model, history
