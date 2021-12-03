@@ -2,10 +2,6 @@ import glob
 import os
 import numpy as np
 import tensorflow as tf
-from PIL import Image
-from scipy.signal import convolve2d
-import psutil
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 BASE_SIZE = 540
@@ -71,22 +67,14 @@ def make_lines(x, y, resolution):
         # current_angle = np.arctan2(current_x, current_y)
         checked = []
         values = []
-        angles = []
         for i in range(0, len(x)):
             if i not in visited:
                 checked.append(i)
                 values.append(
                     (current_x - x[i])**2 + (current_y - y[i])**2
                 )
-                # angles.append(
-                #     np.degrees(current_angle - np.arctan2(x[i], y[i]))
-                # )
-        # min_angle = 90
-        # while 9 < min_angle < 351:
         closest = min(values)
         smallest = checked[values.index(closest)]
-            # min_angle = angles[values.index(closest)]
-            # values[values.index(closest)] = 9
         linked.append(smallest)
         visited.append(smallest)
         current_x = x[smallest]
@@ -126,7 +114,7 @@ def make_lines(x, y, resolution):
     return filled_x, filled_y
 
 
-def transform_to_numpy_array(x, y, variant, invert, image_size=64):
+def transform_to_numpy_array(x, y, variant, invert):
     """Transforms a set of x and y coordinates to a numpy array of size 64x64 by default.
     Inputs:
         x:          A 1d numpy array of x coordinates.
@@ -153,7 +141,7 @@ def transform_to_numpy_array(x, y, variant, invert, image_size=64):
     return output_array
 
 
-def convert_dat_files(variant_range, resolution = 0.0001):
+def convert_dat_files(variant_range, resolution=0.0001):
     """Converts all .dat files to numpy arrays, and saves them as .bmp files.
     These .bmp files are stored in Simulation_images/Simulation_X, where X is the reference number for the simulation.
     These aren't necessarily actual simulations, but can be variants of these 'base' simulations,
@@ -211,6 +199,7 @@ def convert_dat_files(variant_range, resolution = 0.0001):
 
 
 def create_training_data(frames, timestep, validation_split=0.1, image_size=64, focus=1, load=False):
+    batch_size = 8
     if not load:
         print(tf.executing_eagerly())
         simulation_names = glob.glob("Simulation_data_extrapolated/*")
@@ -302,7 +291,6 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
 
         pbar.close()
         print("Converting to datasets...")
-        batch_size = 8
         normalisation_options = [
             np.max(answers_array[:, :, :, :, 0]),
             np.max(answers_array_valid[:, :, :, :, 0]),

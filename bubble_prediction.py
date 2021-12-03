@@ -408,7 +408,7 @@ def main():
     kernel_size_data = 7
     focus = 1
     dropout = 0
-    dat_to_training.convert_dat_files([0, 0], resolution=0.001)
+    dat_to_training.convert_dat_files([0, 0], resolution=0.01)
 
     trainable_parameters = []
     try:
