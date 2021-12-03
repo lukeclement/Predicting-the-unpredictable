@@ -62,7 +62,7 @@ def generate_rail(input_image):
     return input_image
 
 
-def make_lines(x, y):
+def make_lines(x, y, resolution):
     current_x = x[0]
     current_y = y[0]
     visited = [0]
@@ -99,7 +99,6 @@ def make_lines(x, y):
         new_x.append(x[i])
         new_y.append(y[i])
 
-    resolution = 0.00001
     filled_x = []
     filled_y = []
 
@@ -154,7 +153,7 @@ def transform_to_numpy_array(x, y, variant, invert, image_size=64):
     return output_array
 
 
-def convert_dat_files(variant_range):
+def convert_dat_files(variant_range, resolution = 0.0001):
     """Converts all .dat files to numpy arrays, and saves them as .bmp files.
     These .bmp files are stored in Simulation_images/Simulation_X, where X is the reference number for the simulation.
     These aren't necessarily actual simulations, but can be variants of these 'base' simulations,
@@ -183,35 +182,38 @@ def convert_dat_files(variant_range):
                     ))
                 # Making a directory for the images
                 try:
+                    os.mkdir("Simulation_data_extrapolated/Simulation_{}".format(
+                        simulation_index + tracking_index*np.size(simulation_names)
+                    ))
                     os.mkdir("Simulation_images/Simulation_{}".format(
                         simulation_index + tracking_index*np.size(simulation_names)
                     ))
                 except OSError:
                     print("Folder already exists!")
                 # Now the heavy lifting
+                pbar = tqdm(total=len(dat_files))
                 for file in dat_files:
+                    pbar.update(1)
                     # Extracting data
                     x, y = read_file(file)
                     # Finding the actual frame number
                     step_number = int(file[file.find("s_")+2:-4])
                     # Converting to array
-                    resulting_array = transform_to_numpy_array(
-                        x, y, variant, inversion
-                    )
+                    x, y = make_lines(x, y, resolution)
                     # Saving to memory
-                    image = Image.fromarray(resulting_array)
-                    image.save("Simulation_images/Simulation_{}/img_{}.bmp".format(
+                    data = np.array([((-1)**(not inversion))*x, y + (variant / BASE_SIZE)])
+                    np.save("Simulation_data_extrapolated/Simulation_{}/data_{}".format(
                         simulation_index + tracking_index*np.size(simulation_names), step_number
-                    ))
-                    del resulting_array
+                    ), data)
                 tracking_index += 1
+                pbar.close()
         simulation_index += 1
 
 
 def create_training_data(frames, timestep, validation_split=0.1, image_size=64, focus=1, load=False):
     if not load:
         print(tf.executing_eagerly())
-        simulation_names = glob.glob("Simulation_images/*")
+        simulation_names = glob.glob("Simulation_data_extrapolated/*")
         data_sources = []
         refs = []
         print(len(simulation_names))
@@ -225,7 +227,7 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
             sub_total += len(files)
             for i in range(3, number_of_files-timestep*frames*2):
                 total += 1
-                data_sources.append("{}/img_{}.bmp".format(simulation, i))
+                data_sources.append("{}/data_{}.npy".format(simulation, i))
                 refs.append([simulation, i])
         print("Loading data...")
         source_array = np.zeros((len(data_sources), image_size, image_size, 3))
@@ -261,7 +263,7 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
             pbar.update(1)
             if index % int(1.0/validation_split) != 0:
                 for frame in range(0, frames * timestep, timestep):
-                    target_file = "{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame)
+                    target_file = "{}/data_{}.npy".format(refs[index][0], refs[index][1] + frame)
                     array_index = index-1*int(np.floor(index*validation_split) + 1)
                     accessed_index_q.append(array_index)
                     try:
@@ -270,7 +272,7 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
                     except:
                         questions_array[array_index, int(frame / timestep), :, :, :] = process_bmp(target_file, image_size, focus=focus)
                 for frame in range(frames * timestep, frames * timestep * 2, timestep):
-                    target_file = "{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame)
+                    target_file = "{}/data_{}.npy".format(refs[index][0], refs[index][1] + frame)
                     array_index = index - 1 * int(np.floor(index * validation_split) + 1)
                     accessed_index_a.append(array_index)
                     try:
@@ -280,7 +282,7 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
                         answers_array[array_index, int(frame / timestep) - frames, :, :, 0] = process_bmp(target_file, image_size, focus=focus)[:, :, 1]
             else:
                 for frame in range(0, frames * timestep, timestep):
-                    target_file = "{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame)
+                    target_file = "{}/data_{}.npy".format(refs[index][0], refs[index][1] + frame)
                     array_index = int(index*validation_split)
                     accessed_index_qv.append(array_index)
                     try:
@@ -289,7 +291,7 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
                     except:
                         questions_array_valid[array_index, int(frame / timestep), :, :, :] = process_bmp(target_file, image_size, focus=focus)
                 for frame in range(frames * timestep, frames * timestep * 2, timestep):
-                    target_file = "{}/img_{}.bmp".format(refs[index][0], refs[index][1] + frame)
+                    target_file = "{}/data_{}.npy".format(refs[index][0], refs[index][1] + frame)
                     array_index = int(index*validation_split)
                     accessed_index_av.append(array_index)
                     try:
@@ -350,17 +352,27 @@ def print_progress(pos, total):
 
 
 def process_bmp(filename, image_size, focus=1):
-    h = np.asarray(Image.open(filename)) / 255
-    kernel_size = int((BASE_SIZE/image_size)*focus)
-    kernel = np.ones((kernel_size, kernel_size))
-    h = convolve2d(h, kernel, mode='same')
-    h = h[::int(BASE_SIZE / image_size), ::int(BASE_SIZE / image_size)]
+    # h = np.asarray(Image.open(filename)) / 255
+    # kernel_size = int((BASE_SIZE/image_size)*focus)
+    # kernel = np.ones((kernel_size, kernel_size))
+    # h = convolve2d(h, kernel, mode='same')
+    # h = h[::int(BASE_SIZE / image_size), ::int(BASE_SIZE / image_size)]
+    # output_array = np.zeros((image_size, image_size, 3))
+    # # normalisation = np.max(h)
+    # h = np.tanh(0.5 * h)
+    # # h = 1/(1+np.exp(-h))
+    # # print(np.max(h))
+    # # output_array[:, :, 1] = np.minimum(h, np.zeros((image_size, image_size)) + 1)
+    # output_array[:, :, 1] = h
+    # output_array = generate_rail(output_array)
+    # return output_array
+    x, y = np.load(filename)
+    h, x_edge, y_edge = np.histogram2d(
+        x, y,
+        range=[[-1, 1], [-1, 1]], bins=(image_size, image_size)
+    )
     output_array = np.zeros((image_size, image_size, 3))
-    # normalisation = np.max(h)
     h = np.tanh(0.5 * h)
-    # h = 1/(1+np.exp(-h))
-    # print(np.max(h))
-    # output_array[:, :, 1] = np.minimum(h, np.zeros((image_size, image_size)) + 1)
     output_array[:, :, 1] = h
     output_array = generate_rail(output_array)
     return output_array

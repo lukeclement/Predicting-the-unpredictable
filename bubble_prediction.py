@@ -278,7 +278,7 @@ def long_term_prediction(
     for frame in range(0, frames):
         try:
             input_images[0, frame, :, :, :] = dat_to_training.process_bmp(
-                "Simulation_images/Simulation_{}/img_{}.bmp".format(
+                "Simulation_data_extrapolated/Simulation_{}/data_{}.npy".format(
                     start_sim, start_image + frame * timestep
                 ), image_size, focus=focus
             )
@@ -291,7 +291,7 @@ def long_term_prediction(
         try:
             for i in range(0, number_to_simulate):
                 positions.append((dat_to_training.process_bmp(
-                    "Simulation_images/Simulation_{}/img_{}.bmp".format(
+                    "Simulation_data_extrapolated/Simulation_{}/data_{}.npy".format(
                         start_sim, start_image + i * timestep
                     ), image_size, focus=focus
                 ) * 255).astype(np.uint8))
@@ -408,7 +408,7 @@ def main():
     kernel_size_data = 7
     focus = 1
     dropout = 0
-    #dat_to_training.convert_dat_files([0, 0])
+    dat_to_training.convert_dat_files([0, 0], resolution=0.001)
 
     trainable_parameters = []
     try:
@@ -452,11 +452,11 @@ def main():
     for frame in range(0, image_frames):
         try:
             input_images[0, frame, :, :, :] = dat_to_training.process_bmp(
-                "Simulation_images/Simulation_{}/img_{}.bmp".format(
+                "Simulation_data_extrapolated/Simulation_{}/data_{}.npy".format(
                     6, 20 + frame * timestep
                 ), image_size, focus)
             expected_images[0, frame, :, :, 0] = dat_to_training.process_bmp(
-                "Simulation_images/Simulation_{}/img_{}.bmp".format(
+                "Simulation_data_extrapolated/Simulation_{}/data_{}.npy".format(
                     6, 20 + (frame + image_frames) * timestep
                 ), image_size, focus)[:, :, 1]
         except IOError as e:
