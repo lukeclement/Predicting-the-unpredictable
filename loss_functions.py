@@ -9,7 +9,19 @@ def UBERLOSS(y_true, y_pred):
     ssim = ssim_loss(y_true, y_pred)
     mse = losses.mean_squared_logarithmic_error(y_true, y_pred)
     bce = losses.binary_crossentropy(y_true, y_pred)
-    return bce + mse + ssim - k.log(iou) - k.log(dice)
+    if k.mean(bce) > 0.4:
+        return (bce - k.tanh(iou*0.5) - k.tanh(dice*0.5) + k.sigmoid(ssim) + 2)/2
+    else:
+        return (mse - k.tanh(iou*0.5) - k.tanh(dice*0.5) + k.sigmoid(ssim) + 2)/2
+
+
+def cubic_loss(y_true, y_pred):
+    constant = tf.fill(tf.shape(y_true), 1.005)
+    se = (y_pred - y_true) * (y_pred - y_true)
+    dominator = constant - y_true
+    bce = losses.binary_crossentropy(y_true, y_pred)
+    loss = 0.143*k.log(40*k.mean(se / dominator)+1)+bce
+    return loss
 
 
 def relative_diff(y_true, y_pred):
@@ -57,7 +69,8 @@ def iou_coef(y_true, y_pred, smooth=1):
 def ssim_loss(y_true, y_pred):
     mid_t = k.mean(y_true, axis=1)
     mid_p = k.mean(y_pred, axis=1)
-    return 1 - tf.reduce_mean(tf.image.ssim(mid_t, mid_p, 1.0))
+    return 1 - tf.reduce_sum(tf.image.ssim(mid_t, mid_p, 1.0))
+    # return 1 - tf.image.ssim(mid_t, mid_p, 1.0)
 
 
 def mse_dice(y_true, y_pred):

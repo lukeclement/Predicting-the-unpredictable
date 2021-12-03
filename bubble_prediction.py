@@ -401,7 +401,7 @@ def main():
     image_size = allowed_sizes[0]
     timestep = 5
     dropout_rate = 0.1
-    encode_size = 2
+    encode_size = 3
     max_transpose_layers = 7
     kernel_size = 3
     multiply = 3
@@ -434,6 +434,7 @@ def main():
         )
         parameters_line = create_network.interpret_model_summary(model)
         print(parameters_line)
+        print(model.summary())
         training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size,
                                                              focus=focus)
         model, history = create_network.train_model(model, training_data, epochs=epochs)

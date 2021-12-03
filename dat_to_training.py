@@ -5,6 +5,7 @@ import tensorflow as tf
 from PIL import Image
 from scipy.signal import convolve2d
 import psutil
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 BASE_SIZE = 540
@@ -59,6 +60,71 @@ def generate_rail(input_image):
         runway = np.zeros(image_size) + rail
         input_image[i, :, 2] = runway
     return input_image
+
+
+def make_lines(x, y):
+    current_x = x[0]
+    current_y = y[0]
+    visited = [0]
+    linked = []
+    while len(visited) < len(x):
+        # current_angle = np.arctan2(current_x, current_y)
+        checked = []
+        values = []
+        angles = []
+        for i in range(0, len(x)):
+            if i not in visited:
+                checked.append(i)
+                values.append(
+                    (current_x - x[i])**2 + (current_y - y[i])**2
+                )
+                # angles.append(
+                #     np.degrees(current_angle - np.arctan2(x[i], y[i]))
+                # )
+        # min_angle = 90
+        # while 9 < min_angle < 351:
+        closest = min(values)
+        smallest = checked[values.index(closest)]
+            # min_angle = angles[values.index(closest)]
+            # values[values.index(closest)] = 9
+        linked.append(smallest)
+        visited.append(smallest)
+        current_x = x[smallest]
+        current_y = y[smallest]
+    linked.append(0)
+
+    new_x = []
+    new_y = []
+    for i in visited:
+        new_x.append(x[i])
+        new_y.append(y[i])
+
+    resolution = 0.00001
+    filled_x = []
+    filled_y = []
+
+    for i in range(0, len(new_x)):
+        current_x = float(new_x[i])
+        current_y = float(new_y[i])
+        if i+1 != len(new_x):
+            next_x = float(new_x[i+1])
+            next_y = float(new_y[i+1])
+        else:
+            next_x = float(new_x[0])
+            next_y = float(new_y[0])
+        angle_to_next = np.arctan2(next_x - current_x, next_y - current_y)
+        distance = np.sqrt((current_x - next_x)**2 + (current_y - next_y)**2)
+        loops = 0
+        while resolution*loops < distance:
+            filled_x.append(current_x)
+            filled_y.append(current_y)
+            loops += 1
+            current_x += resolution * np.sin(angle_to_next)
+            current_y += resolution * np.cos(angle_to_next)
+    filled_x = np.asarray(filled_x)
+    filled_y = np.asarray(filled_y)
+
+    return filled_x, filled_y
 
 
 def transform_to_numpy_array(x, y, variant, invert, image_size=64):
@@ -153,7 +219,7 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
         sub_total = 0
         print("Gathering references...")
         print(simulation_names[-1])
-        for simulation in simulation_names[:-1]:
+        for simulation in simulation_names[:6]:
             files = glob.glob("{}/*".format(simulation))
             number_of_files = len(files)
             sub_total += len(files)
