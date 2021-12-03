@@ -402,6 +402,7 @@ def main():
     timestep = 5
     dropout_rate = 0.1
     encode_size = 3
+    # howdy
     max_transpose_layers = 7
     kernel_size = 3
     multiply = 3
