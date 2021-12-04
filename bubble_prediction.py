@@ -391,7 +391,7 @@ def main():
     max_transpose_range = [1, 10]
     kernel_range = [2, 10]
     focus_range = [1, 2]
-    epochs = 10
+    epochs = 15
 
     allowed_sizes = [12, 15, 18, 20, 27, 30, 36, 45, 54, 60, 90, 108, 135, 180, 270]
     allowed_sizes = [30, 36, 45, 54, 60, 90, 108, 135, 180, 270]
@@ -409,7 +409,7 @@ def main():
     kernel_size_data = 7
     focus = 1
     dropout = 0
-    dat_to_training.convert_dat_files([0, 0], resolution=0.01)
+    # dat_to_training.convert_dat_files([0, 0], resolution=0.01)
 
     trainable_parameters = []
     try:
@@ -469,6 +469,7 @@ def main():
         ABCD
         EFGH
         IJKL
+        ZXYQ
         """
     )
     # Input
@@ -486,6 +487,11 @@ def main():
     axes["J"].imshow(expected_images[0, 1, :, :, :])
     axes["K"].imshow(expected_images[0, 2, :, :, :])
     axes["L"].imshow(expected_images[0, 3, :, :, :])
+    # Difference
+    axes["Z"].imshow(expected_images[0, 0, :, :, :] - output_images[0, 0, :, :, :])
+    axes["X"].imshow(expected_images[0, 1, :, :, :] - output_images[0, 1, :, :, :])
+    axes["Y"].imshow(expected_images[0, 2, :, :, :] - output_images[0, 2, :, :, :])
+    axes["Q"].imshow(expected_images[0, 3, :, :, :] - output_images[0, 3, :, :, :])
     plt.savefig("Hey_look_at_me.png", dpi=500)
     testing = long_term_prediction(
         model, 10, 20, image_size, timestep, image_frames, 200,
@@ -512,7 +518,24 @@ def main():
         round_result=True, extra=False, focus=focus, dry_run=True
     )
     make_gif(testing, 'samples/actual_data_small')
-
+    overall_loss = history.history["loss"]
+    bce = history.history["binary_crossentropy"]
+    mse = history.history["mean_squared_logarithmic_error"]
+    ssim = history.history["ssim_loss"]
+    plt.clf()
+    plt.close()
+    plt.plot(overall_loss, label="overall loss")
+    plt.plot(bce, label="binary cross entropy")
+    plt.plot(mse, label="mean squared logarithmic error")
+    ssim = np.asarray(ssim)
+    ssim_adjusted = 1 / (1 + np.exp(-ssim))
+    plt.plot(ssim_adjusted, label="SSIM (adjusted)")
+    plt.grid()
+    plt.yscale("log")
+    plt.xlabel("Epoch number")
+    plt.ylabel("Values/AU")
+    plt.legend()
+    plt.savefig("Losses_across_epochs.png", dpi=500)
     # number_of_ensembles = 10
     # number_of_samples = 500
     # predictions = ensemble_prediction(
