@@ -364,6 +364,16 @@ def generate_random_value(rng, allowed_range, i=True):
     return target
 
 
+def calculate_com(image, both=False):
+    image_size = np.shape(image)[0]
+    x, y = np.meshgrid(np.arange(image_size), np.arange(image_size), indexing='ij')
+    x_com = np.sum(x*image[:, :, 1])/np.sum(image[:, :, 1])
+    y_com = np.sum(y*image[:, :, 1])/np.sum(image[:, :, 1])
+    if both:
+        return x_com, y_com
+    return np.sqrt(x_com**2 + y_com**2)
+
+
 def main():
     # activation_function = "LeakyReLU"
     tf.random.set_seed(100)
