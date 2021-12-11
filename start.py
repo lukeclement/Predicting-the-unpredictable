@@ -2,6 +2,10 @@ import bubble_prediction
 import dat_to_training
 import loss_functions
 import create_network
+from tensorflow.keras import layers
+
+GLOBAL_ACTIVATION = layers.LeakyReLU()
+GLOBAL_OPTIMISATION = "adam"
 
 
 def send_request(options):
@@ -36,6 +40,12 @@ def manufacture_network():
     parameters = [
         loss_functions.UBERLOSS,
         0, 0, 0,
+        True, True,
+        0, 0,
+        0.0,
+        [0],
+        True,
+        [0]
     ]
     print("What shall this network be called?")
     naming = send_request(["Custom manual name", "Automatic name"])

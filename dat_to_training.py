@@ -219,12 +219,13 @@ def create_training_data(
     if test_simulation_max not in simulation_names or test_simulation_min not in simulation_names:
         print("Required training data not generated, now creating...")
         convert_dat_files([min(variants), max(variants)], resolution)
+        simulation_names = glob.glob("Simulation_data_extrapolated/*")
     for simulation in simulation_names:
         sim_metadata = simulation.split("/")[1].split("_")[1:]
-        simulation_flippage = sim_metadata[0]
-        simulation_offset = sim_metadata[1]
-        simulation_resolution = sim_metadata[2]
-        simulation_number = sim_metadata[3]
+        simulation_flippage = bool(sim_metadata[0])
+        simulation_offset = int(sim_metadata[1])
+        simulation_resolution = float(sim_metadata[2])
+        simulation_number = int(sim_metadata[3])
 
         flip_test = flips_allowed or not simulation_flippage
         offset_test = simulation_offset in variants
