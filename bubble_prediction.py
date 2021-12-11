@@ -408,7 +408,7 @@ def main():
     allowed_sizes = [45, 54, 60, 90, 108, 135, 180, 270]
 
     image_frames = 4
-    image_size = allowed_sizes[0]
+    image_size = 45
     timestep = 5
     dropout_rate = 0.1
     encode_size = 3
@@ -528,6 +528,27 @@ def main():
         round_result=True, extra=False, focus=focus, dry_run=True
     )
     make_gif(testing, 'samples/actual_data_small')
+    plt.clf()
+    plt.close()
+    for simulation in range(0,2):
+        sim_com = []
+        data = long_term_prediction(
+            model, simulation, 30, image_size, timestep, image_frames, 200,
+            round_result=False, extra=False, focus=focus, dry_run=True
+        )
+        for datapoint in data:
+            sim_com.append(calculate_com(datapoint))
+        plt.plot(sim_com)
+        sim_com = []
+        data = long_term_prediction(
+            model, simulation, 30, image_size, timestep, image_frames, 200,
+            round_result=False, extra=True, focus=focus, dry_run=False
+        )
+        for datapoint in data:
+            sim_com.append(calculate_com(datapoint))
+        plt.plot(np.arange(len(sim_com)), sim_com, '--')
+    #plt.show()
+    plt.savefig("centre_of_mass_tests.png")
     overall_loss = history.history["loss"]
     bce = history.history["binary_crossentropy"]
     mse = history.history["mean_squared_logarithmic_error"]

@@ -210,7 +210,7 @@ def create_training_data(frames, timestep, validation_split=0.1, image_size=64, 
         sub_total = 0
         print("Gathering references...")
         print(simulation_names[-1])
-        for simulation in simulation_names[:2]:
+        for simulation in simulation_names[:-1]:
             files = glob.glob("{}/*".format(simulation))
             number_of_files = len(files)
             sub_total += len(files)
