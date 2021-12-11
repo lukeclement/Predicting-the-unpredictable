@@ -202,7 +202,7 @@ def convert_dat_files(variant_range, resolution=0.0001):
 
 
 def create_training_data(
-        frames, timestep, validation_split=0.1, image_size=64, focus=1,
+        frames, timestep, validation_split=0.1, image_size=64,
         variants=[0], flips_allowed=True, resolution=0.001, excluded_sims=[]):
     batch_size = 8
     simulation_names = glob.glob("Simulation_data_extrapolated/*")
@@ -243,7 +243,7 @@ def create_training_data(
     for index, data in enumerate(data_sources):
         # print_progress(index, len(data_sources))
         pbar.update(1)
-        source_array[index, :, :, :] = process_bmp(data, image_size, focus=focus)
+        source_array[index, :, :, :] = process_bmp(data, image_size)
     pbar.close()
     questions_array = np.zeros((
         int(np.floor(len(data_sources)*(1-validation_split))), frames, image_size, image_size, 3
@@ -278,7 +278,7 @@ def create_training_data(
                     location = data_sources.index(target_file)
                     questions_array[array_index, int(frame / timestep), :, :, :] = source_array[location, :, :, :]
                 except:
-                    questions_array[array_index, int(frame / timestep), :, :, :] = process_bmp(target_file, image_size, focus=focus)
+                    questions_array[array_index, int(frame / timestep), :, :, :] = process_bmp(target_file, image_size)
             for frame in range(frames * timestep, frames * timestep * 2, timestep):
                 target_file = "{}/data_{}.npy".format(refs[index][0], refs[index][1] + frame)
                 array_index = index - 1 * int(np.floor(index * validation_split) + 1)
@@ -287,7 +287,7 @@ def create_training_data(
                     location = data_sources.index(target_file)
                     answers_array[array_index, int(frame / timestep) - frames, :, :, 0] = source_array[location, :, :, 1]
                 except:
-                    answers_array[array_index, int(frame / timestep) - frames, :, :, 0] = process_bmp(target_file, image_size, focus=focus)[:, :, 1]
+                    answers_array[array_index, int(frame / timestep) - frames, :, :, 0] = process_bmp(target_file, image_size)[:, :, 1]
         else:
             for frame in range(0, frames * timestep, timestep):
                 target_file = "{}/data_{}.npy".format(refs[index][0], refs[index][1] + frame)
@@ -297,7 +297,7 @@ def create_training_data(
                     location = data_sources.index(target_file)
                     questions_array_valid[array_index, int(frame / timestep), :, :, :] = source_array[location, :, :, :]
                 except:
-                    questions_array_valid[array_index, int(frame / timestep), :, :, :] = process_bmp(target_file, image_size, focus=focus)
+                    questions_array_valid[array_index, int(frame / timestep), :, :, :] = process_bmp(target_file, image_size)
             for frame in range(frames * timestep, frames * timestep * 2, timestep):
                 target_file = "{}/data_{}.npy".format(refs[index][0], refs[index][1] + frame)
                 array_index = int(index*validation_split)
@@ -306,7 +306,7 @@ def create_training_data(
                     location = data_sources.index(target_file)
                     answers_array_valid[array_index, int(frame / timestep) - frames, :, :, 0] = source_array[location, :, :, 1]
                 except:
-                    answers_array_valid[array_index, int(frame / timestep) - frames, :, :, 0] = process_bmp(target_file, image_size, focus=focus)[:, :, 1]
+                    answers_array_valid[array_index, int(frame / timestep) - frames, :, :, 0] = process_bmp(target_file, image_size)[:, :, 1]
 
     pbar.close()
     print("Converting to datasets...")
@@ -330,7 +330,7 @@ def create_training_data(
     return [testing_data, validation_data]
 
 
-def process_bmp(filename, image_size, focus=1):
+def process_bmp(filename, image_size):
     x, y = np.load(filename)
     h, x_edge, y_edge = np.histogram2d(
         x, y,

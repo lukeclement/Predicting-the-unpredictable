@@ -226,61 +226,16 @@ def generate_sample(image, image_size, rng):
     return sample_image
 
 
-def ensemble_prediction(
-        model, start_sim, start_image, image_size, timestep, frames, number_to_simulate, rng, ensemble_size=5,
-        samples=200, focus=1):
-    print("Starting ensemble")
-    input_images = np.zeros((ensemble_size, frames, image_size, image_size, 3))
-    for frame in range(0, frames):
-        try:
-            insert_array = dat_to_training.process_bmp(
-                "Simulation_images/Simulation_{}/img_{}.bmp".format(
-                    start_sim, start_image + frame * timestep
-                ), image_size, focus=focus
-            )
-        except IOError as e:
-            print("Error - either invalid simulation number or image out of range!")
-            print(e)
-            return []
-        for s in range(0, ensemble_size):
-            input_images[s, frame, :, :, :] = insert_array
-    predictions = []
-    predictions = np.zeros((number_to_simulate, ensemble_size, image_size, image_size, 3))
-    next_images = np.zeros((ensemble_size, image_size, image_size, 3))
-    for i in range(0, number_to_simulate):
-        print(i)
-        next_images[:, :, :, 1] = model(input_images)[:, :, :, 0]
-        possible_images = np.zeros((ensemble_size * samples, image_size, image_size, 3))
-        print("Generating samples...")
-        for j, image in enumerate(next_images):
-            for s in range(0, samples):
-                possible_images[j * samples + s, :, :, :] = generate_sample(image, image_size, rng)
-        print("Selecting best...")
-        unique_images, frequency = np.unique(possible_images, return_counts=True, axis=0)
-        print(len(frequency))
-        for s in range(0, min(ensemble_size, len(frequency))):
-            current_best = np.amax(frequency)
-            current_best_index, = np.where(frequency == current_best)
-            next_images[s, :, :, :] = unique_images[current_best_index[0], :, :, :]
-            unique_images = np.delete(unique_images, current_best_index[0], 0)
-            frequency = np.delete(frequency, current_best_index[0], 0)
-        for frame in range(1, frames):
-            input_images[:, frame - 1, :, :, :] = input_images[:, frame, :, :, :]
-        input_images[:, frames - 1, :, :, :] = next_images
-        predictions[i, :, :, :, :] = next_images
-    return predictions
-
-
 def long_term_prediction(
         model, start_sim, start_image, image_size, timestep, frames, number_to_simulate, resolution, round_result=False,
-        extra=True, jump=False, focus=1, dry_run=False):
+        extra=True, jump=False, dry_run=False):
     input_images = np.zeros((1, frames, image_size, image_size, 3))
     for frame in range(0, frames):
         try:
             input_images[0, frame, :, :, :] = dat_to_training.process_bmp(
                 "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
                     "False", 0, resolution, start_sim, start_image + frame * timestep
-                ), image_size, focus=focus
+                ), image_size
             )
         except IOError as e:
             print("Error - either invalid simulation number or image out of range!")
@@ -293,7 +248,7 @@ def long_term_prediction(
                 positions.append((dat_to_training.process_bmp(
                     "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
                         "False", 0, resolution, start_sim, start_image + i * timestep
-                    ), image_size, focus=focus
+                    ), image_size
                 ) * 255).astype(np.uint8))
         except:
             return positions
@@ -417,7 +372,6 @@ def main():
     kernel_size = 3
     multiply = 3
     kernel_size_data = 7
-    focus = 1
     dropout = 0
     # dat_to_training.convert_dat_files([0, 0], resolution=0.01)
 
@@ -435,7 +389,7 @@ def main():
         # kernel_size = generate_random_value(rng, kernel_range)
         # focus = generate_random_value(rng, focus_range)
         print("frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};focus_{};".format(
-            image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, focus
+            image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size
         ))
         model = create_network.create_neural_network(
             activation_function, optimizer, loss_function, image_frames,
@@ -446,12 +400,11 @@ def main():
         parameters_line = create_network.interpret_model_summary(model)
         print(parameters_line)
         print(model.summary())
-        training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size,
-                                                             focus=focus)
+        training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
         model, history = create_network.train_model(model, training_data, epochs=epochs)
         model.save(
             "models/Proper-frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};focus_{};".format(
-                image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size, focus
+                image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size
             ))
     except Exception as e:
         print("Fail!")
@@ -465,11 +418,11 @@ def main():
             input_images[0, frame, :, :, :] = dat_to_training.process_bmp(
                 "Simulation_data_extrapolated/Simulation_{}/data_{}.npy".format(
                     6, 20 + frame * timestep
-                ), image_size, focus)
+                ), image_size)
             expected_images[0, frame, :, :, 0] = dat_to_training.process_bmp(
                 "Simulation_data_extrapolated/Simulation_{}/data_{}.npy".format(
                     6, 20 + (frame + image_frames) * timestep
-                ), image_size, focus)[:, :, 1]
+                ), image_size)[:, :, 1]
         except IOError as e:
             print("Error - either invalid simulation number or image out of range!")
             print(e)
@@ -505,27 +458,27 @@ def main():
     plt.savefig("Hey_look_at_me.png", dpi=500)
     testing = long_term_prediction(
         model, 10, 20, image_size, timestep, image_frames, 200,
-        round_result=False, extra=True, focus=focus
+        round_result=False, extra=True
     )
     make_gif(testing, 'samples/without_rounding_with_extras_small')
     testing = long_term_prediction(
         model, 10, 20, image_size, timestep, image_frames, 200,
-        round_result=False, extra=False, focus=focus
+        round_result=False, extra=False
     )
     make_gif(testing, 'samples/without_rounding_without_extras_small')
     testing = long_term_prediction(
         model, 10, 20, image_size, timestep, image_frames, 200,
-        round_result=True, extra=True, focus=focus
+        round_result=True, extra=True
     )
     make_gif(testing, 'samples/with_rounding_with_extras_small')
     testing = long_term_prediction(
         model, 10, 20, image_size, timestep, image_frames, 200,
-        round_result=True, extra=False, focus=focus
+        round_result=True, extra=False
     )
     make_gif(testing, 'samples/with_rounding_without_extras_small')
     testing = long_term_prediction(
         model, 10, 20, image_size, timestep, image_frames, 200,
-        round_result=True, extra=False, focus=focus, dry_run=True
+        round_result=True, extra=False, dry_run=True
     )
     make_gif(testing, 'samples/actual_data_small')
     plt.clf()
@@ -534,7 +487,7 @@ def main():
         sim_com = []
         data = long_term_prediction(
             model, simulation, 30, image_size, timestep, image_frames, 200,
-            round_result=False, extra=False, focus=focus, dry_run=True
+            round_result=False, extra=False, dry_run=True
         )
         for datapoint in data:
             sim_com.append(calculate_com(datapoint))
@@ -542,7 +495,7 @@ def main():
         sim_com = []
         data = long_term_prediction(
             model, simulation, 30, image_size, timestep, image_frames, 200,
-            round_result=False, extra=True, focus=focus, dry_run=False
+            round_result=False, extra=True, dry_run=False
         )
         for datapoint in data:
             sim_com.append(calculate_com(datapoint))
