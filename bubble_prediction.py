@@ -272,14 +272,14 @@ def ensemble_prediction(
 
 
 def long_term_prediction(
-        model, start_sim, start_image, image_size, timestep, frames, number_to_simulate, round_result=False,
+        model, start_sim, start_image, image_size, timestep, frames, number_to_simulate, resolution, round_result=False,
         extra=True, jump=False, focus=1, dry_run=False):
     input_images = np.zeros((1, frames, image_size, image_size, 3))
     for frame in range(0, frames):
         try:
             input_images[0, frame, :, :, :] = dat_to_training.process_bmp(
-                "Simulation_data_extrapolated/Simulation_{}/data_{}.npy".format(
-                    start_sim, start_image + frame * timestep
+                "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
+                    "False", 0, resolution, start_sim, start_image + frame * timestep
                 ), image_size, focus=focus
             )
         except IOError as e:
@@ -291,8 +291,8 @@ def long_term_prediction(
         try:
             for i in range(0, number_to_simulate):
                 positions.append((dat_to_training.process_bmp(
-                    "Simulation_data_extrapolated/Simulation_{}/data_{}.npy".format(
-                        start_sim, start_image + i * timestep
+                    "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
+                        "False", 0, resolution, start_sim, start_image + i * timestep
                     ), image_size, focus=focus
                 ) * 255).astype(np.uint8))
         except:
