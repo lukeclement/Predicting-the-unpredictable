@@ -202,7 +202,7 @@ def convert_dat_files(variant_range, resolution=0.0001):
 
 
 def create_training_data(
-        frames, timestep, validation_split=0.1, image_size=64,
+        frames: int, timestep: int, validation_split=0.1, image_size=64,
         variants=[0], flips_allowed=True, resolution=0.001, excluded_sims=[]):
     batch_size = 8
     simulation_names = glob.glob("Simulation_data_extrapolated/*")
