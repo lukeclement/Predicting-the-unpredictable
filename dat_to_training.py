@@ -143,7 +143,7 @@ def convert_dat_files(variant_range):
         simulation_index += 1
 
 
-def load_training_data(frames, timestep, validation_split=0.1, image_size=64, focus=1, simulation_num=999, numpy_=False):
+def load_training_data(frames, timestep, validation_split=0.001, image_size=64, focus=1, simulation_num=999, numpy_=False):
     refs = []
     data_sources = []
     sub_total = 0

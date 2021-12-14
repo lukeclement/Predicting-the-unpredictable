@@ -148,20 +148,22 @@ def main():
     directory = "saved_models/" + dt_string
 
     # dat_to_training.save_training_data(focus, image_size)
-    training_data = dat_to_training.load_training_data(image_frames,
-                                                       timestep=timestep,
-                                                       image_size=image_size,
-                                                       numpy_=True,
-                                                       validation_split=0.001)
+    # training_data = dat_to_training.load_training_data(image_frames,
+    #                                                    timestep=timestep,
+    #                                                    image_size=image_size,
+    #                                                    numpy_=True,
+    #                                                    validation_split=0.001)
+    #
+    # model = create_network.create_inception_net(activation_function, optimizer, loss_function)
+    # model, history = create_network.train_model(model, training_data, epochs=1)
+    # model.save(directory)
+    # for i in range(20):
+    #     data = dat_to_training.load_training_data(image_frames, timestep=timestep, image_size=image_size, numpy_=True, simulation_num=i)
+    #     evaluate_model(data, image_frames, image_size, model, timestep, i, 400)
 
-    model = create_network.create_inception_net(activation_function, optimizer, loss_function)
-    model, history = create_network.train_model(model, training_data, epochs=1)
-    model.save(directory)
-    for i in range(20):
-        data = dat_to_training.load_training_data(image_frames, timestep=timestep, image_size=image_size, numpy_=True, simulation_num=i)
-        evaluate_model(data, image_frames, image_size, model, timestep, i, 400)
-
-
+    data = dat_to_training.load_training_data(image_frames, timestep=1, image_size=image_size, numpy_=True, simulation_num=1)
+    plt.imshow(data[0][0][747])
+    plt.show()
 
     # """
     # print("Loading Model")
