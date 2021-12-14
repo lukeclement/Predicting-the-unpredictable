@@ -115,7 +115,7 @@ def manufacture_network():
             print("What is the minimum amount:")
             mini = ranged_request([-99999, 99999])
             parameters[9] = []
-            for i in range(mini, maxi):
+            for i in range(mini, maxi+1):
                 parameters[9].append(i)
         else:
             inputting = True

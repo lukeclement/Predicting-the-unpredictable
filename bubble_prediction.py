@@ -1,7 +1,7 @@
 import dat_to_training
 import create_network
 import loss_functions
-from tensorflow.keras import layers, losses, models
+from tensorflow.keras import layers, losses, models, optimizers
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
@@ -334,7 +334,7 @@ def main():
     tf.random.set_seed(100)
     rng = default_rng(69420)
     activation_function = layers.LeakyReLU()
-    optimizer = "adam"
+    optimizer = optimizers.Adam(learning_rate=0.001, epsilon=0.1)
     # loss_function = losses.mean_squared_logarithmic_error
     # loss_function = losses.cosine_similarity
     # loss_function = losses.log_cosh
@@ -358,20 +358,14 @@ def main():
     focus_range = [1, 2]
     epochs = 15
 
-    allowed_sizes = [12, 15, 18, 20, 27, 30, 36, 45, 54, 60, 90, 108, 135, 180, 270]
-    allowed_sizes = [30, 36, 45, 54, 60, 90, 108, 135, 180, 270]
-    allowed_sizes = [45, 54, 60, 90, 108, 135, 180, 270]
-
-    image_frames = 4
-    image_size = 45
-    timestep = 5
+    image_frames = 1
+    image_size = 90
+    timestep = 20
     dropout_rate = 0.1
-    encode_size = 3
+    encode_size = 5
     # howdy
-    max_transpose_layers = 7
-    kernel_size = 3
-    multiply = 3
-    kernel_size_data = 7
+    max_transpose_layers = 10
+    kernel_size = 4
     dropout = 0
     # dat_to_training.convert_dat_files([0, 0], resolution=0.01)
 
@@ -388,9 +382,6 @@ def main():
         # max_transpose_layers = generate_random_value(rng, max_transpose_range)
         # kernel_size = generate_random_value(rng, kernel_range)
         # focus = generate_random_value(rng, focus_range)
-        print("frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};focus_{};".format(
-            image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size
-        ))
         model = create_network.create_neural_network(
             activation_function, optimizer, loss_function, image_frames,
             image_size=image_size, encode_size=encode_size, allow_pooling=True,
@@ -400,7 +391,8 @@ def main():
         parameters_line = create_network.interpret_model_summary(model)
         print(parameters_line)
         print(model.summary())
-        training_data = dat_to_training.create_training_data(image_frames, timestep, image_size=image_size)
+        training_data = dat_to_training.create_training_data(
+            image_frames, timestep, image_size=image_size, excluded_sims=[10, 11, 12, 13, 14, 15])
         model, history = create_network.train_model(model, training_data, epochs=epochs)
         model.save(
             "models/Proper-frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};focus_{};".format(
@@ -416,12 +408,12 @@ def main():
     for frame in range(0, image_frames):
         try:
             input_images[0, frame, :, :, :] = dat_to_training.process_bmp(
-                "Simulation_data_extrapolated/Simulation_{}/data_{}.npy".format(
-                    6, 20 + frame * timestep
+                "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
+                    "True", 0, 0.001, 6, 20 + frame * timestep
                 ), image_size)
             expected_images[0, frame, :, :, 0] = dat_to_training.process_bmp(
-                "Simulation_data_extrapolated/Simulation_{}/data_{}.npy".format(
-                    6, 20 + (frame + image_frames) * timestep
+                "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
+                    "True", 0, 0.001, 6, 20 + (frame + image_frames) * timestep
                 ), image_size)[:, :, 1]
         except IOError as e:
             print("Error - either invalid simulation number or image out of range!")
@@ -429,64 +421,72 @@ def main():
     output_images = model(input_images)
     axes = plt.figure(constrained_layout=True).subplot_mosaic(
         """
-        ABCD
-        EFGH
-        IJKL
-        ZXYQ
+        A
+        E
+        I
+        Z
         """
     )
+    # axes = plt.figure(constrained_layout=True).subplot_mosaic(
+    #     """
+    #     ABCD
+    #     EFGH
+    #     IJKL
+    #     ZXYQ
+    #     """
+    # )
     # Input
     axes["A"].imshow(input_images[0, 0, :, :, :])
-    axes["B"].imshow(input_images[0, 1, :, :, :])
-    axes["C"].imshow(input_images[0, 2, :, :, :])
-    axes["D"].imshow(input_images[0, 3, :, :, :])
+    # axes["B"].imshow(input_images[0, 1, :, :, :])
+    # axes["C"].imshow(input_images[0, 2, :, :, :])
+    # axes["D"].imshow(input_images[0, 3, :, :, :])
     # Prediction
     axes["E"].imshow(output_images[0, 0, :, :, :])
-    axes["F"].imshow(output_images[0, 1, :, :, :])
-    axes["G"].imshow(output_images[0, 2, :, :, :])
-    axes["H"].imshow(output_images[0, 3, :, :, :])
+    # axes["F"].imshow(output_images[0, 1, :, :, :])
+    # axes["G"].imshow(output_images[0, 2, :, :, :])
+    # axes["H"].imshow(output_images[0, 3, :, :, :])
     # Actual
     axes["I"].imshow(expected_images[0, 0, :, :, :])
-    axes["J"].imshow(expected_images[0, 1, :, :, :])
-    axes["K"].imshow(expected_images[0, 2, :, :, :])
-    axes["L"].imshow(expected_images[0, 3, :, :, :])
+    # axes["J"].imshow(expected_images[0, 1, :, :, :])
+    # axes["K"].imshow(expected_images[0, 2, :, :, :])
+    # axes["L"].imshow(expected_images[0, 3, :, :, :])
     # Difference
     axes["Z"].imshow(expected_images[0, 0, :, :, :] - output_images[0, 0, :, :, :])
-    axes["X"].imshow(expected_images[0, 1, :, :, :] - output_images[0, 1, :, :, :])
-    axes["Y"].imshow(expected_images[0, 2, :, :, :] - output_images[0, 2, :, :, :])
-    axes["Q"].imshow(expected_images[0, 3, :, :, :] - output_images[0, 3, :, :, :])
+    # axes["X"].imshow(expected_images[0, 1, :, :, :] - output_images[0, 1, :, :, :])
+    # axes["Y"].imshow(expected_images[0, 2, :, :, :] - output_images[0, 2, :, :, :])
+    # axes["Q"].imshow(expected_images[0, 3, :, :, :] - output_images[0, 3, :, :, :])
     plt.savefig("Hey_look_at_me.png", dpi=500)
     testing = long_term_prediction(
-        model, 10, 20, image_size, timestep, image_frames, 200,
+        model, 10, 20, image_size, timestep, image_frames, 200, 0.001,
         round_result=False, extra=True
     )
     make_gif(testing, 'samples/without_rounding_with_extras_small')
     testing = long_term_prediction(
-        model, 10, 20, image_size, timestep, image_frames, 200,
+        model, 10, 20, image_size, timestep, image_frames, 200, 0.001,
         round_result=False, extra=False
     )
     make_gif(testing, 'samples/without_rounding_without_extras_small')
     testing = long_term_prediction(
-        model, 10, 20, image_size, timestep, image_frames, 200,
+        model, 10, 20, image_size, timestep, image_frames, 200, 0.001,
         round_result=True, extra=True
     )
     make_gif(testing, 'samples/with_rounding_with_extras_small')
     testing = long_term_prediction(
-        model, 10, 20, image_size, timestep, image_frames, 200,
+        model, 10, 20, image_size, timestep, image_frames, 200, 0.001,
         round_result=True, extra=False
     )
     make_gif(testing, 'samples/with_rounding_without_extras_small')
     testing = long_term_prediction(
-        model, 10, 20, image_size, timestep, image_frames, 200,
+        model, 10, 20, image_size, timestep, image_frames, 200, 0.001,
         round_result=True, extra=False, dry_run=True
     )
     make_gif(testing, 'samples/actual_data_small')
     plt.clf()
     plt.close()
-    for simulation in range(0,2):
+    for simulation in range(0, 2):
         sim_com = []
         data = long_term_prediction(
-            model, simulation, 30, image_size, timestep, image_frames, 200,
+            model, simulation, 30, image_size, timestep, image_frames, 200, 0.001,
             round_result=False, extra=False, dry_run=True
         )
         for datapoint in data:
@@ -494,7 +494,7 @@ def main():
         plt.plot(sim_com)
         sim_com = []
         data = long_term_prediction(
-            model, simulation, 30, image_size, timestep, image_frames, 200,
+            model, simulation, 30, image_size, timestep, image_frames, 200, 0.001,
             round_result=False, extra=True, dry_run=False
         )
         for datapoint in data:
