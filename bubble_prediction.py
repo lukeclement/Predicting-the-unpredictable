@@ -327,6 +327,7 @@ def calculate_com(image, both=False):
     if both:
         return x_com, y_com
     return np.sqrt(x_com**2 + y_com**2)
+    return  y_com
 
 
 def main():
@@ -359,8 +360,8 @@ def main():
     epochs = 15
 
     image_frames = 1
-    image_size = 90
-    timestep = 20
+    image_size = 50
+    timestep = 5
     dropout_rate = 0.1
     encode_size = 5
     # howdy
@@ -382,6 +383,14 @@ def main():
         # max_transpose_layers = generate_random_value(rng, max_transpose_range)
         # kernel_size = generate_random_value(rng, kernel_range)
         # focus = generate_random_value(rng, focus_range)
+        # model = models.load_model(
+        #     "models/Test_collection",
+        #     custom_objects={
+        #         "mean_squared_logarithmic_error": losses.mean_squared_logarithmic_error,
+        #         "binary_crossentropy": losses.binary_crossentropy,
+        #         "ssim_loss": loss_functions.ssim_loss,
+        #         "UBERLOSS": loss_functions.UBERLOSS
+        #     })
         model = create_network.create_neural_network(
             activation_function, optimizer, loss_function, image_frames,
             image_size=image_size, encode_size=encode_size, allow_pooling=True,
@@ -392,12 +401,9 @@ def main():
         print(parameters_line)
         print(model.summary())
         training_data = dat_to_training.create_training_data(
-            image_frames, timestep, image_size=image_size, excluded_sims=[10, 11, 12, 13, 14, 15])
+            image_frames, timestep, image_size=image_size, excluded_sims=[12])
         model, history = create_network.train_model(model, training_data, epochs=epochs)
-        model.save(
-            "models/Proper-frame_{};size_{};time_{};drop_{};encode_{};maxTrans_{};kernel_{};focus_{};".format(
-                image_frames, image_size, timestep, dropout, encode_size, max_transpose_layers, kernel_size
-            ))
+        model.save("models/Test_collection")
     except Exception as e:
         print("Fail!")
         print(e)
@@ -457,33 +463,43 @@ def main():
     # axes["Q"].imshow(expected_images[0, 3, :, :, :] - output_images[0, 3, :, :, :])
     plt.savefig("Hey_look_at_me.png", dpi=500)
     testing = long_term_prediction(
-        model, 10, 20, image_size, timestep, image_frames, 200, 0.001,
+        model, 12, 20, image_size, timestep, image_frames, 200, 0.001,
         round_result=False, extra=True
     )
+    prediction_proper = testing
     make_gif(testing, 'samples/without_rounding_with_extras_small')
     testing = long_term_prediction(
-        model, 10, 20, image_size, timestep, image_frames, 200, 0.001,
+        model, 12, 20, image_size, timestep, image_frames, 200, 0.001,
         round_result=False, extra=False
     )
     make_gif(testing, 'samples/without_rounding_without_extras_small')
     testing = long_term_prediction(
-        model, 10, 20, image_size, timestep, image_frames, 200, 0.001,
+        model, 12, 20, image_size, timestep, image_frames, 200, 0.001,
         round_result=True, extra=True
     )
     make_gif(testing, 'samples/with_rounding_with_extras_small')
     testing = long_term_prediction(
-        model, 10, 20, image_size, timestep, image_frames, 200, 0.001,
+        model, 12, 20, image_size, timestep, image_frames, 200, 0.001,
         round_result=True, extra=False
     )
     make_gif(testing, 'samples/with_rounding_without_extras_small')
     testing = long_term_prediction(
-        model, 10, 20, image_size, timestep, image_frames, 200, 0.001,
+        model, 12, 20, image_size, timestep, image_frames, 200, 0.001,
         round_result=True, extra=False, dry_run=True
     )
+    actual_proper = testing
     make_gif(testing, 'samples/actual_data_small')
     plt.clf()
     plt.close()
-    for simulation in range(0, 2):
+    prediction_proper = np.asarray(prediction_proper)[:, :, :, 1]
+    actual_proper = np.asarray(actual_proper)[:, :, :, 1]
+    combined = np.zeros((200, image_size, image_size, 3))
+    combined[:, :, :, 0] = prediction_proper
+    combined[:, :, :, 2] = actual_proper
+    make_gif(combined, 'samples/comparison')
+    plt.clf()
+    plt.close()
+    for simulation in range(10, 13):
         sim_com = []
         data = long_term_prediction(
             model, simulation, 30, image_size, timestep, image_frames, 200, 0.001,
@@ -492,6 +508,7 @@ def main():
         for datapoint in data:
             sim_com.append(calculate_com(datapoint))
         plt.plot(sim_com)
+        print(sim_com[0:10])
         sim_com = []
         data = long_term_prediction(
             model, simulation, 30, image_size, timestep, image_frames, 200, 0.001,
@@ -499,9 +516,11 @@ def main():
         )
         for datapoint in data:
             sim_com.append(calculate_com(datapoint))
+        print(sim_com[0:10])
         plt.plot(np.arange(len(sim_com)), sim_com, '--')
     #plt.show()
     plt.savefig("centre_of_mass_tests.png")
+    # exit()
     overall_loss = history.history["loss"]
     bce = history.history["binary_crossentropy"]
     mse = history.history["mean_squared_logarithmic_error"]
