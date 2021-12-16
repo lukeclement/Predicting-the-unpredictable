@@ -326,7 +326,7 @@ def calculate_com(image, both=False):
     y_com = np.sum(y*image[:, :, 1])/np.sum(image[:, :, 1])
     if both:
         return x_com, y_com
-    return np.sqrt(x_com**2 + y_com**2)
+    return np.sqrt((x_com-(float(image_size)/2))**2 + (y_com-(float(image_size)/2))**2)
     return  y_com
 
 
@@ -348,41 +348,19 @@ def main():
     # loss_function = loss_functions.tester_loss
     loss_function = loss_functions.UBERLOSS
     # loss_function = loss_functions.ssim_loss
-    # Parameter ranges
-    image_frame_range = [1, 6]
-    image_size_range = [20, 70]
-    timestep_range = [1, 21]
-    dropout_range = [0, 0.5]
-    encode_range = [1, 21]
-    max_transpose_range = [1, 10]
-    kernel_range = [2, 10]
-    focus_range = [1, 2]
-    epochs = 15
+    epochs = 20
 
-    image_frames = 1
-    image_size = 50
+    image_frames = 2
+    image_size = 60
     timestep = 5
     dropout_rate = 0.1
     encode_size = 5
+    resolution = 0.001
     # howdy
     max_transpose_layers = 10
     kernel_size = 4
     dropout = 0
-    # dat_to_training.convert_dat_files([0, 0], resolution=0.01)
-
-    trainable_parameters = []
     try:
-        # first = True
-        # while image_frames * (image_size ** 2) > 4 * (45 ** 2) or first:
-        #     first = False
-        #     image_size = allowed_sizes[generate_random_value(rng, [0, len(allowed_sizes)])]
-        #     image_frames = generate_random_value(rng, image_frame_range)
-        # timestep = generate_random_value(rng, timestep_range)
-        # dropout = 0
-        # encode_size = generate_random_value(rng, encode_range)
-        # max_transpose_layers = generate_random_value(rng, max_transpose_range)
-        # kernel_size = generate_random_value(rng, kernel_range)
-        # focus = generate_random_value(rng, focus_range)
         # model = models.load_model(
         #     "models/Test_collection",
         #     custom_objects={
@@ -401,7 +379,8 @@ def main():
         print(parameters_line)
         print(model.summary())
         training_data = dat_to_training.create_training_data(
-            image_frames, timestep, image_size=image_size, excluded_sims=[12])
+            image_frames, timestep, image_size=image_size,
+            excluded_sims=[12], variants=[-1, 1], resolution=resolution)
         model, history = create_network.train_model(model, training_data, epochs=epochs)
         model.save("models/Test_collection")
     except Exception as e:
@@ -493,13 +472,14 @@ def main():
     plt.close()
     prediction_proper = np.asarray(prediction_proper)[:, :, :, 1]
     actual_proper = np.asarray(actual_proper)[:, :, :, 1]
-    combined = np.zeros((200, image_size, image_size, 3))
+    combined = np.zeros((200, image_size, image_size, 3), dtype=np.uint8)
     combined[:, :, :, 0] = prediction_proper
-    combined[:, :, :, 2] = actual_proper
+    combined[:min(np.shape(actual_proper)[0], 200), :, :, 2] = actual_proper
     make_gif(combined, 'samples/comparison')
     plt.clf()
     plt.close()
-    for simulation in range(10, 13):
+    plt.grid()
+    for simulation in range(12, 13):
         sim_com = []
         data = long_term_prediction(
             model, simulation, 30, image_size, timestep, image_frames, 200, 0.001,
@@ -508,7 +488,6 @@ def main():
         for datapoint in data:
             sim_com.append(calculate_com(datapoint))
         plt.plot(sim_com)
-        print(sim_com[0:10])
         sim_com = []
         data = long_term_prediction(
             model, simulation, 30, image_size, timestep, image_frames, 200, 0.001,
@@ -521,6 +500,13 @@ def main():
     #plt.show()
     plt.savefig("centre_of_mass_tests.png")
     # exit()
+    plt.clf()
+    plt.close()
+    product = dat_to_training.process_bmp("Simulation_data_extrapolated/Simulation_True_0_0.001_0/data_4.npy", image_size)
+    product = product[:, :, 1]
+    product = product.flatten()
+    plt.hist(product[product > 0], bins=20)
+    plt.savefig("Random_value_distribution.png", dpi=500)
     overall_loss = history.history["loss"]
     bce = history.history["binary_crossentropy"]
     mse = history.history["mean_squared_logarithmic_error"]
