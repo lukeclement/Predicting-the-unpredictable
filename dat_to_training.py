@@ -1,11 +1,9 @@
 import glob
 import os
 import numpy as np
-import pandas as pd
 import tensorflow as tf
 from PIL import Image
 from scipy.signal import convolve2d
-import psutil
 from tqdm import tqdm
 
 BASE_SIZE = 540
@@ -143,16 +141,16 @@ def convert_dat_files(variant_range):
         simulation_index += 1
 
 
-def load_training_data(frames, timestep, validation_split=0.001, image_size=64, focus=1, simulation_num=999, numpy_=False):
+def load_training_data(frames, timestep, validation_split=0.1, image_size=64, focus=1, simulation_num=999, numpy_=False):
     refs = []
     data_sources = []
     sub_total = 0
     total = 0
     print("Loading training data: ")
     training_names = glob.glob("training_images/*")
-    training_names = training_names[:6]
+    training_names = training_names[1:-1]
     if simulation_num != 999:
-        simulation = training_names[simulation_num]
+        simulation = "training_images/Simulation_" + str(simulation_num)
         print("Loading simulation number: ", simulation)
         files = glob.glob("{}/*".format(simulation))
         number_of_files = len(files)
@@ -175,10 +173,11 @@ def load_training_data(frames, timestep, validation_split=0.001, image_size=64, 
     index = 0
     pbar = tqdm(total=len(data_sources))
     if simulation_num != 999:
-        training_directory = glob.glob(training_names[simulation_num] + "/*")
+        simulation = "training_images/Simulation_" + str(simulation_num)
+        training_directory = glob.glob(simulation + "/*")
         number_of_files = len(training_directory)
         for i in range(3, number_of_files - timestep * frames * 2):
-            training_data = np.load(training_directory[i])
+            training_data = np.load("{}/img_{}.npy".format(simulation, i))
             source_array[index, :, :, :] = training_data
             index += 1
             pbar.update(1)
@@ -187,7 +186,7 @@ def load_training_data(frames, timestep, validation_split=0.001, image_size=64, 
             training_directory = glob.glob(simulation+"/*")
             number_of_files = len(training_directory)
             for i in range(3, number_of_files - timestep * frames * 2):
-                training_data = np.load(training_directory[i])
+                training_data = np.load("{}/img_{}.npy".format(simulation, i))
                 source_array[index, :, :, :] = training_data
                 index += 1
                 pbar.update(1)
@@ -286,6 +285,7 @@ def save_training_data(focus, image_size):
         simulation_number = save_refs[i][0]
         image_number = save_refs[i][1]
         image = source_array[i, :, :, :]
+
         try:
             np.save("training_images/Simulation_{}/img_{}.npy".format(simulation_number, image_number), image)
         except:

@@ -1,6 +1,4 @@
 import numpy as np
-import loss_functions
-import dat_to_training
 from keras.engine import data_adapter
 from tensorflow.keras import layers, models, Model, initializers, activations, losses, metrics, backend
 import tensorflow as tf
@@ -49,114 +47,57 @@ def interpret_model_summary(model):
             return line
 
 
-def create_neural_network(activation, optimizer, loss, input_frames, image_size=64, channels=3, encode_size=2,
-                          allow_upsampling=True, allow_pooling=True, kernel_size=3, max_transpose_layers=3):
-    """Generates a Convolutional Neural Network (CNN), based on a sequential architecture. Does not train the CNN.
-    This function can be adjusted to change the overall architecture of the CNN.
-    This function also prints the model summary,
-    allowing for an estimation on training time to be established, among other things.
-    Inputs:
-        activation:     A string of the activation function used on the neurons.
-        optimizer:      A string of the optimisation function used on the model.
-        loss:           A function that represents the loss on the network.
-        input_frames:   An integer representing the number of reference images to be passed to the network.
-        image_size:     (default 64) An integer of the size of an axis of the images to be passed to the network.
-        channels:       (default 3) An integer for the number of channels used in the image. RGB images have 3 channels.
-        encode_size:    (default 2) An integer for the size of an axis for the encoded image.
-                            *Note* This is the final size achieved by ConvXD and MaxPoolingXD layers.
-        allow_upsampling: (default True) A boolean to say whether to include upsampling layers.
-        allow_pooling:  (default True) A boolean to say whether to include max pooling layers.
-        kernel_size:    (default 3) An integer for the default size of kernels used in convolutional layers.
-        max_transpose_layers: (default 3) An integer for the maximum number of transpose layers after the
-                            final upsampling layer.
-    Output:
-        An untrained keras model
-    """
-    # TODO: dropout functions
-    model = models.Sequential()
-    current_axis_size = image_size
-    target_axis_size = encode_size
-    current_frames = input_frames
-    model.add(layers.Conv3D(3, 1, activation=activation, input_shape=(input_frames, image_size, image_size, channels)))
-    # Encoding the image
-    while current_axis_size > target_axis_size:
-        if current_frames > 1:
-            # Initial 3D convolutional layers to reduce the frames into a single image
-            # model.add(layers.Conv3D(64, 2, activation=activation))
-            # current_frames -= 1
-            # current_axis_size -= 1
-            model.add(layers.Conv3D(32, input_frames, activation=activation))
-            current_frames -= input_frames - 1
-            current_axis_size -= input_frames - 1
-        elif current_frames == 1:
-            # Reshaping the image to be the correct dimensions
-            current_frames -= 1
-            model.add(layers.Reshape((current_axis_size, current_axis_size, 32)))
-            model.add(layers.Conv2D(32, kernel_size, activation=activation))
-            current_axis_size -= (kernel_size - 1)
-        else:
-            # Bringing the image down to encoding size
-            if np.floor(current_axis_size / 2) > target_axis_size and allow_pooling:
-                model.add(layers.MaxPooling2D(2))
-                current_axis_size = np.floor(current_axis_size / 2)
-            if current_axis_size - (kernel_size - 1) < target_axis_size:
-                model.add(layers.Conv2D(64, 2, activation=activation))
-                current_axis_size -= 1
-            else:
-                model.add(layers.Conv2D(64, kernel_size, activation=activation))
-                current_axis_size -= (kernel_size - 1)
-    # Now decoding the image using transpose operations
-    # model.add(layers.Conv2DTranspose(64, kernel_size, activation=activation))
-    # current_axis_size += (kernel_size - 1)
-    # Some variables to keep track of in the while loop
-    max_leaps = max_transpose_layers
-    leap_correction = 0
-    calculated = False
-    while current_axis_size < image_size:
-        if current_axis_size * 2 < image_size and allow_upsampling and not first_run:
-            # Upsampling
-            model.add(layers.UpSampling2D(2))
-            current_axis_size = current_axis_size * 2
-        first_run = False
-        if (image_size - current_axis_size) > (kernel_size - 1) * max_leaps \
-                and not calculated \
-                and (not allow_upsampling or current_axis_size * 2 > image_size or first_run):
-            # Calculating the ideal kernel size for the fewest layers needed
-            leaps_needed = np.floor((image_size - current_axis_size) / (kernel_size - 1))
-            leap_correction = int(np.floor((kernel_size - 1) * (leaps_needed / max_leaps - 1)))
-            calculated = True
-        # Transpose operations
-        if current_axis_size + kernel_size - 1 > image_size:
-            # Close to full size
-            model.add(layers.Conv2DTranspose(32, 2, activation=activation))
-            current_axis_size += 1
-        elif current_axis_size + kernel_size - 1 + leap_correction > image_size:
-            # Within a few jumps of full size
-            model.add(layers.Conv2DTranspose(64, kernel_size, activation=activation))
-            current_axis_size += kernel_size - 1
-        else:
-            # Full size far away but too close for upsampling
-            model.add(layers.Conv2DTranspose(64, kernel_size + leap_correction, activation=activation))
-            current_axis_size += kernel_size - 1 + leap_correction
-    # Final adjustments
-    model.add(layers.Conv2DTranspose(1, 1, activation='sigmoid'))
-    print(model.summary())
-    model.compile(optimizer=optimizer, loss=loss)
-    return model
-
-
 class CustomModel(Model):
     custom_steps = 2
+    loss_fraction = 0.1
+    i_multi = 10
+    o_multi = 0.1
+    loss_function_choice = 1
+    mse = metrics.MeanSquaredError(name="MSE")
     loss_tracker = metrics.Mean(name="loss")
+    loss_tracker_live = metrics.Mean(name="loss_live")
     bce_metric = metrics.BinaryCrossentropy(name="BCE")
+    bce_metric_live = metrics.BinaryCrossentropy(name="BCE_live")
 
+    def set_loss_fraction(self, fraction):
+        self.loss_fraction = fraction
 
-    def cubic_loss(self, y_true, y_pred):
+    def set_ln_multi(self, i, o):
+        self.i_multi = i
+        self.o_multi = o
+
+    def set_loss_function_choice(self, choice):
+        self.loss_function_choice = choice
+
+    def cubic_loss_02_12_2021(self, y_true, y_pred):
         constant = tf.fill(tf.shape(y_true), 1.005)
         se = (y_pred - y_true) * (y_pred - y_true)
         dominator = constant - y_true
         bce = losses.binary_crossentropy(y_true, y_pred)
-        loss = 0.143*backend.log(40*backend.mean(se / dominator)+1)+bce
+        loss = 0.143 * backend.log(40 * backend.mean(se / dominator) + 1) + bce
+        return loss
+
+    def cubic_loss_03_12_2021(self, y_true, y_pred):
+        se = (y_pred - y_true) * (y_pred - y_true)
+        bce = losses.binary_crossentropy(y_true, y_pred)
+        loss = 0.143 * backend.log(40 * backend.mean(se) + 1) + bce
+        return loss
+
+    def custom_loss_14_12_2021(self, y_true, y_pred):
+        se = (y_pred - y_true) * (y_pred - y_true)
+        mse = backend.mean(se)
+        bce = losses.binary_crossentropy(y_true, y_pred)
+        if self.loss_function_choice == 1:
+            loss = self.loss_fraction * mse + (1 - self.loss_fraction) * bce
+
+        if self.loss_function_choice == 2:
+            loss = self.o_multi * backend.log(self.i_multi * mse + 1) + bce
+        return loss
+
+    def custom_loss(self, y_true, y_pred):
+        # se = (y_pred - y_true) * (y_pred - y_true)
+        # mse = backend.mean(se)
+        loss = losses.binary_crossentropy(y_true, y_pred)
         return loss
 
     def __init__(self, model):
@@ -171,7 +112,7 @@ class CustomModel(Model):
         xold = x
         rail = x[:, 0, :, :, 2:]
         zeros = x[:, 0, :, :, 0:1]
-        lf = self.cubic_loss
+        lf = self.custom_loss
         with tf.GradientTape() as tape:
             y_pred = self(x, training=True)
             y_true = y[:, 0, :, :, :]
@@ -189,7 +130,8 @@ class CustomModel(Model):
                     loss = tf.math.add(loss, lf(y_true, y_pred))
                     y_pred = tf.concat([zeros, y_pred], 3)
                     y_pred = tf.concat([y_pred, rail], 3)
-                    y_pred = tf.reshape(y_pred, shape=(y_pred_shape[0], 1, y_pred_shape[1], y_pred_shape[2], y_pred_shape[3]))
+                    y_pred = tf.reshape(y_pred,
+                                        shape=(y_pred_shape[0], 1, y_pred_shape[1], y_pred_shape[2], y_pred_shape[3]))
                     x = x[:, 1:, :, :, :]
                     x = tf.concat([x, y_pred], 1)
 
@@ -197,11 +139,21 @@ class CustomModel(Model):
         self.optimizer.minimize(loss, self.trainable_variables, tape=tape)
         # Collect metrics to return
         y_pred = self(xold, training=False)
+        self.loss_tracker_live.reset_state()
+        self.bce_metric_live.reset_state()
         self.loss_tracker.update_state(loss)
         self.bce_metric.update_state(y[:, 0, :, :, :], y_pred)
+        self.mse.update_state(y[:, 0, :, :, :], y_pred)
+        self.loss_tracker_live.update_state(loss)
+        self.bce_metric_live.update_state(y[:, 0, :, :, :], y_pred)
+
         loss_result = self.loss_tracker.result()
         bce_result = self.bce_metric.result()
-        return {"loss": loss_result, "BCE": bce_result}
+        mse_result = self.mse.result()
+        loss_result_live = self.loss_tracker_live.result()
+        bce_result_live = self.bce_metric_live.result()
+        return {"Average loss": loss_result, "Average BCE": bce_result, "Live loss": loss_result_live,
+                "Live BCE": bce_result_live, "MSE": mse_result}
 
     def test_step(self, data):
         self.loss_tracker.reset_state()
@@ -212,7 +164,7 @@ class CustomModel(Model):
         zeros = x[:, 0, :, :, 0:1]
         y_pred = self(x, training=False)
         y_true = y[:, 0, :, :, :]
-        lf = self.cubic_loss
+        lf = self.custom_loss
         loss = lf(y_true, y_pred)
         y_pred = tf.concat([zeros, y_pred], 3)
         y_pred = tf.concat([y_pred, rail], 3)
@@ -227,7 +179,8 @@ class CustomModel(Model):
                 loss = tf.math.add(loss, lf(y_true, y_pred))
                 y_pred = tf.concat([zeros, y_pred], 3)
                 y_pred = tf.concat([y_pred, rail], 3)
-                y_pred = tf.reshape(y_pred, shape=(y_pred_shape[0], 1, y_pred_shape[1], y_pred_shape[2], y_pred_shape[3]))
+                y_pred = tf.reshape(y_pred,
+                                    shape=(y_pred_shape[0], 1, y_pred_shape[1], y_pred_shape[2], y_pred_shape[3]))
                 x = x[:, 1:, :, :, :]
                 x = tf.concat([x, y_pred], 1)
 
@@ -270,7 +223,7 @@ def inception_cell(model, activation, axis, initializer):
     return model
 
 
-def create_inception_net(activation, optimizer, loss, frames=4, size=60, channels=3):
+def create_inception_net(activation, optimizer, frames=4, size=60, channels=3):
     """Creates the CNN.
     Inputs:
         activation: The activation function used on the neurons (string)
@@ -294,26 +247,42 @@ def create_inception_net(activation, optimizer, loss, frames=4, size=60, channel
     model.add(layers.Conv3D(32, (4, 7, 7), kernel_initializer=initializer, activation=activation,
                             input_shape=(frames, size, size, 3)))
     model.add(layers.Reshape((54, 54, 32)))
-    model.add(layers.MaxPooling2D((3, 3)))
-    model.add(layers.BatchNormalization())
-    model = inception_cell(model, activation=activation, axis=1, initializer=initializer)
-    model = inception_cell(model, activation=activation, axis=2, initializer=initializer)
-    model.add(layers.Dropout(0.05))
-    model.add(layers.Conv2D(32, (1, 1), activation=activation, kernel_initializer=initializer))
+
+    model.add(layers.Conv2D(32, (3, 3), strides=(3, 3), activation=activation, kernel_initializer=initializer))
+    model.add(layers.Conv2D(32, (3, 3), activation=activation, kernel_initializer=initializer))
+    model = inception_cell(model, activation=activation, axis=3, initializer=initializer)
+
+    model.add(layers.Conv2D(32, (3, 3), activation=activation, kernel_initializer=initializer))
+    model = inception_cell(model, activation=activation, axis=3, initializer=initializer)
+
+    model.add(layers.Conv2D(32, (3, 3), activation=activation, kernel_initializer=initializer))
+    model = inception_cell(model, activation=activation, axis=3, initializer=initializer)
+
     model.add(layers.Conv2D(32, (3, 3), activation=activation, kernel_initializer=initializer))
 
-    model.add(layers.Conv2D(32, (5, 5), activation=activation, kernel_initializer=initializer, strides=(5, 5)))
-    model = inception_cell(model, activation=activation, axis=1, initializer=initializer)
-    model = inception_cell(model, activation=activation, axis=2, initializer=initializer)
-    model.add(layers.Conv2DTranspose(32, (4, 4), activation=activation, kernel_initializer=initializer))
-    model.add(layers.Conv2DTranspose(32, (4, 4), activation=activation, kernel_initializer=initializer))
-    model.add(layers.Conv2D(1, (3, 3), activation=activations.sigmoid, kernel_initializer=initializer))
+    model.add(layers.Conv2DTranspose(32, (3, 3), activation=activation, kernel_initializer=initializer))
+    model = inception_cell(model, activation=activation, axis=3, initializer=initializer)
+
+    model.add(layers.Conv2DTranspose(32, (3, 3), activation=activation, kernel_initializer=initializer))
+    model = inception_cell(model, activation=activation, axis=3, initializer=initializer)
+
+    model.add(layers.Conv2DTranspose(32, (3, 3), activation=activation, kernel_initializer=initializer))
+    model = inception_cell(model, activation=activation, axis=3, initializer=initializer)
+
+    model.add(layers.Conv2DTranspose(32, (3, 3), activation=activation, kernel_initializer=initializer))
+
+    model.add(layers.Conv2DTranspose(32, (5, 5), strides=(3, 3), activation=activation, kernel_initializer=initializer))
+
+    # model.add(layers.BatchNormalization())
+    model.add(layers.Conv2DTranspose(32, (7, 7), activation=activations.sigmoid, kernel_initializer=initializer))
+
+    model.add(layers.Conv2D(1, (3, 3), activation=activation, kernel_initializer=initializer))
 
     print(model.summary())
 
     model = CustomModel(model)
     # optimizer = tf.keras.mixed_precision.LossScaleOptimizer(optimizer)
-    model.compile(optimizer=optimizer, loss=loss)
+    model.compile(optimizer=optimizer)
 
     # model.compile(optimizer=optimizer, loss=loss, metrics=pixel_prediction(i))
     # model.compile(optimizer=optimizer, loss=loss, metrics=[mass_preservation])
