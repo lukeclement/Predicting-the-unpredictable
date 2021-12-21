@@ -244,7 +244,7 @@ def long_term_prediction(
     positions = []
     if dry_run:
         try:
-            for i in range(0, number_to_simulate):
+            for i in range(frames, number_to_simulate):
                 positions.append((dat_to_training.process_bmp(
                     "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
                         "False", 0, resolution, start_sim, start_image + i * timestep
@@ -380,7 +380,7 @@ def main():
         print(model.summary())
         training_data = dat_to_training.create_training_data(
             image_frames, timestep, image_size=image_size,
-            excluded_sims=[12], variants=[-1, 1], resolution=resolution)
+            excluded_sims=[12], variants=[0], resolution=resolution)
         model, history = create_network.train_model(model, training_data, epochs=epochs)
         model.save("models/Test_collection")
     except Exception as e:
@@ -488,6 +488,7 @@ def main():
         for datapoint in data:
             sim_com.append(calculate_com(datapoint))
         plt.plot(sim_com)
+        saved = sim_com
         sim_com = []
         data = long_term_prediction(
             model, simulation, 30, image_size, timestep, image_frames, 200, 0.001,
@@ -495,13 +496,17 @@ def main():
         )
         for datapoint in data:
             sim_com.append(calculate_com(datapoint))
-        print(sim_com[0:10])
+        saved_2 = sim_com
         plt.plot(np.arange(len(sim_com)), sim_com, '--')
     #plt.show()
     plt.savefig("centre_of_mass_tests.png")
     # exit()
     plt.clf()
     plt.close()
+    # plt.plot((np.asarray(saved) - np.asarray(saved_2)))
+    # plt.savefig("Centre_of_mass_difference.png")
+    # plt.clf()
+    # plt.close()
     product = dat_to_training.process_bmp("Simulation_data_extrapolated/Simulation_True_0_0.001_0/data_4.npy", image_size)
     product = product[:, :, 1]
     product = product.flatten()
