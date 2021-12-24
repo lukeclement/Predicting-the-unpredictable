@@ -354,10 +354,10 @@ def main():
     image_size = 60
     timestep = 5
     dropout_rate = 0.1
-    encode_size = 5
+    encode_size = 2
     resolution = 0.001
     # howdy
-    max_transpose_layers = 10
+    max_transpose_layers = 20
     kernel_size = 4
     dropout = 0
     try:
@@ -382,7 +382,7 @@ def main():
             image_frames, timestep, image_size=image_size,
             excluded_sims=[12], variants=[0], resolution=resolution)
         model, history = create_network.train_model(model, training_data, epochs=epochs)
-        model.save("models/Test_collection")
+        model.save("models/Christmas")
     except Exception as e:
         print("Fail!")
         print(e)

@@ -74,8 +74,9 @@ def cross_check(model_name, initial_conditions):
     plt.plot(UBERLOSS_values, label="UBERLOSS")
     plt.plot(mse_values, label="MSE")
     plt.plot(bce_values, label="BCE")
+    plt.plot(ssim_values, label="SSIM")
     plt.legend()
-    plt.show()
+    plt.savefig("model_performance/{}_losses.png".format(model_name), dpi=500)
 
 
 def main():
