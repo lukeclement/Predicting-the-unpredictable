@@ -451,7 +451,7 @@ def main():
         plt.xlabel("Epoch number")
         plt.ylabel("Values/AU")
         plt.legend()
-        plt.savefig("Model_performance/{}_Losses_across_epochs.png".format(name), dpi=500)
+        plt.savefig("model_performance/{}_Losses_across_epochs.png".format(name), dpi=500)
     output_images = np.zeros((1, image_frames, image_size, image_size, 1))
     input_images = np.zeros((1, image_frames, image_size, image_size, 3))
     expected_images = np.zeros((1, image_frames, image_size, image_size, 1))
