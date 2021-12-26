@@ -79,20 +79,41 @@ def cross_check(model_name, initial_conditions):
     plt.savefig("model_performance/{}_losses.png".format(model_name), dpi=500)
 
     actual_com = []
+    actual_angles = []
     for data in raw_data_actual[0, :, 0, :, :, :]:
         zz = np.zeros((parameters[2], parameters[2], 2))
         zz[:, :, 1] = data[:, :, 0]
         actual_com.append(bubble_prediction.calculate_com(zz))
+        point_x, point_y = bubble_prediction.calculate_com(zz, True)
+        actual_angles.append(np.arctan2(point_x, point_y))
     guess_com = []
+    guess_angles = []
     for data in raw_data_guess[0, :, 0, :, :, :]:
         zz = np.zeros((parameters[2], parameters[2], 2))
         zz[:, :, 1] = data[:, :, 0]
         guess_com.append(bubble_prediction.calculate_com(zz))
+        point_x, point_y = bubble_prediction.calculate_com(zz, True)
+        guess_angles.append(np.arctan2(point_x, point_y))
     plt.clf()
     plt.grid()
     plt.plot(actual_com, label="Actual")
     plt.plot(guess_com, label="Predictions")
+    plt.legend()
     plt.savefig("model_performance/{}_centre_of_mass.png".format(model_name), dpi=500)
+    plt.clf()
+    plt.grid()
+    plt.plot(actual_angles, label="Actual")
+    plt.plot(guess_angles, label="Predictions")
+    plt.legend()
+    plt.savefig("model_performance/{}_centre_of_mass_angle.png".format(model_name), dpi=500)
+    plt.clf()
+    plt.grid()
+    plt.plot(np.asarray(actual_angles) - np.asarray(guess_angles), label="Actual")
+    plt.savefig("model_performance/{}_centre_of_mass_angle_diff.png".format(model_name), dpi=500)
+    plt.clf()
+    plt.grid()
+    plt.plot(np.asarray(actual_com) - np.asarray(guess_com), label="Actual")
+    plt.savefig("model_performance/{}_centre_of_mass_diff.png".format(model_name), dpi=500)
 
 
 def main():
