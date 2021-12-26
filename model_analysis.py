@@ -117,7 +117,25 @@ def cross_check(model_name, initial_conditions):
 
 
 def main():
-    cross_check("Christmas", [12, 20])
+    cross_check("Original", [12, 20])
+    cross_check("Large", [12, 20])
+    cross_check("Long", [12, 20])
+    cross_check("Original-", [12, 20])
+    cross_check("OriginalMSE", [12, 20])
+    cross_check("OriginalBCE", [12, 20])
+    cross_check("OriginalSSIM", [12, 20])
+    cross_check("Sanders", [12, 20])
+    cross_check("Johnson", [12, 20])
+    cross_check("Thin", [12, 20])
+    cross_check("Thick", [12, 20])
+    cross_check("ThickJohnson", [12, 20])
+    cross_check("ThinSanders", [12, 20])
+    cross_check("ThickSanders", [12, 20])
+    cross_check("ThinJohnson", [12, 20])
+    cross_check("Low", [12, 20])
+    cross_check("High", [12, 20])
+    cross_check("Fast", [12, 20])
+    cross_check("Slow", [12, 20])
 
 
 if __name__ == "__main__":
