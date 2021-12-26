@@ -336,57 +336,121 @@ def main():
     rng = default_rng(69420)
     activation_function = layers.LeakyReLU()
     optimizer = optimizers.Adam(learning_rate=0.001, epsilon=0.1)
-    # loss_function = losses.mean_squared_logarithmic_error
-    # loss_function = losses.cosine_similarity
-    # loss_function = losses.log_cosh
-    # loss_function = losses.huber
-    # loss_function = loss_functions.bce_dice
-    # loss_function = losses.categorical_crossentropy
-    # loss_function = losses.BinaryCrossentropy()
-    # loss_function = losses.sparse_categorical_crossentropy
-    # loss_function = loss_functions.mse_dice
-    # loss_function = loss_functions.tester_loss
-    loss_function = loss_functions.UBERLOSS
-    # loss_function = loss_functions.ssim_loss
-    epochs = 20
+    # losses = [
+    #     loss_functions.UBERLOSS,
+    #     loss_functions.UBERLOSS_minus_dice,
+    #     loss_functions.cubic_loss,
+    #     loss_functions.relative_diff,
+    #     loss_functions.absolute_diff,
+    #     loss_functions.ssim_loss,
+    #     loss_functions.mse_dice,
+    #     loss_functions.bce_dice
+    # ]
+    kernel_sizes = [2, 3, 4, 5, 6, 7]
+    encode_sizes = [1, 2, 3, 4, 5, 10]
+    image_sizes = [30, 40, 50, 60, 90]
+    frames = [1, 2, 4]
+    parameters_extra = [
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Original", 20],
+        [loss_functions.UBERLOSS, 60, 1, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Large", 20],
+        [loss_functions.UBERLOSS, 30, 4, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Long", 20],
+        [loss_functions.UBERLOSS_minus_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Original-", 20],
+        [losses.mean_squared_logarithmic_error, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "OriginalMSE", 20],
+        [losses.binary_crossentropy, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "OriginalBCE", 20],
+        [loss_functions.ssim_loss, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "OriginalSSIM", 20],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 2, 0.001, [0], True, [0], 5, "Sanders", 20],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 7, 0.001, [0], True, [0], 5, "Johnson", 20],
+        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 20, 3, 0.001, [0], True, [0], 5, "Thin", 20],
+        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 20, 3, 0.001, [0], True, [0], 5, "Thick", 20],
+        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 20, 7, 0.001, [0], True, [0], 5, "ThickJohnson", 20],
+        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 20, 2, 0.001, [0], True, [0], 5, "ThinSanders", 20],
+        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 20, 2, 0.001, [0], True, [0], 5, "ThickSanders", 20],
+        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 20, 7, 0.001, [0], True, [0], 5, "ThinJohnson", 20],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.1, [0], True, [0], 5, "Low", 20],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "High", 20],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 20, "Fast", 20],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 1, "Slow", 20]
+    ]
+    for parameters in parameters_extra:
+        loss_function = parameters[0]
+        epochs = parameters[14]
+        image_frames = parameters[1]
+        image_size = parameters[2]
+        timestep = parameters[12]
+        encode_size = parameters[3]
+        resolution = parameters[8]
+        max_transpose_layers = parameters[6]
+        kernel_size = parameters[7]
+        dropout_rate = 0
+        name = parameters[13]
+        # loss_function = losses.mean_squared_logarithmic_error
+        # loss_function = losses.cosine_similarity
+        # loss_function = losses.log_cosh
+        # loss_function = losses.huber
+        # loss_function = loss_functions.bce_dice
+        # loss_function = losses.categorical_crossentropy
+        # loss_function = losses.BinaryCrossentropy()
+        # loss_function = losses.sparse_categorical_crossentropy
+        # loss_function = loss_functions.mse_dice
+        # loss_function = loss_functions.tester_loss
+        # loss_function = loss_functions.UBERLOSS
+        # # loss_function = loss_functions.ssim_loss
+        # epochs = 20
+        # image_frames = 2
+        # image_size = 60
+        # timestep = 5
+        # dropout_rate = 0.1
+        # encode_size = 2
+        # resolution = 0.001
+        # # howdy
+        # max_transpose_layers = 20
+        # kernel_size = 4
+        # dropout = 0
+        try:
+            # model = models.load_model(
+            #     "models/Test_collection",
+            #     custom_objects={
+            #         "mean_squared_logarithmic_error": losses.mean_squared_logarithmic_error,
+            #         "binary_crossentropy": losses.binary_crossentropy,
+            #         "ssim_loss": loss_functions.ssim_loss,
+            #         "UBERLOSS": loss_functions.UBERLOSS
+            #     })
+            model = create_network.create_neural_network(
+                activation_function, optimizer, loss_function, image_frames,
+                image_size=image_size, encode_size=encode_size, allow_pooling=True,
+                allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
+                dropout_rate=dropout_rate
+            )
+            parameters_line = create_network.interpret_model_summary(model)
+            print(parameters_line)
+            print(model.summary())
+            training_data = dat_to_training.create_training_data(
+                image_frames, timestep, image_size=image_size,
+                excluded_sims=[12], variants=[0], resolution=resolution)
+            model, history = create_network.train_model(model, training_data, epochs=epochs)
+            model.save("models/{}".format(name))
+        except Exception as e:
+            print("Fail!")
+            print(e)
 
-    image_frames = 2
-    image_size = 60
-    timestep = 5
-    dropout_rate = 0.1
-    encode_size = 2
-    resolution = 0.001
-    # howdy
-    max_transpose_layers = 20
-    kernel_size = 4
-    dropout = 0
-    try:
-        # model = models.load_model(
-        #     "models/Test_collection",
-        #     custom_objects={
-        #         "mean_squared_logarithmic_error": losses.mean_squared_logarithmic_error,
-        #         "binary_crossentropy": losses.binary_crossentropy,
-        #         "ssim_loss": loss_functions.ssim_loss,
-        #         "UBERLOSS": loss_functions.UBERLOSS
-        #     })
-        model = create_network.create_neural_network(
-            activation_function, optimizer, loss_function, image_frames,
-            image_size=image_size, encode_size=encode_size, allow_pooling=True,
-            allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
-            dropout_rate=dropout_rate
-        )
-        parameters_line = create_network.interpret_model_summary(model)
-        print(parameters_line)
-        print(model.summary())
-        training_data = dat_to_training.create_training_data(
-            image_frames, timestep, image_size=image_size,
-            excluded_sims=[12], variants=[0], resolution=resolution)
-        model, history = create_network.train_model(model, training_data, epochs=epochs)
-        model.save("models/Christmas")
-    except Exception as e:
-        print("Fail!")
-        print(e)
-
+        overall_loss = history.history["loss"]
+        bce = history.history["binary_crossentropy"]
+        mse = history.history["mean_squared_logarithmic_error"]
+        ssim = history.history["ssim_loss"]
+        plt.clf()
+        plt.close()
+        plt.plot(overall_loss, label="overall loss")
+        plt.plot(bce, label="binary cross entropy")
+        plt.plot(mse, label="mean squared logarithmic error")
+        ssim = np.asarray(ssim)
+        ssim_adjusted = 1 / (1 + np.exp(-ssim))
+        plt.plot(ssim_adjusted, label="SSIM (adjusted)")
+        plt.grid()
+        plt.yscale("log")
+        plt.xlabel("Epoch number")
+        plt.ylabel("Values/AU")
+        plt.legend()
+        plt.savefig("Model_performance/{}_Losses_across_epochs.png".format(name), dpi=500)
     output_images = np.zeros((1, image_frames, image_size, image_size, 1))
     input_images = np.zeros((1, image_frames, image_size, image_size, 3))
     expected_images = np.zeros((1, image_frames, image_size, image_size, 1))

@@ -78,9 +78,25 @@ def cross_check(model_name, initial_conditions):
     plt.legend()
     plt.savefig("model_performance/{}_losses.png".format(model_name), dpi=500)
 
+    actual_com = []
+    for data in raw_data_actual[0, :, 0, :, :, :]:
+        zz = np.zeros((parameters[2], parameters[2], 2))
+        zz[:, :, 1] = data[:, :, 0]
+        actual_com.append(bubble_prediction.calculate_com(zz))
+    guess_com = []
+    for data in raw_data_guess[0, :, 0, :, :, :]:
+        zz = np.zeros((parameters[2], parameters[2], 2))
+        zz[:, :, 1] = data[:, :, 0]
+        guess_com.append(bubble_prediction.calculate_com(zz))
+    plt.clf()
+    plt.grid()
+    plt.plot(actual_com, label="Actual")
+    plt.plot(guess_com, label="Predictions")
+    plt.savefig("model_performance/{}_centre_of_mass.png".format(model_name), dpi=500)
+
 
 def main():
-    cross_check("Test_collection", [12, 20])
+    cross_check("Christmas", [12, 20])
 
 
 if __name__ == "__main__":
