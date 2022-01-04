@@ -52,9 +52,6 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
     ))
     # Encoding the image
     while current_axis_size > target_axis_size:
-        if np.floor(current_axis_size / 2) > target_axis_size and allow_pooling and np.floor(current_frames / 2) > 1:
-            model.add(layers.MaxPooling3D((1, 2, 2)))
-            current_axis_size = np.floor(current_axis_size / 2)
         if current_axis_size - (kernel_size - 1) < target_axis_size:
             if current_frames > 1:
                 model.add(layers.Conv3D(32, (2, 2, 2), activation=activation, kernel_initializer=initializer))
@@ -66,6 +63,9 @@ def create_neural_network(activation, optimizer, loss, input_frames, image_size=
         else:
             model.add(layers.Conv3D(32, (1, kernel_size, kernel_size), activation=activation, kernel_initializer=initializer))
             current_axis_size -= (kernel_size - 1)
+        if np.floor(current_axis_size / 2) > target_axis_size and allow_pooling:
+            model.add(layers.MaxPooling3D((1, 2, 2)))
+            current_axis_size = np.floor(current_axis_size / 2)
     while current_frames > 1:
         model.add(layers.Conv3D(64, (2, 1, 1), activation=activation, kernel_initializer=initializer))
         current_frames -= 1
