@@ -351,25 +351,26 @@ def main():
     image_sizes = [30, 40, 50, 60, 90]
     frames = [1, 2, 4]
     parameters_extra = [
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Original", 20],
-        [loss_functions.UBERLOSS, 60, 1, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Large", 20],
-        [loss_functions.UBERLOSS, 30, 4, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Long", 20],
-        [loss_functions.UBERLOSS_minus_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Original-", 20],
-        [losses.mean_squared_logarithmic_error, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "OriginalMSE", 20],
-        [losses.binary_crossentropy, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "OriginalBCE", 20],
-        [loss_functions.ssim_loss, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "OriginalSSIM", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 2, 0.001, [0], True, [0], 5, "Sanders", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 7, 0.001, [0], True, [0], 5, "Johnson", 20],
-        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 20, 3, 0.001, [0], True, [0], 5, "Thin", 20],
-        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 20, 3, 0.001, [0], True, [0], 5, "Thick", 20],
-        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 20, 7, 0.001, [0], True, [0], 5, "ThickJohnson", 20],
-        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 20, 2, 0.001, [0], True, [0], 5, "ThinSanders", 20],
-        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 20, 2, 0.001, [0], True, [0], 5, "ThickSanders", 20],
-        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 20, 7, 0.001, [0], True, [0], 5, "ThinJohnson", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.1, [0], True, [0], 5, "Low", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Original", 20],
+        # [loss_functions.UBERLOSS, 60, 1, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Large", 20],
+        # [loss_functions.UBERLOSS, 30, 4, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Long", 20],
+        # [loss_functions.UBERLOSS_minus_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Original-", 20],
+        # [losses.mean_squared_logarithmic_error, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "OriginalMSE", 20],
+        # [losses.binary_crossentropy, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "OriginalBCE", 20],
+        # [loss_functions.ssim_loss, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "OriginalSSIM", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 2, 0.001, [0], True, [0], 5, "Sanders", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 7, 0.001, [0], True, [0], 5, "Johnson", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 1, True, True, 20, 3, 0.001, [0], True, [0], 5, "Thin", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 10, True, True, 20, 3, 0.001, [0], True, [0], 5, "Thick", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 10, True, True, 20, 7, 0.001, [0], True, [0], 5, "ThickJohnson", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 1, True, True, 20, 2, 0.001, [0], True, [0], 5, "ThinSanders", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 10, True, True, 20, 2, 0.001, [0], True, [0], 5, "ThickSanders", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 1, True, True, 20, 7, 0.001, [0], True, [0], 5, "ThinJohnson", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.1, [0], True, [0], 5, "Low", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.01, [0], True, [0], 5, "Medium", 20],
         [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "High", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 20, "Fast", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 1, "Slow", 20]
+        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 20, "Fast", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 1, "Slow", 20]
     ]
     for parameters in parameters_extra:
         loss_function = parameters[0]

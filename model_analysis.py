@@ -15,12 +15,39 @@ def get_model(name):
             "mean_squared_logarithmic_error": losses.mean_squared_logarithmic_error,
             "binary_crossentropy": losses.binary_crossentropy,
             "ssim_loss": loss_functions.ssim_loss,
-            "UBERLOSS": loss_functions.UBERLOSS
+            "UBERLOSS": loss_functions.UBERLOSS,
+            "UBERLOSS_minus_dice": loss_functions.UBERLOSS_minus_dice
         })
     return model
 
 
 def read_parameters(model_name):
+    parameter_options = [
+
+        [loss_functions.UBERLOSS, 2, 60, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Original", 20],
+        [loss_functions.UBERLOSS, 1, 60, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Large", 20],
+        [loss_functions.UBERLOSS, 4, 30, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Long", 20],
+        [loss_functions.UBERLOSS_minus_dice, 2, 60, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Original-", 20],
+        [losses.mean_squared_logarithmic_error, 2, 60, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "OriginalMSE", 20],
+        [losses.binary_crossentropy, 2, 60, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "OriginalBCE", 20],
+        [loss_functions.ssim_loss, 2, 60, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "OriginalSSIM", 20],
+        [loss_functions.UBERLOSS, 2, 60, 3, True, True, 20, 2, 0.001, [0], True, [0], 5, "Sanders", 20],
+        [loss_functions.UBERLOSS, 2, 60, 3, True, True, 20, 7, 0.001, [0], True, [0], 5, "Johnson", 20],
+        [loss_functions.UBERLOSS, 2, 60, 1, True, True, 20, 3, 0.001, [0], True, [0], 5, "Thin", 20],
+        [loss_functions.UBERLOSS, 2, 60, 10, True, True, 20, 3, 0.001, [0], True, [0], 5, "Thick", 20],
+        [loss_functions.UBERLOSS, 2, 60, 10, True, True, 20, 7, 0.001, [0], True, [0], 5, "ThickJohnson", 20],
+        [loss_functions.UBERLOSS, 2, 60, 1, True, True, 20, 2, 0.001, [0], True, [0], 5, "ThinSanders", 20],
+        [loss_functions.UBERLOSS, 2, 60, 10, True, True, 20, 2, 0.001, [0], True, [0], 5, "ThickSanders", 20],
+        [loss_functions.UBERLOSS, 2, 60, 1, True, True, 20, 7, 0.001, [0], True, [0], 5, "ThinJohnson", 20],
+        [loss_functions.UBERLOSS, 2, 60, 3, True, True, 20, 3, 0.1, [0], True, [0], 5, "Low", 20],
+        [loss_functions.UBERLOSS, 2, 60, 3, True, True, 20, 3, 0.01, [0], True, [0], 5, "Medium", 20],
+        [loss_functions.UBERLOSS, 2, 60, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "High", 20],
+        [loss_functions.UBERLOSS, 2, 60, 3, True, True, 20, 3, 0.001, [0], True, [0], 20, "Fast", 20],
+        [loss_functions.UBERLOSS, 2, 60, 3, True, True, 20, 3, 0.001, [0], True, [0], 1, "Slow", 20]
+    ]
+    for p in parameter_options:
+        if model_name == p[13]:
+            return p
     return [loss_functions.UBERLOSS, 2, 60, 5, True, True, 10, 4, 0.001, [0], True, [12], 5, "Test_collection", 20]
 
 
@@ -68,7 +95,9 @@ def cross_check(model_name, initial_conditions):
         ssim_values[i] = np.mean(loss_functions.ssim_loss(looking_act, looking_gue).numpy())
     looking_act = k.constant(raw_data_actual[:, 0, :, :, :, :])
     looking_gue = k.constant(raw_data_guess[:, 0, :, :, :, :])
-    print(losses.binary_crossentropy(looking_act, looking_gue).numpy())
+    # print(losses.binary_crossentropy(looking_act, looking_gue).numpy())
+    plt.clf()
+    plt.close()
     plt.grid()
     plt.xlabel("Step")
     plt.plot(UBERLOSS_values, label="UBERLOSS")
@@ -117,25 +146,47 @@ def cross_check(model_name, initial_conditions):
 
 
 def main():
+    print("0")
     cross_check("Original", [12, 20])
+    print("1")
     cross_check("Large", [12, 20])
+    print("2")
     cross_check("Long", [12, 20])
+    print("3")
     cross_check("Original-", [12, 20])
+    print("4")
     cross_check("OriginalMSE", [12, 20])
+    print("5")
     cross_check("OriginalBCE", [12, 20])
+    print("6")
     cross_check("OriginalSSIM", [12, 20])
+    print("7")
     cross_check("Sanders", [12, 20])
+    print("8")
     cross_check("Johnson", [12, 20])
+    print("9")
     cross_check("Thin", [12, 20])
+    print("10")
     cross_check("Thick", [12, 20])
+    print("11")
     cross_check("ThickJohnson", [12, 20])
+    print("12")
     cross_check("ThinSanders", [12, 20])
+    print("13")
     cross_check("ThickSanders", [12, 20])
+    print("14")
     cross_check("ThinJohnson", [12, 20])
+    print("15")
     cross_check("Low", [12, 20])
+    print("16")
+    cross_check("Medium", [12, 20])
+    print("17")
     cross_check("High", [12, 20])
+    print("18")
     cross_check("Fast", [12, 20])
+    print("19")
     cross_check("Slow", [12, 20])
+    print("20")
 
 
 if __name__ == "__main__":
