@@ -49,50 +49,12 @@ def interpret_model_summary(model):
 
 class CustomModel(Model):
     custom_steps = 2
-    loss_fraction = 0.1
-    i_multi = 10
-    o_multi = 0.1
-    loss_function_choice = 1
+
     mse = metrics.MeanSquaredError(name="MSE")
     loss_tracker = metrics.Mean(name="loss")
     loss_tracker_live = metrics.Mean(name="loss_live")
     bce_metric = metrics.BinaryCrossentropy(name="BCE")
     bce_metric_live = metrics.BinaryCrossentropy(name="BCE_live")
-
-    def set_loss_fraction(self, fraction):
-        self.loss_fraction = fraction
-
-    def set_ln_multi(self, i, o):
-        self.i_multi = i
-        self.o_multi = o
-
-    def set_loss_function_choice(self, choice):
-        self.loss_function_choice = choice
-
-    def cubic_loss_02_12_2021(self, y_true, y_pred):
-        constant = tf.fill(tf.shape(y_true), 1.005)
-        se = (y_pred - y_true) * (y_pred - y_true)
-        dominator = constant - y_true
-        bce = losses.binary_crossentropy(y_true, y_pred)
-        loss = 0.143 * backend.log(40 * backend.mean(se / dominator) + 1) + bce
-        return loss
-
-    def cubic_loss_03_12_2021(self, y_true, y_pred):
-        se = (y_pred - y_true) * (y_pred - y_true)
-        bce = losses.binary_crossentropy(y_true, y_pred)
-        loss = 0.143 * backend.log(40 * backend.mean(se) + 1) + bce
-        return loss
-
-    def custom_loss_14_12_2021(self, y_true, y_pred):
-        se = (y_pred - y_true) * (y_pred - y_true)
-        mse = backend.mean(se)
-        bce = losses.binary_crossentropy(y_true, y_pred)
-        if self.loss_function_choice == 1:
-            loss = self.loss_fraction * mse + (1 - self.loss_fraction) * bce
-
-        if self.loss_function_choice == 2:
-            loss = self.o_multi * backend.log(self.i_multi * mse + 1) + bce
-        return loss
 
     def custom_loss(self, y_true, y_pred):
         # se = (y_pred - y_true) * (y_pred - y_true)
@@ -117,35 +79,28 @@ class CustomModel(Model):
             y_pred = self(x, training=True)
             y_true = y[:, 0, :, :, :]
             loss = lf(y_true, y_pred)
-            y_pred = tf.concat([zeros, y_pred], 3)
-            y_pred = tf.concat([y_pred, rail], 3)
-            y_pred_shape = tf.shape(y_pred)
-            y_pred = tf.reshape(y_pred, shape=(y_pred_shape[0], 1, y_pred_shape[1], y_pred_shape[2], y_pred_shape[3]))
-            x = x[:, 1:, :, :, :]
-            x = tf.concat([x, y_pred], 1)
             if self.custom_steps > 1:
                 for i in range(0, self.custom_steps - 1):
-                    y_pred = self(x, training=True)
-                    y_true = y[:, i + 1, :, :, :]
-                    loss = tf.math.add(loss, lf(y_true, y_pred))
                     y_pred = tf.concat([zeros, y_pred], 3)
                     y_pred = tf.concat([y_pred, rail], 3)
-                    y_pred = tf.reshape(y_pred,
-                                        shape=(y_pred_shape[0], 1, y_pred_shape[1], y_pred_shape[2], y_pred_shape[3]))
+                    y_pred_shape = tf.shape(y_pred)
+                    y_pred = tf.reshape(y_pred, shape=(y_pred_shape[0], 1, y_pred_shape[1], y_pred_shape[2], y_pred_shape[3]))
                     x = x[:, 1:, :, :, :]
                     x = tf.concat([x, y_pred], 1)
+                    y_pred = self(x, training=True)
+                    y_true = y[:, i + 1, :, :, :]
+                    loss = loss + lf(y_true, y_pred)
 
         # Run backwards pass.
         self.optimizer.minimize(loss, self.trainable_variables, tape=tape)
-        # Collect metrics to return
         y_pred = self(xold, training=False)
         self.loss_tracker_live.reset_state()
         self.bce_metric_live.reset_state()
         self.loss_tracker.update_state(loss)
-        self.bce_metric.update_state(y[:, 0, :, :, :], y_pred)
-        self.mse.update_state(y[:, 0, :, :, :], y_pred)
         self.loss_tracker_live.update_state(loss)
-        self.bce_metric_live.update_state(y[:, 0, :, :, :], y_pred)
+        self.bce_metric.update_state(y, y_pred)
+        self.mse.update_state(y, y_pred)
+        self.bce_metric_live.update_state(y, y_pred)
 
         loss_result = self.loss_tracker.result()
         bce_result = self.bce_metric.result()
@@ -162,27 +117,21 @@ class CustomModel(Model):
         xold = x
         rail = x[:, 0, :, :, 2:]
         zeros = x[:, 0, :, :, 0:1]
+        lf = self.custom_loss
         y_pred = self(x, training=False)
         y_true = y[:, 0, :, :, :]
-        lf = self.custom_loss
         loss = lf(y_true, y_pred)
-        y_pred = tf.concat([zeros, y_pred], 3)
-        y_pred = tf.concat([y_pred, rail], 3)
-        y_pred_shape = tf.shape(y_pred)
-        y_pred = tf.reshape(y_pred, shape=(y_pred_shape[0], 1, y_pred_shape[1], y_pred_shape[2], y_pred_shape[3]))
-        x = x[:, 1:, :, :, :]
-        x = tf.concat([x, y_pred], 1)
         if self.custom_steps > 1:
             for i in range(0, self.custom_steps - 1):
-                y_pred = self(x, training=False)
-                y_true = y[:, i + 1, :, :, :]
-                loss = tf.math.add(loss, lf(y_true, y_pred))
                 y_pred = tf.concat([zeros, y_pred], 3)
                 y_pred = tf.concat([y_pred, rail], 3)
-                y_pred = tf.reshape(y_pred,
-                                    shape=(y_pred_shape[0], 1, y_pred_shape[1], y_pred_shape[2], y_pred_shape[3]))
+                y_pred_shape = tf.shape(y_pred)
+                y_pred = tf.reshape(y_pred, shape=(y_pred_shape[0], 1, y_pred_shape[1], y_pred_shape[2], y_pred_shape[3]))
                 x = x[:, 1:, :, :, :]
                 x = tf.concat([x, y_pred], 1)
+                y_pred = self(x, training=False)
+                y_true = y[:, i + 1, :, :, :]
+                loss = loss + lf(y_true, y_pred)
 
         y_pred = self(xold, training=False)
         self.loss_tracker.update_state(loss)

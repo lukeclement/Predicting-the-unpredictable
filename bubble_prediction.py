@@ -5,11 +5,12 @@ import pickle
 import os
 from dill.source import getsource
 import matplotlib.pyplot as plt
-from tensorflow.keras import layers, losses, optimizers, activations
+from tensorflow.keras import layers, losses, optimizers, activations, models
 import tensorflow as tf
 import imageio
 import datetime
-import models
+import models as md
+import model_analysis
 
 
 def difference_graphing(expected, guess, previous_frame, plotting=True):
@@ -90,50 +91,19 @@ def real_guess_differences(positive_guess, positive_real):
     return positive_correct, positive_counts
 
 
-def evaluate_model(data, image_frames, image_size, model, timestep, simulation, start, directory):
+def evaluate_model(image_frames, image_size, model, timestep, simulation, start, directory):
     print("Simulation " + str(simulation))
-    test_positions = long_term_prediction(data, model, simulation, start, image_size, timestep, image_frames, 200,
-                                          round_result=False)
+    model_analysis.model_gif('{}'.format(directory), model, simulation, start, image_size, timestep, image_frames)
+    # test_positions = long_term_prediction(model, simulation, start, image_size, timestep, image_frames, 200,
+    #                                       round_result=False)
 
-    make_gif(test_positions, '{}/gifs/without_rounding_'.format(directory) + str(simulation))
+    # make_gif(test_positions, '{}/gifs/without_rounding_'.format(directory) + str(simulation))
     # test_positions = long_term_prediction(data, model, simulation, start, image_size, timestep, image_frames, 200,
     #                                       round_result=True)
     # make_gif(test_positions, 'gifs/with_rounding_' + simulation)
 
 
-def long_term_prediction(data, model, start_sim, start_image, image_size, timestep, frames, number_to_simulate,
-                         round_result=False):
-    input_images = data[0][0]
-    image = input_images[0, 0, :, :, :]
-    dat_to_training.generate_rail(image)
-    rail = [image[:, :, 2:]]
-    zeros = [image[:, :, 0:1]]
-    working_frames = input_images[start_image:start_image + 1]
-    y_pred = model(working_frames).numpy()
-    y_pred = np.append(zeros, y_pred, 3)
-    y_pred = np.append(y_pred, rail, 3)
-    output_images = y_pred
-    y_pred_shape = np.shape(y_pred)
-    y_pred = np.reshape(y_pred, newshape=(y_pred_shape[0], 1, y_pred_shape[1], y_pred_shape[2], y_pred_shape[3]))
-    working_frames = working_frames[:, 1:, :, :, :]
-    working_frames = np.append(working_frames, y_pred, 1)
-    for i in range(0, number_to_simulate - 1):
-        y_pred = model(working_frames).numpy()
-        y_pred = np.append(zeros, y_pred, 3)
-        y_pred = np.append(y_pred, rail, 3)
-        output_images = np.append(output_images, y_pred, axis=0)
-        y_pred = np.reshape(y_pred, newshape=(y_pred_shape[0], 1, y_pred_shape[1], y_pred_shape[2], y_pred_shape[3]))
-        working_frames = working_frames[:, 1:, :, :, :]
-        working_frames = np.append(working_frames, y_pred, 1)
-    output_images = (output_images * 255).astype(np.uint8)
-    return output_images
 
-
-def make_gif(image, name):
-    images = []
-    for i in image:
-        images.append(i)
-    imageio.mimsave("{}.gif".format(name), images)
 
 
 def create_and_train_frac(epochs, training_data, image_frames, image_size, timestep, loss_fraction):
@@ -210,19 +180,18 @@ def create_and_train_norm(epochs, training_data, image_frames, image_size, times
     return mse[-1]
 
 
-def create_and_train_specific(epochs, training_data, image_frames, image_size, timestep):
-
+def create_and_train_specific_1(epochs, training_data, image_frames, image_size, timestep):
     activation_function = layers.LeakyReLU()
     optimizer = optimizers.Adam()
 
-    model_arr = models.model_array(activation_function, optimizer)
+    model_arr = md.model_array_1(activation_function, optimizer)
 
     for model in model_arr:
         today = datetime.datetime.today()
         dt_string = today.strftime("%d_%m_%Y %H_%M")
         directory = "model_experiment/" + dt_string
 
-        model, history = models.train_model_1(training_data, model, epochs=epochs)
+        model, history = md.train_model_1(training_data, model, epochs=epochs)
         model.save(directory)
         try:
             obj = getsource(model.custom_loss)
@@ -233,6 +202,17 @@ def create_and_train_specific(epochs, training_data, image_frames, image_size, t
             text_file = open(directory + "/Non_custom_loss_function.txt", "w")
             text_file.write("Non custom loss function")
             text_file.close()
+
+        try:
+            obj = model.summary_v
+            text_file = open(directory + "/model_summary.txt", "w")
+            text_file.write(str(obj))
+            text_file.close()
+        except:
+            text_file = open(directory + "/No_model_summary.txt", "w")
+            text_file.write("No model_summary")
+            text_file.close()
+
         try:
             os.mkdir(directory + "/gifs")
         except:
@@ -247,10 +227,146 @@ def create_and_train_specific(epochs, training_data, image_frames, image_size, t
         text_file.write(str(mse))
         text_file.close()
         for i in range(2):
-            data = dat_to_training.load_training_data(image_frames, timestep=timestep, image_size=image_size, numpy_=True,
-                                                      simulation_num=i)
-            evaluate_model(data, image_frames, image_size, model, timestep, i, 400, directory)
+            evaluate_model(image_frames, image_size, model, timestep, i, 400, directory)
 
+
+def create_and_train_specific_2(epochs, training_data, image_frames, image_size, timestep):
+    activation_function = layers.LeakyReLU()
+    optimizer = optimizers.Adam()
+
+    model_arr = md.model_array_2(activation_function, optimizer)
+
+    for model in model_arr:
+        today = datetime.datetime.today()
+        dt_string = today.strftime("%d_%m_%Y %H_%M")
+        directory = "model_experiment/" + dt_string
+
+        model, history = md.train_model_2(training_data, model, epochs=epochs)
+        model.save(directory)
+        try:
+            obj = getsource(model.custom_loss)
+            text_file = open(directory + "/loss_function_code.txt", "w")
+            text_file.write(str(obj))
+            text_file.close()
+        except:
+            text_file = open(directory + "/Non_custom_loss_function.txt", "w")
+            text_file.write("Non custom loss function")
+            text_file.close()
+
+        try:
+            obj = model.summary_v
+            text_file = open(directory + "/model_summary.txt", "w")
+            text_file.write(str(obj))
+            text_file.close()
+        except:
+            text_file = open(directory + "/No_model_summary.txt", "w")
+            text_file.write("No model_summary")
+            text_file.close()
+
+        try:
+            os.mkdir(directory + "/gifs")
+        except:
+            print("Caution: Overwriting gifs")
+        with open(directory + "/trainHistoryDict", 'wb') as file_pi:
+            pickle.dump(history.history, file_pi)
+        # history = pickle.load(open(directory + "/trainHistoryDict", "rb"))
+        # print("history:", history)
+        mse = history.history["MSE"]
+        final_mse = "MSE_" + str(mse[-1])
+        text_file = open(directory + "/" + str(final_mse) + ".txt", "w")
+        text_file.write(str(mse))
+        text_file.close()
+        for i in range(2):
+            evaluate_model(image_frames, image_size, model, timestep, i, 400, directory)
+
+def create_and_train_model1(model, epochs, training_data, image_frames, image_size, timestep):
+
+
+    today = datetime.datetime.today()
+    dt_string = today.strftime("%d_%m_%Y %H_%M")
+    directory = "model_experiment/" + dt_string
+
+    model, history = md.train_model_1(training_data, model, epochs=epochs)
+    model.save(directory)
+    try:
+        obj = getsource(model.custom_loss)
+        text_file = open(directory + "/loss_function_code.txt", "w")
+        text_file.write(str(obj))
+        text_file.close()
+    except:
+        text_file = open(directory + "/Non_custom_loss_function.txt", "w")
+        text_file.write("Non custom loss function")
+        text_file.close()
+
+    try:
+        obj = model.summary_v
+        text_file = open(directory + "/model_summary.txt", "w")
+        text_file.write(str(obj))
+        text_file.close()
+    except:
+        text_file = open(directory + "/No_model_summary.txt", "w")
+        text_file.write("No model_summary")
+        text_file.close()
+
+    try:
+        os.mkdir(directory + "/gifs")
+    except:
+        print("Caution: Overwriting gifs")
+    with open(directory + "/trainHistoryDict", 'wb') as file_pi:
+        pickle.dump(history.history, file_pi)
+    # history = pickle.load(open(directory + "/trainHistoryDict", "rb"))
+    # print("history:", history)
+    mse = history.history["MSE"]
+    final_mse = "MSE_" + str(mse[-1])
+    text_file = open(directory + "/" + str(final_mse) + ".txt", "w")
+    text_file.write(str(mse))
+    text_file.close()
+    for i in range(2):
+        evaluate_model(image_frames, image_size, model, timestep, i, 400, directory)
+
+def create_and_train_model2(model, epochs, training_data, image_frames, image_size, timestep):
+
+    today = datetime.datetime.today()
+    dt_string = today.strftime("%d_%m_%Y %H_%M")
+    directory = "model_experiment/" + dt_string
+
+    model, history = md.train_model_2(training_data, model, epochs=epochs)
+    model.save(directory)
+    try:
+        obj = getsource(model.custom_loss)
+        text_file = open(directory + "/loss_function_code.txt", "w")
+        text_file.write(str(obj))
+        text_file.close()
+    except:
+        text_file = open(directory + "/Non_custom_loss_function.txt", "w")
+        text_file.write("Non custom loss function")
+        text_file.close()
+
+    try:
+        obj = model.summary_v
+        text_file = open(directory + "/model_summary.txt", "w")
+        text_file.write(str(obj))
+        text_file.close()
+    except:
+        text_file = open(directory + "/No_model_summary.txt", "w")
+        text_file.write("No model_summary")
+        text_file.close()
+
+    try:
+        os.mkdir(directory + "/gifs")
+    except:
+        print("Caution: Overwriting gifs")
+    with open(directory + "/trainHistoryDict", 'wb') as file_pi:
+        pickle.dump(history.history, file_pi)
+    # history = pickle.load(open(directory + "/trainHistoryDict", "rb"))
+    # print("history:", history)
+    mse = history.history["MSE"]
+    final_mse = "MSE_" + str(mse[-1])
+    text_file = open(directory + "/" + str(final_mse) + ".txt", "w")
+    text_file.write(str(mse))
+    text_file.close()
+    for i in range(2):
+        evaluate_model(image_frames, image_size, model, timestep, i, 400, directory)
 
 
 def create_and_train_ln(epochs, training_data, image_frames, image_size, timestep, o_multi, i_multi):
@@ -286,18 +402,19 @@ def create_and_train_ln(epochs, training_data, image_frames, image_size, timeste
     text_file.write(str(mse))
     text_file.close()
     for i in range(2):
-        data = dat_to_training.load_training_data(image_frames, timestep=timestep, image_size=image_size, numpy_=True,
-                                                  simulation_num=i)
-        evaluate_model(data, image_frames, image_size, model, timestep, i, 400, directory)
+        evaluate_model(image_frames, image_size, model, timestep, i, 400, directory)
     return mse[-1]
 
 
 def main():
     tf.random.set_seed(100)
 
-    image_frames = 4
+    activation_function = layers.LeakyReLU()
+    optimizer = optimizers.Adam()
+
+    image_frames = 2
     loss_frames = 2
-    image_size = 60
+    image_size = 120
     timestep = 5
     focus = 1
     epochs = 5
@@ -305,19 +422,35 @@ def main():
     # """
     # dat_to_training.convert_dat_files([0,0])
     # dat_to_training.save_training_data(focus, image_size)
-    training_data = dat_to_training.load_training_data(image_frames,
-                                                       timestep=timestep,
-                                                       image_size=image_size,
-                                                       numpy_=True,
-                                                       validation_split=0.001)
+    # dat_to_training.convert_dat_files([-10, -5, 0, 5, 10], resolution=0.01)
+    training_data = dat_to_training.create_training_data(image_frames, timestep, variants=[0],
+                                                         image_size=image_size, resolution=0.01, flips_allowed='False')
 
+    training_image = training_data[0][0][0, 3, :, :, :]
+    training_image = np.array(training_image, dtype=np.double)
+    print(np.shape(training_image))
+    plt.imshow(training_image)
+    plt.show()
+    answer_image = training_data[0][1][0, 1, :, :, :]
+    answer_image = np.array(answer_image, dtype=np.double)
+    answer_image = np.concatenate([training_image[:, :, 0:1], answer_image], axis=2)
+    answer_image = np.concatenate([answer_image, training_image[:, :, 2:]], axis=2)
+    plt.imshow(answer_image)
+    plt.show()
+    
     # model = create_network.create_inception_net(activations.relu, optimizers.Adam())
 
     # model = models.load_model("saved_models/03_12_2021_00_00")
 
-    create_and_train_specific(10, training_data, image_frames, image_size, timestep)
+    # create_and_train_specific_1(1, training_data, image_frames, image_size, timestep)
+    # create_and_train_specific_2(1, training_data, image_frames, image_size, timestep)
+    model = md.model_14(activation_function, optimizer, type=1)
+    create_and_train_model1(model, 20, training_data, image_frames, image_size, timestep)
 
-    # mse = create_and_train_norm(1, training_data, image_frames, image_size, timestep)
+    model = md.model_13(activation_function, optimizer, type=2)
+    create_and_train_model2(model, 20, training_data, image_frames, image_size, timestep)
+    # model = md.model_10(activation_function, optimizer, type=1)
+    # create_and_train_model(model, 1, training_data, image_frames, image_size, timestep)
 
     """    
 
