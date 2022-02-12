@@ -351,26 +351,32 @@ def main():
     image_sizes = [30, 40, 50, 60, 90]
     frames = [1, 2, 4]
     parameters_extra = [
-        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Original", 20],
-        # [loss_functions.UBERLOSS, 60, 1, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Large", 20],
-        # [loss_functions.UBERLOSS, 30, 4, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Long", 20],
-        # [loss_functions.UBERLOSS_minus_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Original-", 20],
-        # [losses.mean_squared_logarithmic_error, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "OriginalMSE", 20],
-        # [losses.binary_crossentropy, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "OriginalBCE", 20],
-        # [loss_functions.ssim_loss, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "OriginalSSIM", 20],
-        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 2, 0.001, [0], True, [0], 5, "Sanders", 20],
-        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 7, 0.001, [0], True, [0], 5, "Johnson", 20],
-        # [loss_functions.UBERLOSS, 60, 2, 1, True, True, 20, 3, 0.001, [0], True, [0], 5, "Thin", 20],
-        # [loss_functions.UBERLOSS, 60, 2, 10, True, True, 20, 3, 0.001, [0], True, [0], 5, "Thick", 20],
-        # [loss_functions.UBERLOSS, 60, 2, 10, True, True, 20, 7, 0.001, [0], True, [0], 5, "ThickJohnson", 20],
-        # [loss_functions.UBERLOSS, 60, 2, 1, True, True, 20, 2, 0.001, [0], True, [0], 5, "ThinSanders", 20],
-        # [loss_functions.UBERLOSS, 60, 2, 10, True, True, 20, 2, 0.001, [0], True, [0], 5, "ThickSanders", 20],
-        # [loss_functions.UBERLOSS, 60, 2, 1, True, True, 20, 7, 0.001, [0], True, [0], 5, "ThinJohnson", 20],
-        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.1, [0], True, [0], 5, "Low", 20],
-        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.01, [0], True, [0], 5, "Medium", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "High", 20],
-        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 20, "Fast", 20],
-        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 1, "Slow", 20]
+        [loss_functions.mse_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "MSEDICE", 20],
+        [loss_functions.bce_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "BCEDICE", 20],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Original_long_epochs", 50],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 5, 3, 0.001, [0], True, [0], 5, "Trans_Trans", 20],
+        [loss_functions.UBERLOSS, 60, 1, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Large", 20],
+        [loss_functions.UBERLOSS, 30, 4, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Long", 20],
+        [loss_functions.UBERLOSS_minus_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original-", 20],
+        [losses.mean_squared_logarithmic_error, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalMSE", 20],
+        [losses.binary_crossentropy, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalBCE", 20],
+        [loss_functions.ssim_loss, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalSSIM", 20],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_Sanders", 20],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_Johnson", 20],
+        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Thin", 20],
+        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Thick", 20],
+        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_ThickJohnson", 20],
+        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_ThinSanders", 20],
+        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_ThickSanders", 20],
+        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_ThinJohnson", 20],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.1, [0], True, [0], 5, "Trans_Low", 20],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.01, [0], True, [0], 5, "Trans_Medium", 20],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_High", 20],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 20, "Trans_Fast", 20],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 1, "Trans_Slow", 20],
+        [loss_functions.mse_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_MSEDICE", 20],
+        [loss_functions.bce_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_BCEDICE", 20]
     ]
     for parameters in parameters_extra:
         loss_function = parameters[0]
@@ -434,14 +440,17 @@ def main():
         except Exception as e:
             print("Fail!")
             print(e)
+            exit()
 
         overall_loss = history.history["loss"]
+        overall_val = history.history["val_loss"]
         bce = history.history["binary_crossentropy"]
         mse = history.history["mean_squared_logarithmic_error"]
         ssim = history.history["ssim_loss"]
         plt.clf()
         plt.close()
         plt.plot(overall_loss, label="overall loss")
+        plt.plot(overall_val, linestyle="dashed", label="overall validation loss")
         plt.plot(bce, label="binary cross entropy")
         plt.plot(mse, label="mean squared logarithmic error")
         ssim = np.asarray(ssim)
@@ -453,6 +462,9 @@ def main():
         plt.ylabel("Values/AU")
         plt.legend()
         plt.savefig("model_performance/{}_Losses_across_epochs.png".format(name), dpi=500)
+        del model
+        del training_data
+
     output_images = np.zeros((1, image_frames, image_size, image_size, 1))
     input_images = np.zeros((1, image_frames, image_size, image_size, 3))
     expected_images = np.zeros((1, image_frames, image_size, image_size, 1))
