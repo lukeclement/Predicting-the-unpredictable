@@ -228,7 +228,7 @@ def generate_sample(image, image_size, rng):
 
 def long_term_prediction(
         model, start_sim, start_image, image_size, timestep, frames, number_to_simulate, resolution, round_result=False,
-        extra=True, jump=False, dry_run=False):
+        extra=True, jump=True, dry_run=False):
     input_images = np.zeros((1, frames, image_size, image_size, 3))
     for frame in range(0, frames):
         try:
@@ -255,18 +255,15 @@ def long_term_prediction(
         return positions
     if jump:
         for i in range(0, number_to_simulate):
-            output_image = np.zeros((frames, image_size, image_size, 3))
-            output_image[:, :, :, 1] = model(input_images)[0, :, :, :, 0]
-            for frame in range(0, frames):
-                dat_to_training.generate_rail(output_image[frame])
-            for frame in range(0, frames):
-                if round_result:
-                    input_images[0, frame, :, :, 1] = np.around(output_image[frame, :, :, 1])
-                    input_images[0, frame, :, :, 0] = output_image[frame, :, :, 0]
-                    input_images[0, frame, :, :, 2] = output_image[frame, :, :, 2]
+            output_image = np.zeros((image_size, image_size, 3))
+            output_image[:, :, 1] = model(input_images)[0, :, :, 0]
+            dat_to_training.generate_rail(output_image)
+            for frame in range(1, frames):
+                if frame == frames-1:
+                    input_images[0, frame, :, :, :] = output_image
                 else:
-                    input_images[0, frame, :, :, :] = output_image[frame, :, :, :]
-                positions.append((input_images[0, frame, :, :, :] * 255).astype(np.uint8))
+                    input_images[0, frame, :, :, :] = input_images[0, frame-1, :, :, :]
+            positions.append((input_images[0, frames-1, :, :, :] * 255).astype(np.uint8))
         return positions
     future_frames = np.zeros((frames, frames, image_size, image_size, 3))
     for i in range(0, number_to_simulate):
@@ -351,32 +348,33 @@ def main():
     image_sizes = [30, 40, 50, 60, 90]
     frames = [1, 2, 4]
     parameters_extra = [
-        [loss_functions.mse_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "MSEDICE", 20],
-        [loss_functions.bce_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "BCEDICE", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original", 20],
-        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Original_long_epochs", 50],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 5, 3, 0.001, [0], True, [0], 5, "Trans_Trans", 20],
-        [loss_functions.UBERLOSS, 60, 1, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Large", 20],
-        [loss_functions.UBERLOSS, 30, 4, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Long", 20],
-        [loss_functions.UBERLOSS_minus_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original-", 20],
-        [losses.mean_squared_logarithmic_error, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalMSE", 20],
-        [losses.binary_crossentropy, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalBCE", 20],
-        [loss_functions.ssim_loss, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalSSIM", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_Sanders", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_Johnson", 20],
-        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Thin", 20],
-        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Thick", 20],
-        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_ThickJohnson", 20],
-        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_ThinSanders", 20],
-        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_ThickSanders", 20],
-        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_ThinJohnson", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.1, [0], True, [0], 5, "Trans_Low", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.01, [0], True, [0], 5, "Trans_Medium", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_High", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 20, "Trans_Fast", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 1, "Trans_Slow", 20],
-        [loss_functions.mse_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_MSEDICE", 20],
-        [loss_functions.bce_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_BCEDICE", 20]
+        # [loss_functions.mse_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "MSEDICE", 20],
+        [loss_functions.bce_dice, 60, 4, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Parallel_bce", 5],
+        # [loss_functions.bce_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "BCEDICE", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original", 20],
+        # # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Original_long_epochs", 50],
+        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 5, 3, 0.001, [0], True, [0], 5, "Trans_Trans", 20],
+        # [loss_functions.UBERLOSS, 60, 1, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Large", 20],
+        # [loss_functions.UBERLOSS, 30, 4, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Long", 20],
+        # [loss_functions.UBERLOSS_minus_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original-", 20],
+        # [losses.mean_squared_logarithmic_error, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalMSE", 20],
+        # [losses.binary_crossentropy, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalBCE", 20],
+        # [loss_functions.ssim_loss, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalSSIM", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_Sanders", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_Johnson", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Thin", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Thick", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_ThickJohnson", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_ThinSanders", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_ThickSanders", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_ThinJohnson", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.1, [0], True, [0], 5, "Trans_Low", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.01, [0], True, [0], 5, "Trans_Medium", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_High", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 20, "Trans_Fast", 20],
+        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 1, "Trans_Slow", 20],
+        # [loss_functions.mse_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_MSEDICE", 20],
+        # [loss_functions.bce_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_BCEDICE", 20]
     ]
     for parameters in parameters_extra:
         loss_function = parameters[0]
@@ -413,7 +411,7 @@ def main():
         # max_transpose_layers = 20
         # kernel_size = 4
         # dropout = 0
-        try:
+        # try:
             # model = models.load_model(
             #     "models/Test_collection",
             #     custom_objects={
@@ -422,40 +420,42 @@ def main():
             #         "ssim_loss": loss_functions.ssim_loss,
             #         "UBERLOSS": loss_functions.UBERLOSS
             #     })
-            model = create_network.create_neural_network(
-                activation_function, optimizer, loss_function, image_frames,
-                image_size=image_size, encode_size=encode_size, allow_pooling=True,
-                allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
-                dropout_rate=dropout_rate
-            )
-            parameters_line = create_network.interpret_model_summary(model)
-            print(parameters_line)
+            # model = create_network.create_neural_network(
+            #     activation_function, optimizer, loss_function, image_frames,
+            #     image_size=image_size, encode_size=encode_size, allow_pooling=True,
+            #     allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
+            #     dropout_rate=dropout_rate
+            # )
+        model = create_network.create_inception_network()
+            # parameters_line = create_network.interpret_model_summary(model)
+            # print(parameters_line)
             # print(model.summary())
-            print(name)
-            training_data = dat_to_training.create_training_data(
-                image_frames, timestep, image_size=image_size,
-                excluded_sims=[12], variants=[0], resolution=resolution)
-            model, history = create_network.train_model(model, training_data, epochs=epochs)
-            model.save("models/{}".format(name))
-        except Exception as e:
-            print("Fail!")
-            print(e)
-            exit()
+        print(name)
+        training_data = dat_to_training.create_training_data(
+            image_frames, timestep, image_size=image_size,
+            excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False)
+        model, history = create_network.train_model(model, training_data, epochs=epochs)
+        model.save("models/{}".format(name))
+        print(model.summary())
+        # except Exception as e:
+        #     print("Fail!")
+        #     print(e)
+        #     exit()
 
         overall_loss = history.history["loss"]
         overall_val = history.history["val_loss"]
         bce = history.history["binary_crossentropy"]
         mse = history.history["mean_squared_logarithmic_error"]
-        ssim = history.history["ssim_loss"]
+        # ssim = history.history["ssim_loss"]
         plt.clf()
         plt.close()
         plt.plot(overall_loss, label="overall loss")
         plt.plot(overall_val, linestyle="dashed", label="overall validation loss")
         plt.plot(bce, label="binary cross entropy")
         plt.plot(mse, label="mean squared logarithmic error")
-        ssim = np.asarray(ssim)
-        ssim_adjusted = 1 / (1 + np.exp(-ssim))
-        plt.plot(ssim_adjusted, label="SSIM (adjusted)")
+        # ssim = np.asarray(ssim)
+        # ssim_adjusted = 1 / (1 + np.exp(-ssim))
+        # plt.plot(ssim_adjusted, label="SSIM (adjusted)")
         plt.grid()
         plt.yscale("log")
         plt.xlabel("Epoch number")

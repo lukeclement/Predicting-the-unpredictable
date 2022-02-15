@@ -222,7 +222,7 @@ def create_training_data(
         simulation_names = glob.glob("Simulation_data_extrapolated/*")
     for simulation in simulation_names:
         sim_metadata = simulation.split("/")[1].split("_")[1:]
-        simulation_flippage = bool(sim_metadata[0])
+        simulation_flippage = sim_metadata[0] == "True"
         simulation_offset = int(sim_metadata[1])
         simulation_resolution = float(sim_metadata[2])
         simulation_number = int(sim_metadata[3])
@@ -250,17 +250,19 @@ def create_training_data(
         int(np.floor(len(data_sources)*(1-validation_split))), frames, image_size, image_size, 3
     ), dtype="float16")
     answers_array = np.zeros((
-        int(np.floor(len(data_sources)*(1-validation_split))), frames, image_size, image_size, 1
+        int(np.floor(len(data_sources)*(1-validation_split))), 1, image_size, image_size, 1
     ), dtype="float16")
     questions_array_valid = np.zeros((
         int(np.ceil(len(data_sources)*validation_split)), frames, image_size, image_size, 3
     ), dtype="float16")
     answers_array_valid = np.zeros((
-        int(np.ceil(len(data_sources)*validation_split)), frames, image_size, image_size, 1
+        int(np.ceil(len(data_sources)*validation_split)), 1, image_size, image_size, 1
     ), dtype="float16")
     print("Getting training data with shapes:")
     print(np.shape(questions_array))
     print(np.shape(answers_array))
+    print(np.shape(questions_array_valid))
+    print(np.shape(answers_array_valid))
 
     accessed_index_q = []
     accessed_index_qv = []
@@ -268,6 +270,7 @@ def create_training_data(
     accessed_index_av = []
 
     pbar = tqdm(total=len(data_sources))
+    print(int(1.0/validation_split))
     for index, file in enumerate(data_sources):
         pbar.update(1)
         if index % int(1.0/validation_split) != 0:
@@ -280,7 +283,7 @@ def create_training_data(
                     questions_array[array_index, int(frame / timestep), :, :, :] = source_array[location, :, :, :]
                 except:
                     questions_array[array_index, int(frame / timestep), :, :, :] = process_bmp(target_file, image_size)
-            for frame in range(frames * timestep, frames * timestep * 2, timestep):
+            for frame in range(frames * timestep, (frames + 1) * timestep, timestep):
                 target_file = "{}/data_{}.npy".format(refs[index][0], refs[index][1] + frame)
                 array_index = index - 1 * int(np.floor(index * validation_split) + 1)
                 accessed_index_a.append(array_index)
@@ -299,7 +302,7 @@ def create_training_data(
                     questions_array_valid[array_index, int(frame / timestep), :, :, :] = source_array[location, :, :, :]
                 except:
                     questions_array_valid[array_index, int(frame / timestep), :, :, :] = process_bmp(target_file, image_size)
-            for frame in range(frames * timestep, frames * timestep * 2, timestep):
+            for frame in range(frames * timestep, (frames + 1) * timestep, timestep):
                 target_file = "{}/data_{}.npy".format(refs[index][0], refs[index][1] + frame)
                 array_index = int(index*validation_split)
                 accessed_index_av.append(array_index)
@@ -317,6 +320,8 @@ def create_training_data(
         np.max(questions_array[:, :, :, :, 1]),
         np.max(questions_array_valid[:, :, :, :, 1])
     ]
+    answers_array_valid = np.reshape(answers_array_valid, (int(np.ceil(len(data_sources)*validation_split)), image_size, image_size, 1))
+    answers_array = np.reshape(answers_array, (int(np.floor(len(data_sources)*(1-validation_split))), image_size, image_size, 1))
     print(np.shape(accessed_index_a))
     print(np.shape(accessed_index_av))
     normalisation_best = max(normalisation_options)
@@ -338,7 +343,7 @@ def process_bmp(filename, image_size):
         range=[[-1, 1], [-1, 1]], bins=(image_size, image_size)
     )
     output_array = np.zeros((image_size, image_size, 3))
-    h = np.tanh(100 * h)
+    h = np.tanh(0.05 * h)
     output_array[:, :, 1] = h
     output_array = generate_rail(output_array)
     return output_array
