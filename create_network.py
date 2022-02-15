@@ -146,53 +146,13 @@ def inception_cell(model, activation, initializer, channels, axis=3):
     tower_3 = layers.Conv2D(channels, (5, 5), padding='same', activation=activation, kernel_initializer=initializer)(
         tower_3)
 
-    # tower_4 = layers.MaxPooling2D((3, 3), strides=1)(input_tower)
-    tower_4 = layers.Conv2D(channels, (3, 3), padding='same', activation=activation, kernel_initializer=initializer)(
-        input_tower)
+    tower_4 = layers.MaxPooling2D(3, strides=1, padding='same')(input_tower)
+    tower_4 = layers.Conv2D(channels, 1, padding='same', activation=activation, kernel_initializer=initializer)(
+        tower_4)
 
     merged = layers.concatenate([tower_1, tower_2, tower_3, tower_4], axis=axis)
 
     model.add(Model(input_tower, merged))
-    return model
-
-
-def model_14(activation, optimizer, frames=4, size=60, kernal_size=32):
-    initializer = initializers.HeNormal()
-    loss_function = loss_functions.UBERLOSS
-    model = models.Sequential()
-
-    model.add(layers.Conv3D(kernal_size, (4, 7, 7), kernel_initializer=initializer, activation=activation,
-                            input_shape=(frames, size, size, 3)))
-    model.add(layers.Reshape((54, 54, 32)))
-    model.add(layers.Conv2D(kernal_size, (3, 3), activation=activation, kernel_initializer=initializer))
-    model.add(layers.MaxPool2D((3, 3)))
-
-    model = inception_cell(model, activation=activation, axis=3, initializer=initializer, kernal_size=kernal_size)
-
-    model.add(layers.Conv2D(64, (3, 3), activation=activation, kernel_initializer=initializer))
-
-    model = inception_cell(model, activation=activation, axis=3, initializer=initializer, kernal_size=kernal_size)
-
-    model.add(layers.Conv2D(128, (3, 3), activation=activation, kernel_initializer=initializer))
-
-    model.add(layers.Conv2DTranspose(128, (3, 3), activation=activation, kernel_initializer=initializer))
-
-    model.add(layers.Conv2DTranspose(64, (3, 3), activation=activation, kernel_initializer=initializer))
-
-    model.add(layers.Conv2DTranspose(32, (4, 4), activation=activation, kernel_initializer=initializer))
-
-    model.add(layers.UpSampling2D((3, 3)))
-
-    model.add(layers.Conv2DTranspose(kernal_size, (3, 3), activation=activation, kernel_initializer=initializer))
-
-    model.add(layers.Conv2D(1, (3, 3), activation='sigmoid', kernel_initializer=initializer))
-
-    stringlist = []
-    # model.summary(print_fn=lambda x: stringlist.append(x))
-    # short_model_summary = "\n".join(stringlist)
-    model.compile(optimizer=optimizer, loss=loss_function, metrics=[
-        losses.binary_crossentropy, losses.mean_squared_logarithmic_error
-    ])
     return model
 
 
@@ -222,7 +182,8 @@ def create_inception_network(activation, optimizer, loss, input_frames, image_si
         if np.floor(current_axis_size / 2) > target_axis_size:
             model.add(layers.MaxPool2D(2))
             current_axis_size = int(np.floor(current_axis_size / 2))
-        model = inception_cell(model, activation=activation, axis=3, initializer=initializer, channels=32 * 2**(laps - 2))
+        model = inception_cell(model, activation=activation, axis=3, initializer=initializer,
+                               channels=32 * 2**(laps-2))
         if laps < 2:
             laps += 1
 
