@@ -349,7 +349,7 @@ def main():
     frames = [1, 2, 4]
     parameters_extra = [
         # [loss_functions.mse_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "MSEDICE", 20],
-        [loss_functions.bce_dice, 60, 4, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Parallel_bce", 5],
+        [loss_functions.UBERLOSS, 60, 4, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Parallel", 5],
         # [loss_functions.bce_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "BCEDICE", 20],
         # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original", 20],
         # # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Original_long_epochs", 50],
@@ -426,17 +426,25 @@ def main():
             #     allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
             #     dropout_rate=dropout_rate
             # )
-        model = create_network.create_inception_network()
+        model = create_network.create_inception_network(
+            activation_function, optimizer, loss_function, image_frames,
+            image_size=image_size, encode_size=encode_size, allow_pooling=True,
+            allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
+            dropout_rate=dropout_rate
+        )
             # parameters_line = create_network.interpret_model_summary(model)
             # print(parameters_line)
             # print(model.summary())
         print(name)
+        # training_data = dat_to_training.create_training_data(
+        #     image_frames, timestep, image_size=image_size,
+        #     excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False)
         training_data = dat_to_training.create_training_data(
             image_frames, timestep, image_size=image_size,
             excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False)
+        print(model.summary())
         model, history = create_network.train_model(model, training_data, epochs=epochs)
         model.save("models/{}".format(name))
-        print(model.summary())
         # except Exception as e:
         #     print("Fail!")
         #     print(e)

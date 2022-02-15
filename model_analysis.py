@@ -28,7 +28,7 @@ def read_parameters(model_name):
         [loss_functions.mse_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "MSEDICE", 20],
         [loss_functions.bce_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "BCEDICE", 20],
         [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original", 20],
-        [loss_functions.UBERLOSS, 60, 4, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Parallel_bce", 5],
+        [loss_functions.UBERLOSS, 60, 4, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Parallel", 20],
         # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Original_long_epochs", 50],
         [loss_functions.UBERLOSS, 60, 2, 3, True, True, 5, 3, 0.001, [0], True, [0], 5, "Trans_Trans", 20],
         [loss_functions.UBERLOSS, 60, 1, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Large", 20],
@@ -222,7 +222,7 @@ def cross_check(model_name, initial_conditions):
     plt.savefig("model_performance/{}_y_pos_div.png".format(model_name), dpi=500)
 
 def main():
-    cross_check("Parallel_bce", [12, 20])
+    cross_check("Parallel", [12, 20])
     # print("0")
     # cross_check("Original", [12, 20])
     # print("1")
