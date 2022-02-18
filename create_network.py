@@ -158,13 +158,13 @@ def inception_cell(model, activation, initializer, channels, axis=3):
 
 def create_inception_network(activation, optimizer, loss, input_frames, image_size=64, channels=3, encode_size=2,
                              allow_upsampling=True, allow_pooling=True, kernel_size=3, max_transpose_layers=3,
-                             dropout_rate=0.2):
+                             dropout_rate=0.2, inception=True):
     initializer = initializers.HeNormal()
     model = models.Sequential()
     current_axis_size = image_size
     target_axis_size = encode_size
     current_frames = input_frames
-    model.add(layers.Conv3D(channels, 1, activation=activation, kernel_initializer=initializer,
+    model.add(layers.Conv3D(32, 1, activation=activation, kernel_initializer=initializer,
                             input_shape=(input_frames, image_size, image_size, channels)
                             ))
     model.add(layers.Conv3D(32, (input_frames, 1, 1), activation=activation, kernel_initializer=initializer))
@@ -182,8 +182,9 @@ def create_inception_network(activation, optimizer, loss, input_frames, image_si
         if np.floor(current_axis_size / 2) > target_axis_size:
             model.add(layers.MaxPool2D(2))
             current_axis_size = int(np.floor(current_axis_size / 2))
-        model = inception_cell(model, activation=activation, axis=3, initializer=initializer,
-                               channels=32 * 2**(laps-2))
+        if inception:
+            model = inception_cell(model, activation=activation, axis=3, initializer=initializer,
+                                   channels=32 * 2**(laps-2))
         if laps < 2:
             laps += 1
 

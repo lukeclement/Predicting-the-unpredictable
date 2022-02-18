@@ -140,17 +140,17 @@ def UBERLOSS(y_true, y_pred):
 
 
 def UBERLOSS_minus_dice(y_true, y_pred):
-    test = tester_loss(y_true, y_pred)
+    # test = tester_loss(y_true, y_pred)
     dice = dice_coef(y_true, y_pred)
     iou = iou_coef(y_true, y_pred)
-    ssim = ssim_loss(y_true, y_pred)
+    # ssim = ssim_loss(y_true, y_pred)
     mse = losses.mean_squared_logarithmic_error(y_true, y_pred)
     bce = losses.binary_crossentropy(y_true, y_pred)
     if k.mean(bce) > 0.1:
-        return (bce + k.sigmoid(ssim))/2
+        return (bce)/2
         # return (bce + k.sigmoid(ssim))/2
     else:
-        return (mse + k.sigmoid(ssim))/2
+        return (mse)/2
         # return (mse + k.sigmoid(ssim))/2
 
 

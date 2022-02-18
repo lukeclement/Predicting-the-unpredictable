@@ -258,11 +258,9 @@ def long_term_prediction(
             output_image = np.zeros((image_size, image_size, 3))
             output_image[:, :, 1] = model(input_images)[0, :, :, 0]
             dat_to_training.generate_rail(output_image)
-            for frame in range(1, frames):
-                if frame == frames-1:
-                    input_images[0, frame, :, :, :] = output_image
-                else:
-                    input_images[0, frame, :, :, :] = input_images[0, frame-1, :, :, :]
+            for frame in range(0, frames-1):
+                input_images[0, frame, :, :, :] = input_images[0, frame+1, :, :, :]
+            input_images[0, frames-1, :, :, :] = output_image
             positions.append((input_images[0, frames-1, :, :, :] * 255).astype(np.uint8))
         return positions
     future_frames = np.zeros((frames, frames, image_size, image_size, 3))
@@ -333,6 +331,7 @@ def main():
     rng = default_rng(69420)
     activation_function = layers.LeakyReLU()
     optimizer = optimizers.Adam(learning_rate=0.001, epsilon=0.1)
+    # optimizer = optimizers.Adam()
     # losses = [
     #     loss_functions.UBERLOSS,
     #     loss_functions.UBERLOSS_minus_dice,
@@ -349,7 +348,8 @@ def main():
     frames = [1, 2, 4]
     parameters_extra = [
         # [loss_functions.mse_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "MSEDICE", 20],
-        [losses.binary_crossentropy, 120, 4, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Parallel", 5],
+        [losses.binary_crossentropy, 60, 4, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Parallel", 5, True],
+        [losses.binary_crossentropy, 60, 4, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Linear", 5, False],
         # [loss_functions.bce_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "BCEDICE", 20],
         # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original", 20],
         # # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Original_long_epochs", 50],
@@ -388,6 +388,7 @@ def main():
         kernel_size = parameters[7]
         dropout_rate = 0
         name = parameters[13]
+        linearity = parameters[15]
         # loss_function = losses.mean_squared_logarithmic_error
         # loss_function = losses.cosine_similarity
         # loss_function = losses.log_cosh
@@ -430,7 +431,7 @@ def main():
                 activation_function, optimizer, loss_function, image_frames,
                 image_size=image_size, encode_size=encode_size, allow_pooling=True,
                 allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
-                dropout_rate=dropout_rate
+                dropout_rate=dropout_rate, inception=linearity
             )
                 # parameters_line = create_network.interpret_model_summary(model)
                 # print(parameters_line)
@@ -441,7 +442,7 @@ def main():
             #     excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False)
             training_data = dat_to_training.create_training_data(
                 image_frames, timestep, image_size=image_size,
-                excluded_sims=[0,1,2,3,4,5,6,7,8,9,10,11,12], variants=[0], resolution=resolution, flips_allowed=False)
+                excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False)
             print(model.summary())
             # exit()
             model, history = create_network.train_model(model, training_data, epochs=epochs)
