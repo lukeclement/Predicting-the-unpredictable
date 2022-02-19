@@ -25,56 +25,60 @@ def get_model(name):
 
 def read_parameters(model_name):
     parameter_options = [
-        [loss_functions.mse_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "MSEDICE", 20],
-        [loss_functions.bce_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "BCEDICE", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original", 20],
-        [loss_functions.UBERLOSS, 60, 4, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Parallel", 5, True],
-        [loss_functions.UBERLOSS, 60, 4, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Linear", 5, False],
+        [loss_functions.mse_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "MSEDICE_parallel", 20, True],
+        [losses.binary_crossentropy, 60, 2, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Parallel", 5, True],
+        [losses.binary_crossentropy, 60, 2, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Linear", 5, False],
+        [loss_functions.bce_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "BCEDICE_parallel", 20, True],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original_parallel", 20, True],
+        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Original_long_epochs_parallel", 50],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 5, 3, 0.001, [0], True, [0], 5, "Trans_Trans_parallel", 20, True],
+        [loss_functions.UBERLOSS, 60, 1, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Large_parallel", 20, True],
+        [loss_functions.UBERLOSS, 30, 4, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Long_parallel", 20, True],
+        [loss_functions.UBERLOSS_minus_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original-_parallel", 20, True],
+        [losses.mean_squared_logarithmic_error, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalMSE_parallel", 20, True],
+        [losses.binary_crossentropy, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalBCE_parallel", 20, True],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_Sanders_parallel", 20, True],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_Johnson_parallel", 20, True],
+        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Thin_parallel", 20, True],
+        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Thick_parallel", 20, True],
+        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_ThickJohnson_parallel", 20, True],
+        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_ThinSanders_parallel", 20, True],
+        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_ThickSanders_parallel", 20, True],
+        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_ThinJohnson_parallel", 20, True],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.1, [0], True, [0], 5, "Trans_Low_parallel", 20, True],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.01, [0], True, [0], 5, "Trans_Medium_parallel", 20, True],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_High_parallel", 20, True],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 20, "Trans_Fast_parallel", 20, True],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 1, "Trans_Slow_parallel", 20, True],
+        [loss_functions.mse_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_MSEDICE_parallel", 20, True],
+        [loss_functions.bce_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_BCEDICE_parallel", 20, True],
+
+
+        [loss_functions.mse_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "MSEDICE", 20, False],
+        [loss_functions.bce_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "BCEDICE", 20, False],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original", 20, False],
         # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Original_long_epochs", 50],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 5, 3, 0.001, [0], True, [0], 5, "Trans_Trans", 20],
-        [loss_functions.UBERLOSS, 60, 1, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Large", 20],
-        [loss_functions.UBERLOSS, 30, 4, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Long", 20],
-        [loss_functions.UBERLOSS_minus_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original-", 20],
-        [losses.mean_squared_logarithmic_error, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalMSE", 20],
-        [losses.binary_crossentropy, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalBCE", 20],
-        # [loss_functions.ssim_loss, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalSSIM", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_Sanders", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_Johnson", 20],
-        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Thin", 20],
-        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Thick", 20],
-        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_ThickJohnson", 20],
-        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_ThinSanders", 20],
-        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_ThickSanders", 20],
-        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_ThinJohnson", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.1, [0], True, [0], 5, "Trans_Low", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.01, [0], True, [0], 5, "Trans_Medium", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_High", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 20, "Trans_Fast", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 1, "Trans_Slow", 20],
-        [loss_functions.mse_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_MSEDICE", 20],
-        [loss_functions.bce_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_BCEDICE", 20],
-        [loss_functions.UBERLOSS, 60, 2,  3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Original", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Original_long_epochs", 150],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans", 20],
-        [loss_functions.UBERLOSS, 60, 1, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Large", 20],
-        [loss_functions.UBERLOSS, 30, 4, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Long", 20],
-        [loss_functions.UBERLOSS_minus_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "Original-", 20],
-        [losses.mean_squared_logarithmic_error, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "OriginalMSE", 20],
-        [losses.binary_crossentropy, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "OriginalBCE", 20],
-        # [loss_functions.ssim_loss, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "OriginalSSIM", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 2, 0.001, [0], True, [0], 5, "Sanders", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 7, 0.001, [0], True, [0], 5, "Johnson", 20],
-        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 20, 3, 0.001, [0], True, [0], 5, "Thin", 20],
-        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 20, 3, 0.001, [0], True, [0], 5, "Thick", 20],
-        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 20, 7, 0.001, [0], True, [0], 5, "ThickJohnson", 20],
-        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 20, 2, 0.001, [0], True, [0], 5, "ThinSanders", 20],
-        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 20, 2, 0.001, [0], True, [0], 5, "ThickSanders", 20],
-        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 20, 7, 0.001, [0], True, [0], 5, "ThinJohnson", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.1, [0], True, [0], 5, "Low", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.01, [0], True, [0], 5, "Medium", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "High", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 20, "Fast", 20],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 1, "Slow", 20]
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 5, 3, 0.001, [0], True, [0], 5, "Trans_Trans", 20, False],
+        [loss_functions.UBERLOSS, 60, 1, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Large", 20, False],
+        [loss_functions.UBERLOSS, 30, 4, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Long", 20, False],
+        [loss_functions.UBERLOSS_minus_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original-", 20, False],
+        [losses.mean_squared_logarithmic_error, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalMSE", 20, False],
+        [losses.binary_crossentropy, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalBCE", 20, False],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_Sanders", 20, False],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_Johnson", 20, False],
+        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Thin", 20, False],
+        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Thick", 20, False],
+        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_ThickJohnson", 20, False],
+        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_ThinSanders", 20, False],
+        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_ThickSanders", 20, False],
+        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_ThinJohnson", 20, False],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.1, [0], True, [0], 5, "Trans_Low", 20, False],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.01, [0], True, [0], 5, "Trans_Medium", 20, False],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_High", 20, False],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 20, "Trans_Fast", 20, False],
+        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 1, "Trans_Slow", 20, False],
+        [loss_functions.mse_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_MSEDICE", 20, False],
+        [loss_functions.bce_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_BCEDICE", 20, False]
     ]
 
     for i in range(len(parameter_options)):
@@ -109,7 +113,7 @@ def cross_check(model_name, initial_conditions):
     guesses_2 = guesses_2[:min(length_actual, FUTURE_DISTANCE)]
     difference = actual.astype(np.float32) - guesses.astype(np.float32)
     difference = np.abs(difference).astype(np.uint8)
-    bubble_prediction.make_gif(difference, "model_performance/{}_raw_difference".format(model_name))
+    # bubble_prediction.make_gif(difference, "model_performance/{}_raw_difference".format(model_name))
     composite = np.zeros((np.shape(guesses)[0], parameters[2], parameters[2], 3), np.uint8)
     composite[:, :, :, 2] = guesses
     composite[:, :, :, 0] = actual
@@ -183,7 +187,7 @@ def cross_check(model_name, initial_conditions):
     plt.plot(actual_com, label="Actual")
     plt.plot(guess_com, label="Predictions")
     plt.legend()
-    plt.savefig("model_performance/{}_centre_of_mass.png".format(model_name), dpi=500)
+    # plt.savefig("model_performance/{}_centre_of_mass.png".format(model_name), dpi=500)
     plt.clf()
     plt.grid()
     plt.ylabel("Angle from centre/Radians")
@@ -192,19 +196,19 @@ def cross_check(model_name, initial_conditions):
     plt.plot(actual_angles, label="Actual")
     plt.plot(guess_angles, label="Predictions")
     plt.legend()
-    plt.savefig("model_performance/{}_centre_of_mass_angle.png".format(model_name), dpi=500)
+    # plt.savefig("model_performance/{}_centre_of_mass_angle.png".format(model_name), dpi=500)
     plt.clf()
     plt.grid()
     plt.ylabel("Value/Radians")
     plt.xlabel("Step")
     plt.plot(np.asarray(actual_angles) - np.asarray(guess_angles), label="Actual")
-    plt.savefig("model_performance/{}_centre_of_mass_angle_diff.png".format(model_name), dpi=500)
+    # plt.savefig("model_performance/{}_centre_of_mass_angle_diff.png".format(model_name), dpi=500)
     plt.clf()
     plt.grid()
     plt.ylabel("Centre of mass difference")
     plt.xlabel("Step")
     plt.plot(np.asarray(actual_com) - np.asarray(guess_com), label="Actual")
-    plt.savefig("model_performance/{}_centre_of_mass_diff.png".format(model_name), dpi=500)
+    # plt.savefig("model_performance/{}_centre_of_mass_diff.png".format(model_name), dpi=500)
     plt.clf()
     plt.grid()
     plt.ylabel("Y position")
@@ -222,103 +226,98 @@ def cross_check(model_name, initial_conditions):
     plt.legend()
     plt.savefig("model_performance/{}_y_pos_div.png".format(model_name), dpi=500)
 
+
 def main():
     cross_check("Parallel", [12, 20])
     cross_check("Linear", [12, 20])
-    # print("0")
-    # cross_check("Original", [12, 20])
-    # print("1")
-    # cross_check("Large", [12, 20])
-    # print("2")
-    # cross_check("Long", [12, 20])
-    # print("3")
-    # cross_check("Original-", [12, 20])
-    # print("4")
-    # cross_check("OriginalMSE", [12, 20])
-    # print("5")
-    # cross_check("OriginalBCE", [12, 20])
-    # print("6")
-    # cross_check("OriginalSSIM", [12, 20])
-    # print("7")
-    # cross_check("Sanders", [12, 20])
-    # print("8")
-    # cross_check("Johnson", [12, 20])
-    # print("9")
-    # cross_check("Thin", [12, 20])
-    # print("10")
-    # cross_check("Thick", [12, 20])
-    # print("11")
-    # cross_check("ThickJohnson", [12, 20])
-    # print("12")
-    # cross_check("ThinSanders", [12, 20])
-    # print("13")
-    # cross_check("ThickSanders", [12, 20])
-    # print("14")
-    # cross_check("ThinJohnson", [12, 20])
-    # print("15")
-    # cross_check("Low", [12, 20])
-    # print("16")
-    # cross_check("Medium", [12, 20])
-    # print("17")
-    # cross_check("High", [12, 20])
-    # print("18")
-    # cross_check("Fast", [12, 20])
-    # print("19")
-    # cross_check("Slow", [12, 20])
-    # print("20")
-    # cross_check("Trans", [12, 20])
-    # print("21")
-    # cross_check("MSEDICE", [12, 20])
-    # print("22")
-    # cross_check("BCEDICE", [12, 20])
-    # print("23--")
-    # print("0")
-    # cross_check("Trans_Original", [12, 20])
-    # print("1")
-    # cross_check("Trans_Large", [12, 20])
-    # print("2")
-    # cross_check("Trans_Long", [12, 20])
-    # print("3")
-    # cross_check("Trans_Original-", [12, 20])
-    # print("4")
-    # cross_check("Trans_OriginalMSE", [12, 20])
-    # print("5")
-    # cross_check("Trans_OriginalBCE", [12, 20])
-    # print("6")
-    # cross_check("Trans_OriginalSSIM", [12, 20])
-    # print("7")
-    # cross_check("Trans_Sanders", [12, 20])
-    # print("8")
-    # cross_check("Trans_Johnson", [12, 20])
-    # print("9")
-    # cross_check("Trans_Thin", [12, 20])
-    # print("10")
-    # cross_check("Trans_Thick", [12, 20])
-    # print("11")
-    # cross_check("Trans_ThickJohnson", [12, 20])
-    # print("12")
-    # cross_check("Trans_ThinSanders", [12, 20])
-    # print("13")
-    # cross_check("Trans_ThickSanders", [12, 20])
-    # print("14")
-    # cross_check("Trans_ThinJohnson", [12, 20])
-    # print("15")
-    # cross_check("Trans_Low", [12, 20])
-    # print("16")
-    # cross_check("Trans_Medium", [12, 20])
-    # print("17")
-    # cross_check("Trans_High", [12, 20])
-    # print("18")
-    # cross_check("Trans_Fast", [12, 20])
-    # print("19")
-    # cross_check("Trans_Slow", [12, 20])
-    # print("20")
-    # cross_check("Trans_Trans", [12, 20])
-    # print("21")
-    # cross_check("Trans_MSEDICE", [12, 20])
-    # print("22")
-    # cross_check("Trans_BCEDICE", [12, 20])
-    # print("23--")
+    cross_check("Trans_Original", [12, 20])
+    print("1")
+    cross_check("Trans_Large", [12, 20])
+    print("2")
+    cross_check("Trans_Long", [12, 20])
+    print("3")
+    cross_check("Trans_Original-", [12, 20])
+    print("4")
+    cross_check("Trans_OriginalMSE", [12, 20])
+    print("5")
+    cross_check("Trans_OriginalBCE", [12, 20])
+    print("7")
+    cross_check("Trans_Sanders", [12, 20])
+    print("8")
+    cross_check("Trans_Johnson", [12, 20])
+    print("9")
+    cross_check("Trans_Thin", [12, 20])
+    print("10")
+    cross_check("Trans_Thick", [12, 20])
+    print("11")
+    cross_check("Trans_ThickJohnson", [12, 20])
+    print("12")
+    cross_check("Trans_ThinSanders", [12, 20])
+    print("13")
+    cross_check("Trans_ThickSanders", [12, 20])
+    print("14")
+    cross_check("Trans_ThinJohnson", [12, 20])
+    print("15")
+    cross_check("Trans_Low", [12, 20])
+    print("16")
+    cross_check("Trans_Medium", [12, 20])
+    print("17")
+    cross_check("Trans_High", [12, 20])
+    print("18")
+    cross_check("Trans_Fast", [12, 20])
+    print("19")
+    cross_check("Trans_Slow", [12, 20])
+    print("20")
+    cross_check("Trans_Trans", [12, 20])
+    print("21")
+    cross_check("Trans_MSEDICE", [12, 20])
+    print("22")
+    cross_check("Trans_BCEDICE", [12, 20])
+    print("23--")
+    cross_check("Trans_Original_parallel", [12, 20])
+    print("24")
+    cross_check("Trans_Large_parallel", [12, 20])
+    print("25")
+    cross_check("Trans_Long_parallel", [12, 20])
+    print("35")
+    cross_check("Trans_Original-_parallel", [12, 20])
+    print("45")
+    cross_check("Trans_OriginalMSE_parallel", [12, 20])
+    print("55")
+    cross_check("Trans_OriginalBCE_parallel", [12, 20])
+    print("65")
+    cross_check("Trans_Sanders_parallel", [12, 20])
+    print("85")
+    cross_check("Trans_Johnson_parallel", [12, 20])
+    print("95")
+    cross_check("Trans_Thin_parallel", [12, 20])
+    print("105")
+    cross_check("Trans_Thick_parallel", [12, 20])
+    print("115")
+    cross_check("Trans_ThickJohnson_parallel", [12, 20])
+    print("125")
+    cross_check("Trans_ThinSanders_parallel", [12, 20])
+    print("135")
+    cross_check("Trans_ThickSanders_parallel", [12, 20])
+    print("145")
+    cross_check("Trans_ThinJohnson_parallel", [12, 20])
+    print("155")
+    cross_check("Trans_Low_parallel", [12, 20])
+    print("165")
+    cross_check("Trans_Medium_parallel", [12, 20])
+    print("175")
+    cross_check("Trans_High_parallel", [12, 20])
+    print("185")
+    cross_check("Trans_Fast_parallel", [12, 20])
+    print("195")
+    cross_check("Trans_Slow_parallel", [12, 20])
+    print("205")
+    cross_check("Trans_Trans_parallel", [12, 20])
+    print("215")
+    cross_check("Trans_MSEDICE_parallel", [12, 20])
+    print("225")
+    cross_check("Trans_BCEDICE_parallel", [12, 20])
+    print("235--")
 
 if __name__ == "__main__":
     main()
