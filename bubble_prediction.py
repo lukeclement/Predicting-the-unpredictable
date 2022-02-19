@@ -347,60 +347,101 @@ def main():
     image_sizes = [30, 40, 50, 60, 90]
     frames = [1, 2, 4]
     parameters_extra = [
-        [loss_functions.mse_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "MSEDICE_parallel", 20, True],
-        [losses.binary_crossentropy, 60, 2, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Parallel", 5, True],
-        [losses.binary_crossentropy, 60, 2, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Linear", 5, False],
-        [loss_functions.bce_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "BCEDICE_parallel", 20, True],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original_parallel", 20, True],
-        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Original_long_epochs_parallel", 50],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 5, 3, 0.001, [0], True, [0], 5, "Trans_Trans_parallel", 20, True],
-        [loss_functions.UBERLOSS, 60, 1, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Large_parallel", 20, True],
-        [loss_functions.UBERLOSS, 30, 4, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Long_parallel", 20, True],
-        [loss_functions.UBERLOSS_minus_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original-_parallel", 20, True],
-        [losses.mean_squared_logarithmic_error, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalMSE_parallel", 20, True],
-        [losses.binary_crossentropy, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalBCE_parallel", 20, True],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_Sanders_parallel", 20, True],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_Johnson_parallel", 20, True],
-        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Thin_parallel", 20, True],
-        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Thick_parallel", 20, True],
-        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_ThickJohnson_parallel", 20, True],
-        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_ThinSanders_parallel", 20, True],
-        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_ThickSanders_parallel", 20, True],
-        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_ThinJohnson_parallel", 20, True],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.1, [0], True, [0], 5, "Trans_Low_parallel", 20, True],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.01, [0], True, [0], 5, "Trans_Medium_parallel", 20, True],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_High_parallel", 20, True],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 20, "Trans_Fast_parallel", 20, True],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 1, "Trans_Slow_parallel", 20, True],
-        [loss_functions.mse_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_MSEDICE_parallel", 20, True],
-        [loss_functions.bce_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_BCEDICE_parallel", 20, True],
-
-
-        [loss_functions.mse_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "MSEDICE", 20, False],
-        [loss_functions.bce_dice, 60, 2, 3, True, True, 20, 3, 0.001, [0], True, [0], 5, "BCEDICE", 20, False],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original", 20, False],
-        # [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Original_long_epochs", 50],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 5, 3, 0.001, [0], True, [0], 5, "Trans_Trans", 20, False],
-        [loss_functions.UBERLOSS, 60, 1, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Large", 20, False],
-        [loss_functions.UBERLOSS, 30, 4, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Long", 20, False],
-        [loss_functions.UBERLOSS_minus_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Original-", 20, False],
-        [losses.mean_squared_logarithmic_error, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalMSE", 20, False],
-        [losses.binary_crossentropy, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_OriginalBCE", 20, False],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_Sanders", 20, False],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_Johnson", 20, False],
-        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Thin", 20, False],
-        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_Thick", 20, False],
-        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_ThickJohnson", 20, False],
-        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_ThinSanders", 20, False],
-        [loss_functions.UBERLOSS, 60, 2, 10, True, True, 10, 2, 0.001, [0], True, [0], 5, "Trans_ThickSanders", 20, False],
-        [loss_functions.UBERLOSS, 60, 2, 1, True, True, 10, 7, 0.001, [0], True, [0], 5, "Trans_ThinJohnson", 20, False],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.1, [0], True, [0], 5, "Trans_Low", 20, False],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.01, [0], True, [0], 5, "Trans_Medium", 20, False],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_High", 20, False],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 20, "Trans_Fast", 20, False],
-        [loss_functions.UBERLOSS, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 1, "Trans_Slow", 20, False],
-        [loss_functions.mse_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_MSEDICE", 20, False],
-        [loss_functions.bce_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_BCEDICE", 20, False]
+        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Aberdeen", 20, False],
+        #
+        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bravo", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bristol", 20, False],
+        ##
+        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 3, 0.001, [0], True, [0], 5, "Charlie", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 3, 0.001, [0], True, [0], 5, "Castlebay", 20, False],
+        #
+        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 3, 0.001, [0], True, [0], 5, "Delta", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 3, 0.001, [0], True, [0], 5, "Derby", 20, False],
+        ###
+        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 2, 0.001, [0], True, [0], 5, "Echo", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 2, 0.001, [0], True, [0], 5, "Exeter", 20, False],
+        #
+        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 2, 0.001, [0], True, [0], 5, "Foxtrot", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 2, 0.001, [0], True, [0], 5, "Fleet", 20, False],
+        ##
+        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 2, 0.001, [0], True, [0], 5, "Golf", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 2, 0.001, [0], True, [0], 5, "Glasgow", 20, False],
+        #
+        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 2, 0.001, [0], True, [0], 5, "Hotel", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 2, 0.001, [0], True, [0], 5, "Hartlepool", 20, False],
+        ####
+        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 5, 0.001, [0], True, [0], 5, "India", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 5, 0.001, [0], True, [0], 5, "Inverness", 20, False],
+        #
+        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 5, 0.001, [0], True, [0], 5, "Juliet", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 5, 0.001, [0], True, [0], 5, "JohnOGroats", 20, False],
+        ##
+        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 5, 0.001, [0], True, [0], 5, "Kilo", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 5, 0.001, [0], True, [0], 5, "Kingston", 20, False],
+        #
+        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 5, 0.001, [0], True, [0], 5, "Lima", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 5, 0.001, [0], True, [0], 5, "London", 20, False],
+        ###
+        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 4, 0.001, [0], True, [0], 5, "Mancy", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 4, 0.001, [0], True, [0], 5, "Manchester", 20, False],
+        #
+        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 4, 0.001, [0], True, [0], 5, "November", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 4, 0.001, [0], True, [0], 5, "Nottingham", 20, False],
+        ##
+        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 4, 0.001, [0], True, [0], 5, "Oscar", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 4, 0.001, [0], True, [0], 5, "Oxford", 20, False],
+        #
+        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 4, 0.001, [0], True, [0], 5, "Papa", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 4, 0.001, [0], True, [0], 5, "Portsmouth", 20, False],
+        #####
+        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 3, 0.001, [0], True, [0], 5, "Quebec", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 3, 0.001, [0], True, [0], 5, "Quedgeley", 20, False],
+        #
+        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 3, 0.001, [0], True, [0], 5, "Romeo", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 3, 0.001, [0], True, [0], 5, "Reading", 20, False],
+        ##
+        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 3, 0.001, [0], True, [0], 5, "Sierra", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 3, 0.001, [0], True, [0], 5, "Salisbury", 20, False],
+        #
+        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 3, 0.001, [0], True, [0], 5, "Tango", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 3, 0.001, [0], True, [0], 5, "Taunton", 20, False],
+        ###
+        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 2, 0.001, [0], True, [0], 5, "Uniform", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 2, 0.001, [0], True, [0], 5, "Uxbridge", 20, False],
+        #
+        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 2, 0.001, [0], True, [0], 5, "Victor", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 2, 0.001, [0], True, [0], 5, "Verwood", 20, False],
+        ##
+        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 2, 0.001, [0], True, [0], 5, "Whiskey", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 2, 0.001, [0], True, [0], 5, "Woking", 20, False],
+        #
+        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 2, 0.001, [0], True, [0], 5, "Xray", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 2, 0.001, [0], True, [0], 5, "Xfuckonlyknows", 20, False],
+        ####
+        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 5, 0.001, [0], True, [0], 5, "Yankee", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 5, 0.001, [0], True, [0], 5, "Yateley", 20, False],
+        #
+        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 5, 0.001, [0], True, [0], 5, "Zulu", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 5, 0.001, [0], True, [0], 5, "Zetland", 20, False],
+        ##
+        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 5, 0.001, [0], True, [0], 5, "0_Amsterdam", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 5, 0.001, [0], True, [0], 5, "0_Andover", 20, False],
+        #
+        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 5, 0.001, [0], True, [0], 5, "0_Brussels", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 5, 0.001, [0], True, [0], 5, "0_Birmingham", 20, False],
+        ###
+        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 4, 0.001, [0], True, [0], 5, "0_Copenhagen", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 4, 0.001, [0], True, [0], 5, "0_Cardiff", 20, False],
+        #
+        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 4, 0.001, [0], True, [0], 5, "0_Dublin", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 4, 0.001, [0], True, [0], 5, "0_Dundee", 20, False],
+        ##
+        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_ElAaiun", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Edinburgh", 20, False],
+        #
+        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Freetown", 20, True],
+        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Frimley", 20, False],
     ]
     for parameters in parameters_extra:
         loss_function = parameters[0]
