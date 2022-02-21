@@ -254,8 +254,8 @@ def long_term_prediction(
             return positions
         return positions
     if jump:
+        output_image = np.zeros((image_size, image_size, 3))
         for i in range(0, number_to_simulate):
-            output_image = np.zeros((image_size, image_size, 3))
             output_image[:, :, 1] = model(input_images)[0, :, :, 0]
             dat_to_training.generate_rail(output_image)
             for frame in range(0, frames-1):
@@ -320,7 +320,7 @@ def calculate_com(image, both=False):
     x_com = np.sum(x*image[:, :, 1])/np.sum(image[:, :, 1])
     y_com = np.sum(y*image[:, :, 1])/np.sum(image[:, :, 1])
     if both:
-        return x_com-(float(image_size)/2), y_com-(float(image_size)/2)
+        return -x_com+(float(image_size)/2), y_com-(float(image_size)/2)
     return np.sqrt((x_com-(float(image_size)/2))**2 + (y_com-(float(image_size)/2))**2)
     return  y_com
 

@@ -4,6 +4,7 @@ from tensorflow.keras import models, losses
 import loss_functions
 import numpy as np
 import keras.backend as k
+from tqdm import tqdm
 
 FUTURE_DISTANCE = 200
 
@@ -190,24 +191,27 @@ def read_parameters(model_name):
     return [loss_functions.UBERLOSS, 2, 60, 5, True, True, 10, 4, 0.001, [0], True, [12], 5, "Test_collection", 20]
 
 
-def generate_predictions(model_name, initial_conditions, dry_run=False):
+def generate_predictions(model_name, initial_conditions, length=FUTURE_DISTANCE, dry_run=False):
     parameters = read_parameters(model_name)
     return bubble_prediction.long_term_prediction(
         get_model(model_name),
         initial_conditions[0], initial_conditions[1],
-        parameters[2], parameters[12], parameters[1], FUTURE_DISTANCE, parameters[8],
+        parameters[2], parameters[12], parameters[1], length, parameters[8],
         round_result=False, extra=True, dry_run=dry_run
     )
 
 
 def cross_check(model_name, initial_conditions):
     parameters = read_parameters(model_name)
-    guesses = np.asarray(generate_predictions(model_name, initial_conditions))[:, :, :, 1]
-    guesses_2 = np.asarray(generate_predictions(model_name, [13, 20]))[:, :, :, 1]
-    actual = np.asarray(generate_predictions(model_name, initial_conditions, dry_run=True))[:, :, :, 1]
-    length_actual = np.shape(actual)[0]
-    guesses = guesses[:min(length_actual, FUTURE_DISTANCE)]
-    guesses_2 = guesses_2[:min(length_actual, FUTURE_DISTANCE)]
+    guesses_raw = np.asarray(generate_predictions(model_name, initial_conditions))[:, :, :, 1]
+    guesses_2_raw = np.asarray(generate_predictions(model_name, [15, 20]))[:, :, :, 1]
+    actual_raw = np.asarray(generate_predictions(model_name, initial_conditions, dry_run=True))[:, :, :, 1]
+    actual_2_raw = np.asarray(generate_predictions(model_name, [15, 20], dry_run=True))[:, :, :, 1]
+    length_actual = min(np.shape(actual_raw)[0], np.shape(actual_2_raw)[0])
+    actual = actual_raw[:min(length_actual, FUTURE_DISTANCE)]
+    guesses = guesses_raw[:min(length_actual, FUTURE_DISTANCE)]
+    guesses_2 = guesses_2_raw[:min(length_actual, FUTURE_DISTANCE)]
+    actual_2 = actual_2_raw[:min(length_actual, FUTURE_DISTANCE)]
     difference = actual.astype(np.float32) - guesses.astype(np.float32)
     difference = np.abs(difference).astype(np.uint8)
     # bubble_prediction.make_gif(difference, "model_performance/{}_raw_difference".format(model_name))
@@ -215,17 +219,23 @@ def cross_check(model_name, initial_conditions):
     composite[:, :, :, 2] = guesses
     composite[:, :, :, 0] = actual
     bubble_prediction.make_gif(composite, "model_performance/{}_composite".format(model_name))
+    composite_2 = np.zeros((np.shape(guesses)[0], parameters[2], parameters[2], 3), np.uint8)
+    composite_2[:, :, :, 2] = actual
+    composite_2[:, :, :, 0] = actual_2
+    bubble_prediction.make_gif(composite_2, "model_performance/{}_composite_12-15".format(model_name))
     difference_sums = np.zeros(np.shape(guesses)[0])
     bce_values = np.zeros(np.shape(guesses)[0])
     UBERLOSS_values = np.zeros(np.shape(guesses)[0])
     mse_values = np.zeros(np.shape(guesses)[0])
     ssim_values = np.zeros(np.shape(guesses)[0])
-    raw_data_actual = np.zeros((1, np.shape(guesses)[0], 1, parameters[2], parameters[2], 1))
-    raw_data_guess = np.zeros((1, np.shape(guesses)[0], 1, parameters[2], parameters[2], 1))
-    raw_data_guess_2 = np.zeros((1, np.shape(guesses)[0], 1, parameters[2], parameters[2], 1))
-    raw_data_actual[0, :, 0, :, :, 0] = actual.astype(np.float32) / 255
-    raw_data_guess[0, :, 0, :, :, 0] = guesses.astype(np.float32) / 255
-    raw_data_guess_2[0, :, 0, :, :, 0] = guesses_2.astype(np.float32) / 255
+    raw_data_actual = np.zeros((1, np.shape(actual_raw)[0], 1, parameters[2], parameters[2], 1))
+    raw_data_actual_2 = np.zeros((1, np.shape(actual_2_raw)[0], 1, parameters[2], parameters[2], 1))
+    raw_data_guess = np.zeros((1, np.shape(guesses_raw)[0], 1, parameters[2], parameters[2], 1))
+    raw_data_guess_2 = np.zeros((1, np.shape(guesses_2_raw)[0], 1, parameters[2], parameters[2], 1))
+    raw_data_actual[0, :, 0, :, :, 0] = actual_raw.astype(np.float32) / 255
+    raw_data_actual_2[0, :, 0, :, :, 0] = actual_2_raw.astype(np.float32) / 255
+    raw_data_guess[0, :, 0, :, :, 0] = guesses_raw.astype(np.float32) / 255
+    raw_data_guess_2[0, :, 0, :, :, 0] = guesses_2_raw.astype(np.float32) / 255
 
     for i in range(0, np.shape(guesses)[0]):
         difference_sums[i] = np.sum(difference[i, :, :])
@@ -254,16 +264,26 @@ def cross_check(model_name, initial_conditions):
     actual_com = []
     actual_angles = []
     actual_y = []
+    actual_x = []
     for data in raw_data_actual[0, :, 0, :, :, :]:
         zz = np.zeros((parameters[2], parameters[2], 2))
         zz[:, :, 1] = data[:, :, 0]
         actual_com.append(bubble_prediction.calculate_com(zz))
         point_x, point_y = bubble_prediction.calculate_com(zz, True)
         actual_angles.append(np.arctan2(point_x, point_y))
+        actual_x.append(point_y)
         actual_y.append(point_x)
+    actual_2_y = []
+    for data in raw_data_actual_2[0, :, 0, :, :, :]:
+        zz = np.zeros((parameters[2], parameters[2], 2))
+        zz[:, :, 1] = data[:, :, 0]
+        actual_com.append(bubble_prediction.calculate_com(zz))
+        point_x, point_y = bubble_prediction.calculate_com(zz, True)
+        actual_2_y.append(point_x)
     guess_com = []
     guess_angles = []
     guess_y = []
+    guess_x = []
     for data in raw_data_guess[0, :, 0, :, :, :]:
         zz = np.zeros((parameters[2], parameters[2], 2))
         zz[:, :, 1] = data[:, :, 0]
@@ -271,6 +291,7 @@ def cross_check(model_name, initial_conditions):
         point_x, point_y = bubble_prediction.calculate_com(zz, True)
         guess_angles.append(np.arctan2(point_x, point_y))
         guess_y.append(point_x)
+        guess_x.append(point_y)
     guess_2_y = []
     for data in raw_data_guess_2[0, :, 0, :, :, :]:
         zz = np.zeros((parameters[2], parameters[2], 2))
@@ -279,49 +300,61 @@ def cross_check(model_name, initial_conditions):
         guess_2_y.append(point_x)
     plt.clf()
     plt.grid()
-    plt.ylabel("Centre of mass distance/AU")
-    plt.xlabel("Step")
-    plt.plot(actual_com, label="Actual")
-    plt.plot(guess_com, label="Predictions")
-    plt.legend()
-    # plt.savefig("model_performance/{}_centre_of_mass.png".format(model_name), dpi=500)
-    plt.clf()
-    plt.grid()
-    plt.ylabel("Angle from centre/Radians")
-    plt.xlabel("Step")
-
-    plt.plot(actual_angles, label="Actual")
-    plt.plot(guess_angles, label="Predictions")
-    plt.legend()
-    # plt.savefig("model_performance/{}_centre_of_mass_angle.png".format(model_name), dpi=500)
-    plt.clf()
-    plt.grid()
-    plt.ylabel("Value/Radians")
-    plt.xlabel("Step")
-    plt.plot(np.asarray(actual_angles) - np.asarray(guess_angles), label="Actual")
-    # plt.savefig("model_performance/{}_centre_of_mass_angle_diff.png".format(model_name), dpi=500)
-    plt.clf()
-    plt.grid()
-    plt.ylabel("Centre of mass difference")
-    plt.xlabel("Step")
-    plt.plot(np.asarray(actual_com) - np.asarray(guess_com), label="Actual")
-    # plt.savefig("model_performance/{}_centre_of_mass_diff.png".format(model_name), dpi=500)
-    plt.clf()
-    plt.grid()
     plt.ylabel("Y position")
     plt.xlabel("Step")
     plt.plot(actual_y, label="Actual")
     plt.plot(guess_y, label="Prediction")
+    # plt.plot(actual_x, "--", label="Actual (x)")
+    # plt.plot(guess_x, "--", label="Prediction (x)")
     plt.legend()
     plt.savefig("model_performance/{}_y_pos.png".format(model_name), dpi=500)
     plt.clf()
     plt.grid()
     plt.ylabel("Y position")
     plt.xlabel("Step")
-    plt.plot(guess_2_y, label="Prediction from 13")
-    plt.plot(guess_y, label="Prediction from 12")
+    plt.plot(guess_2_y, 'r-', label="Prediction from 15")
+    plt.plot(guess_y, 'b-', label="Prediction from 12")
+    plt.plot(actual_2_y, "r--", label="Actual from 15")
+    plt.plot(actual_y, "b--", label="Actual from 12")
     plt.legend()
     plt.savefig("model_performance/{}_y_pos_div.png".format(model_name), dpi=500)
+    plt.clf()
+    fig, (ax_1, ax_2) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]}, sharey=True)
+    ax_1.grid()
+    print("Intensive...")
+    length_actual = np.shape(actual_raw)[0]
+    pbar = tqdm(total=len(actual))
+    final_positions = []
+    close = []
+    far = []
+    for start_point in range(0, length_actual*parameters[12], parameters[12]):
+        new_guess = np.asarray(generate_predictions(
+            model_name, [initial_conditions[0], start_point + initial_conditions[1]],
+            length=length_actual - int(start_point/parameters[12])
+        ))
+        points = []
+        for i in range(0, int(start_point/parameters[12])):
+            points.append(actual_y[i])
+        for point in new_guess:
+            point_y, point_x = bubble_prediction.calculate_com(point, True)
+            points.append(point_y)
+        if start_point/parameters[12] < 100:
+            ax_1.plot(np.asarray(points), 'red', alpha=0.01)
+            far.append(np.asarray(points)[-1])
+        else:
+            ax_1.plot(np.asarray(points), 'green', alpha=0.05)
+            close.append(np.asarray(points)[-1])
+        final_positions.append(np.asarray(points)[-1])
+        pbar.update(1)
+    pbar.close()
+    ax_1.plot([100, 100], [-5, 5], 'g-')
+    ax_1.plot(actual_y, 'b--')
+    n, b, p = ax_2.hist(final_positions, orientation='horizontal', bins=50, color='m')
+    ax_2.plot([0, max(n)], [np.asarray(actual_y)[-1], np.asarray(actual_y)[-1]], 'b--')
+    ax_2.plot([0, max(n)], [np.mean(far), np.mean(far)], 'r:')
+    ax_2.plot([0, max(n)], [np.mean(close), np.mean(close)], 'g:')
+    plt.savefig("model_performance/{}_y_pos_evolve.png".format(model_name), dpi=500)
+
 
 
 def main():
@@ -422,9 +455,11 @@ def main():
         [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Freetown", 20, True],
         [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Frimley", 20, False],
     ]
+    print(len(to_analyse))
     for model in to_analyse:
         print(model[13])
         cross_check(model[13], [12, 20])
+
 
 if __name__ == "__main__":
     main()
