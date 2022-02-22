@@ -322,19 +322,19 @@ def cross_check(model_name, initial_conditions):
     fig, (ax_1, ax_2) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]}, sharey=True)
     ax_1.grid()
     print("Intensive...")
-    length_actual = np.shape(actual_raw)[0]
-    pbar = tqdm(total=len(actual))
+    length_actual = np.shape(actual_2_raw)[0]
+    pbar = tqdm(total=len(actual_2))
     final_positions = []
     close = []
     far = []
     for start_point in range(0, length_actual*parameters[12], parameters[12]):
         new_guess = np.asarray(generate_predictions(
-            model_name, [initial_conditions[0], start_point + initial_conditions[1]],
+            model_name, [15, start_point + initial_conditions[1]],
             length=length_actual - int(start_point/parameters[12])
         ))
         points = []
         for i in range(0, int(start_point/parameters[12])):
-            points.append(actual_y[i])
+            points.append(actual_2_y[i])
         for point in new_guess:
             point_y, point_x = bubble_prediction.calculate_com(point, True)
             points.append(point_y)
@@ -348,12 +348,12 @@ def cross_check(model_name, initial_conditions):
         pbar.update(1)
     pbar.close()
     ax_1.plot([100, 100], [-5, 5], 'g-')
-    ax_1.plot(actual_y, 'b--')
+    ax_1.plot(actual_2_y, 'b--')
     n, b, p = ax_2.hist(final_positions, orientation='horizontal', bins=50, color='m')
-    ax_2.plot([0, max(n)], [np.asarray(actual_y)[-1], np.asarray(actual_y)[-1]], 'b--')
+    ax_2.plot([0, max(n)], [np.asarray(actual_2_y)[-1], np.asarray(actual_2_y)[-1]], 'b--')
     ax_2.plot([0, max(n)], [np.mean(far), np.mean(far)], 'r:')
     ax_2.plot([0, max(n)], [np.mean(close), np.mean(close)], 'g:')
-    plt.savefig("model_performance/{}_y_pos_evolve.png".format(model_name), dpi=500)
+    plt.savefig("model_performance/{}_y_pos_evolve_15.png".format(model_name), dpi=500)
     plt.clf()
     plt.grid()
     plt.scatter(np.linspace(0, len(final_positions)-1, len(final_positions)), final_positions)
@@ -361,8 +361,8 @@ def cross_check(model_name, initial_conditions):
     for i in range(0, len(final_positions)):
         current_mean.append(np.mean(final_positions[:i]))
     plt.plot(current_mean, "b:")
-    plt.plot([0, len(final_positions)], [np.asarray(actual_y)[-1], np.asarray(actual_y)[-1]], "r--")
-    plt.savefig("model_performance/{}_predictions_evolve.png".format(model_name), dpi=500)
+    plt.plot([0, len(final_positions)], [np.asarray(actual_2_y)[-1], np.asarray(actual_2_y)[-1]], "r--")
+    plt.savefig("model_performance/{}_predictions_evolve_15.png".format(model_name), dpi=500)
 
 
 def main():
