@@ -354,7 +354,15 @@ def cross_check(model_name, initial_conditions):
     ax_2.plot([0, max(n)], [np.mean(far), np.mean(far)], 'r:')
     ax_2.plot([0, max(n)], [np.mean(close), np.mean(close)], 'g:')
     plt.savefig("model_performance/{}_y_pos_evolve.png".format(model_name), dpi=500)
-
+    plt.clf()
+    plt.grid()
+    plt.scatter(np.linspace(0, len(final_positions)-1, len(final_positions)), final_positions)
+    current_mean = []
+    for i in range(0, len(final_positions)):
+        current_mean.append(np.mean(final_positions[:i]))
+    plt.plot(current_mean, "b:")
+    plt.plot([0, len(final_positions)], [np.asarray(actual_y)[-1], np.asarray(actual_y)[-1]], "r--")
+    plt.savefig("model_performance/{}_predictions_evolve.png".format(model_name), dpi=500)
 
 
 def main():
