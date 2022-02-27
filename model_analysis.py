@@ -365,6 +365,27 @@ def cross_check(model_name, initial_conditions):
     plt.savefig("model_performance/{}_predictions_evolve_15.png".format(model_name), dpi=500)
 
 
+def cross_check_easy(model_name, initial_conditions):
+    model = get_model(model_name)
+    actual_data = generate_predictions(model_name, initial_conditions, dry_run=True)
+    actual_y = []
+    image_groupings = np.zeros((len(actual_data), 1, 45, 45, 3))
+    for index, data in enumerate(actual_data):
+        point_x, point_y = bubble_prediction.calculate_com(data, True)
+        actual_y.append(point_x)
+        image_groupings[index, 0, :, :, :] = data
+    predictions = model(image_groupings).numpy()
+    plt.plot(actual_y)
+    plt.plot(predictions[:, 0], label="Top")
+    plt.plot(predictions[:, 1], label="Bottom")
+    plt.plot(predictions[:, 2], label="Center")
+    plt.plot(predictions[:, 3], label="Split")
+    plt.legend()
+    plt.show()
+    print(predictions)
+    return 0
+
+
 def main():
     to_analyse = [
         [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 20, True],
@@ -466,7 +487,7 @@ def main():
     print(len(to_analyse))
     for model in to_analyse:
         print(model[13])
-        cross_check(model[13], [12, 20])
+        cross_check(model[13], [13, 10])
 
 
 if __name__ == "__main__":

@@ -201,9 +201,27 @@ def convert_dat_files(variant_range, resolution=0.0001):
         simulation_index += 1
 
 
+def get_sim_result(source):
+    outcomes = [3, 3, 0, 1, 3, 3, 3, 3, 0, 2, 3, 2, 3, 0, 3, 3]
+    sim_metadata = source.split("/")[1].split("_")[1:]
+    simulation_flippage = sim_metadata[0] == "True"
+    simulation_offset = int(sim_metadata[1])
+    simulation_resolution = float(sim_metadata[2])
+    simulation_number = int(sim_metadata[3])
+    result = outcomes[simulation_number]
+    output = result
+    if simulation_flippage and result == 0:
+        output = 1
+    if simulation_flippage and result == 1:
+        output = 0
+    final_array = np.zeros(4)
+    final_array[output] = 1
+    return final_array
+
+
 def create_training_data(
         frames: int, timestep: int, validation_split=0.1, image_size=64,
-        variants=[0], flips_allowed=True, resolution=0.001, excluded_sims=[]):
+        variants=[0], flips_allowed=True, resolution=0.001, excluded_sims=[], easy_mode=False):
     batch_size = 8
     simulation_names = glob.glob("Simulation_data_extrapolated/*")
     data_sources = []
@@ -249,15 +267,25 @@ def create_training_data(
     questions_array = np.zeros((
         int(np.floor(len(data_sources)*(1-validation_split))), frames, image_size, image_size, 3
     ), dtype="float16")
-    answers_array = np.zeros((
-        int(np.floor(len(data_sources)*(1-validation_split))), 1, image_size, image_size, 1
-    ), dtype="float16")
+    if easy_mode:
+        answers_array = np.zeros((
+            int(np.floor(len(data_sources) * (1 - validation_split))), 4
+        ), dtype="float16")
+    else:
+        answers_array = np.zeros((
+            int(np.floor(len(data_sources)*(1-validation_split))), 1, image_size, image_size, 1
+        ), dtype="float16")
     questions_array_valid = np.zeros((
         int(np.ceil(len(data_sources)*validation_split)), frames, image_size, image_size, 3
     ), dtype="float16")
-    answers_array_valid = np.zeros((
-        int(np.ceil(len(data_sources)*validation_split)), 1, image_size, image_size, 1
-    ), dtype="float16")
+    if easy_mode:
+        answers_array_valid = np.zeros((
+            int(np.ceil(len(data_sources) * validation_split)), 4
+        ), dtype="float16")
+    else:
+        answers_array_valid = np.zeros((
+            int(np.ceil(len(data_sources) * validation_split)), 1, image_size, image_size, 1
+        ), dtype="float16")
     print("Getting training data with shapes:")
     print(np.shape(questions_array))
     print(np.shape(answers_array))
@@ -288,8 +316,11 @@ def create_training_data(
                 array_index = index - 1 * int(np.floor(index * validation_split) + 1)
                 accessed_index_a.append(array_index)
                 try:
-                    location = data_sources.index(target_file)
-                    answers_array[array_index, int(frame / timestep) - frames, :, :, 0] = source_array[location, :, :, 1]
+                    if easy_mode:
+                        answers_array[array_index, :] = get_sim_result(refs[index][0])
+                    else:
+                        location = data_sources.index(target_file)
+                        answers_array[array_index, int(frame / timestep) - frames, :, :, 0] = source_array[location, :, :, 1]
                 except:
                     answers_array[array_index, int(frame / timestep) - frames, :, :, 0] = process_bmp(target_file, image_size)[:, :, 1]
         else:
@@ -307,25 +338,29 @@ def create_training_data(
                 array_index = int(index*validation_split)
                 accessed_index_av.append(array_index)
                 try:
-                    location = data_sources.index(target_file)
-                    answers_array_valid[array_index, int(frame / timestep) - frames, :, :, 0] = source_array[location, :, :, 1]
+                    if easy_mode:
+                        answers_array_valid[array_index, :] = get_sim_result(refs[index][0])
+                    else:
+                        location = data_sources.index(target_file)
+                        answers_array_valid[array_index, int(frame / timestep) - frames, :, :, 0] = source_array[location, :, :, 1]
                 except:
                     answers_array_valid[array_index, int(frame / timestep) - frames, :, :, 0] = process_bmp(target_file, image_size)[:, :, 1]
 
     pbar.close()
     print("Converting to datasets...")
-    normalisation_options = [
-        np.max(answers_array[:, :, :, :, 0]),
-        np.max(answers_array_valid[:, :, :, :, 0]),
-        np.max(questions_array[:, :, :, :, 1]),
-        np.max(questions_array_valid[:, :, :, :, 1])
-    ]
-    answers_array_valid = np.reshape(answers_array_valid, (int(np.ceil(len(data_sources)*validation_split)), image_size, image_size, 1))
-    answers_array = np.reshape(answers_array, (int(np.floor(len(data_sources)*(1-validation_split))), image_size, image_size, 1))
+    # normalisation_options = [
+    #     np.max(answers_array[:, :, :, :, 0]),
+    #     np.max(answers_array_valid[:, :, :, :, 0]),
+    #     np.max(questions_array[:, :, :, :, 1]),
+    #     np.max(questions_array_valid[:, :, :, :, 1])
+    # ]
+    if not easy_mode:
+        answers_array_valid = np.reshape(answers_array_valid, (int(np.ceil(len(data_sources)*validation_split)), image_size, image_size, 1))
+        answers_array = np.reshape(answers_array, (int(np.floor(len(data_sources)*(1-validation_split))), image_size, image_size, 1))
     print(np.shape(accessed_index_a))
     print(np.shape(accessed_index_av))
-    normalisation_best = max(normalisation_options)
-    print(normalisation_options)
+    # normalisation_best = max(normalisation_options)
+    # print(normalisation_options)
     print(np.shape(questions_array_valid))
     print(np.shape(answers_array_valid))
     testing_data = tf.data.Dataset.from_tensor_slices((questions_array, answers_array))

@@ -158,7 +158,7 @@ def inception_cell(model, activation, initializer, channels, axis=3):
 
 def create_inception_network(activation, optimizer, loss, input_frames, image_size=64, channels=3, encode_size=2,
                              allow_upsampling=True, allow_pooling=True, kernel_size=3, max_transpose_layers=3,
-                             dropout_rate=0.2, inception=True):
+                             dropout_rate=0.2, inception=True, simple=False):
     initializer = initializers.HeNormal()
     model = models.Sequential()
     current_axis_size = image_size
@@ -187,48 +187,52 @@ def create_inception_network(activation, optimizer, loss, input_frames, image_si
                                    channels=32 * 2**(laps-2))
         if laps < 2:
             laps += 1
-
-    max_leaps = max_transpose_layers
-    leap_correction = 0
-    calculated = False
-    first_run = True
-    boopage = True
-    while current_axis_size < image_size:
-        if laps < 0:
-            boopage = False
-            laps = 0
-        if current_axis_size * 2 < image_size and allow_upsampling and not first_run:
-            # Upsampling
-            model.add(layers.UpSampling2D(2))
-            current_axis_size = current_axis_size * 2
-        if (image_size - current_axis_size) > (kernel_size - 1) * max_leaps \
-                and not calculated \
-                and (not allow_upsampling or current_axis_size * 2 > image_size or first_run):
-            # Calculating the ideal kernel size for the fewest layers needed
-            leaps_needed = np.floor((image_size - current_axis_size) / (kernel_size - 1))
-            leap_correction = int(np.floor((kernel_size - 1) * (leaps_needed / max_leaps - 1)))
-            calculated = True
-        # Transpose operations
-        if current_axis_size + kernel_size - 1 > image_size:
-            # Close to full size
-            model.add(layers.Conv2DTranspose(32 * 2**laps, 2, activation=activation, kernel_initializer=initializer))
-            current_axis_size += 1
-        elif current_axis_size + kernel_size - 1 + leap_correction > image_size or boopage:
-            # Within a few jumps of full size
-            model.add(layers.Conv2DTranspose(
-                32 * 2**laps, kernel_size, activation=activation, kernel_initializer=initializer
-            ))
-            current_axis_size += kernel_size - 1
-        else:
-            # Full size far away but too close for upsampling
-            model.add(layers.Conv2DTranspose(
-                32 * 2**laps, kernel_size + leap_correction, activation=activation, kernel_initializer=initializer
-            ))
-            current_axis_size += kernel_size - 1 + leap_correction
-        laps -= 1
-        first_run = False
-    model.add(layers.Conv2DTranspose(1, 1, activation='sigmoid', kernel_initializer=initializer))
-
+    if not simple:
+        max_leaps = max_transpose_layers
+        leap_correction = 0
+        calculated = False
+        first_run = True
+        boopage = True
+        while current_axis_size < image_size:
+            if laps < 0:
+                boopage = False
+                laps = 0
+            if current_axis_size * 2 < image_size and allow_upsampling and not first_run:
+                # Upsampling
+                model.add(layers.UpSampling2D(2))
+                current_axis_size = current_axis_size * 2
+            if (image_size - current_axis_size) > (kernel_size - 1) * max_leaps \
+                    and not calculated \
+                    and (not allow_upsampling or current_axis_size * 2 > image_size or first_run):
+                # Calculating the ideal kernel size for the fewest layers needed
+                leaps_needed = np.floor((image_size - current_axis_size) / (kernel_size - 1))
+                leap_correction = int(np.floor((kernel_size - 1) * (leaps_needed / max_leaps - 1)))
+                calculated = True
+            # Transpose operations
+            if current_axis_size + kernel_size - 1 > image_size:
+                # Close to full size
+                model.add(layers.Conv2DTranspose(32 * 2**laps, 2, activation=activation, kernel_initializer=initializer))
+                current_axis_size += 1
+            elif current_axis_size + kernel_size - 1 + leap_correction > image_size or boopage:
+                # Within a few jumps of full size
+                model.add(layers.Conv2DTranspose(
+                    32 * 2**laps, kernel_size, activation=activation, kernel_initializer=initializer
+                ))
+                current_axis_size += kernel_size - 1
+            else:
+                # Full size far away but too close for upsampling
+                model.add(layers.Conv2DTranspose(
+                    32 * 2**laps, kernel_size + leap_correction, activation=activation, kernel_initializer=initializer
+                ))
+                current_axis_size += kernel_size - 1 + leap_correction
+            laps -= 1
+            first_run = False
+        model.add(layers.Conv2DTranspose(1, 1, activation='sigmoid', kernel_initializer=initializer))
+    else:
+        model.add(layers.Flatten())
+        current_axis_size = (current_axis_size**2) * 32 * 2**laps
+        model.add(layers.Dense(np.sqrt(current_axis_size), activation=activation, kernel_initializer=initializer))
+        model.add(layers.Dense(4, activation='sigmoid', kernel_initializer=initializer))
     model.compile(optimizer=optimizer, loss=loss, metrics=[
         losses.binary_crossentropy, losses.mean_squared_logarithmic_error
     ])

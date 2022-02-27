@@ -10,6 +10,7 @@ import pandas as pd
 from time import time
 from numpy.random import default_rng
 import imageio
+import model_analysis
 
 
 def plot_performance(model, image_frames, image_size, timestep, name):
@@ -443,6 +444,13 @@ def main():
         [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Freetown", 20, True],
         [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Frimley", 20, False],
     ]
+
+    parameters_extra = [
+        [losses.binary_crossentropy, 45, 1, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 5, True],
+        [losses.binary_crossentropy, 45, 1, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Aberdeen", 20, False],
+        [losses.binary_crossentropy, 45, 1, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bravo", 20, True],
+        [losses.binary_crossentropy, 45, 1, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bristol", 20, False],
+    ]
     for parameters in parameters_extra:
         loss_function = parameters[0]
         epochs = parameters[14]
@@ -498,7 +506,7 @@ def main():
                 activation_function, optimizer, loss_function, image_frames,
                 image_size=image_size, encode_size=encode_size, allow_pooling=True,
                 allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
-                dropout_rate=dropout_rate, inception=linearity
+                dropout_rate=dropout_rate, inception=linearity, simple=True
             )
                 # parameters_line = create_network.interpret_model_summary(model)
                 # print(parameters_line)
@@ -509,11 +517,12 @@ def main():
             #     excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False)
             training_data = dat_to_training.create_training_data(
                 image_frames, timestep, image_size=image_size,
-                excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=True)
+                excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=True)
             print(model.summary())
             # exit()
             model, history = create_network.train_model(model, training_data, epochs=epochs)
             model.save("models/{}".format(name))
+            model_analysis.cross_check_easy(name, [12, 20])
         except Exception as e:
             print("Fail!")
             print(e)
@@ -538,6 +547,20 @@ def main():
         plt.ylabel("Values/AU")
         plt.legend()
         plt.savefig("model_performance/{}_Losses_across_epochs.png".format(name), dpi=500)
+
+        input_images = np.zeros((1, image_frames, image_size, image_size, 3))
+        for frame in range(0, image_frames):
+            try:
+                input_images[0, frame, :, :, :] = dat_to_training.process_bmp(
+                    "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
+                        "False", 0, 0.001, 12, 20 + frame * timestep
+                    ), image_size
+                )
+            except IOError as e:
+                print("Error - either invalid simulation number or image out of range!")
+                print(e)
+        results = model(input_images)[0, :]
+        print(results)
         del model
         del training_data
 
