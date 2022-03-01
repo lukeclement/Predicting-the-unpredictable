@@ -446,10 +446,10 @@ def main():
     ]
 
     parameters_extra = [
-        [losses.binary_crossentropy, 45, 1, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 5, True],
-        [losses.binary_crossentropy, 45, 1, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Aberdeen", 20, False],
-        [losses.binary_crossentropy, 45, 1, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bravo", 20, True],
-        [losses.binary_crossentropy, 45, 1, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bristol", 20, False],
+        [losses.binary_crossentropy, 224, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 5, False],
+        [losses.binary_crossentropy, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Aberdeen", 20, False],
+        [losses.binary_crossentropy, 60, 4, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bravo", 20, True],
+        [losses.binary_crossentropy, 60, 4, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bristol", 20, False],
     ]
     for parameters in parameters_extra:
         loss_function = parameters[0]
@@ -464,57 +464,18 @@ def main():
         dropout_rate = 0
         name = parameters[13]
         linearity = parameters[15]
-        # loss_function = losses.mean_squared_logarithmic_error
-        # loss_function = losses.cosine_similarity
-        # loss_function = losses.log_cosh
-        # loss_function = losses.huber
-        # loss_function = loss_functions.bce_dice
-        # loss_function = losses.categorical_crossentropy
-        # loss_function = losses.BinaryCrossentropy()
-        # loss_function = losses.sparse_categorical_crossentropy
-        # loss_function = loss_functions.mse_dice
-        # loss_function = loss_functions.tester_loss
-        # loss_function = loss_functions.UBERLOSS
-        # # loss_function = loss_functions.ssim_loss
-        # epochs = 20
-        # image_frames = 2
-        # image_size = 60
-        # timestep = 5
-        # dropout_rate = 0.1
-        # encode_size = 2
-        # resolution = 0.001
-        # # howdy
-        # max_transpose_layers = 20
-        # kernel_size = 4
-        # dropout = 0
         try:
-            # model = models.load_model(
-            #     "models/Test_collection",
-            #     custom_objects={
-            #         "mean_squared_logarithmic_error": losses.mean_squared_logarithmic_error,
-            #         "binary_crossentropy": losses.binary_crossentropy,
-            #         "ssim_loss": loss_functions.ssim_loss,
-            #         "UBERLOSS": loss_functions.UBERLOSS
-            #     })
-            # model = create_network.create_neural_network(
+            model = create_network.create_resnet(activation_function, optimizer, loss_function, image_frames,
+                                                 image_size=image_size, inception=linearity)
+            print(model.summary())
+            # exit()
+            # model = create_network.create_inception_network(
             #     activation_function, optimizer, loss_function, image_frames,
             #     image_size=image_size, encode_size=encode_size, allow_pooling=True,
             #     allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
-            #     dropout_rate=dropout_rate
+            #     dropout_rate=dropout_rate, inception=linearity, simple=False
             # )
-            model = create_network.create_inception_network(
-                activation_function, optimizer, loss_function, image_frames,
-                image_size=image_size, encode_size=encode_size, allow_pooling=True,
-                allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
-                dropout_rate=dropout_rate, inception=linearity, simple=False
-            )
-                # parameters_line = create_network.interpret_model_summary(model)
-                # print(parameters_line)
-                # print(model.summary())
             print(name)
-            # training_data = dat_to_training.create_training_data(
-            #     image_frames, timestep, image_size=image_size,
-            #     excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False)
             training_data = dat_to_training.create_training_data(
                 image_frames, timestep, image_size=image_size,
                 excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False)
@@ -522,7 +483,7 @@ def main():
             # exit()
             model, history = create_network.train_model(model, training_data, epochs=epochs)
             model.save("models/{}".format(name))
-            model_analysis.cross_check(name, [12, 20])
+            # model_analysis.cross_check(name, [12, 20])
         except Exception as e:
             print("Fail!")
             print(e)

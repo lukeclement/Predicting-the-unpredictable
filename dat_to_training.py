@@ -221,8 +221,12 @@ def get_sim_result(source):
 
 def create_training_data(
         frames: int, timestep: int, validation_split=0.1, image_size=64,
-        variants=[0], flips_allowed=True, resolution=0.001, excluded_sims=[], easy_mode=False):
-    batch_size = 8
+        variants=None, flips_allowed=True, resolution=0.001, excluded_sims=None, easy_mode=False):
+    if excluded_sims is None:
+        excluded_sims = []
+    if variants is None:
+        variants = [0]
+    batch_size = 64
     simulation_names = glob.glob("Simulation_data_extrapolated/*")
     data_sources = []
     refs = []
@@ -378,7 +382,7 @@ def process_bmp(filename, image_size):
         range=[[-1, 1], [-1, 1]], bins=(image_size, image_size)
     )
     output_array = np.zeros((image_size, image_size, 3))
-    h = np.tanh(0.05 * h)
+    h = np.tanh(100 * h)
     output_array[:, :, 1] = h
     output_array = generate_rail(output_array)
     return output_array

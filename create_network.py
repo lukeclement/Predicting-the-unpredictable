@@ -1,5 +1,5 @@
 import numpy as np
-from tensorflow.keras import layers, models, Model, initializers, losses, optimizers
+from tensorflow.keras import layers, models, Model, initializers, losses, optimizers, activations
 import gc
 from tensorflow.keras import backend as k
 from tensorflow.keras.callbacks import Callback
@@ -153,6 +153,135 @@ def inception_cell(model, activation, initializer, channels, axis=3):
     merged = layers.concatenate([tower_1, tower_2, tower_3, tower_4], axis=axis)
 
     model.add(Model(input_tower, merged))
+    return model
+
+
+def inception_cell_revive(x, channels, axis=3):
+
+    tower_1 = layers.Conv2D(channels, (1, 1), padding='same')(
+        x)
+
+    tower_2 = layers.Conv2D(channels, (1, 1), padding='same')(
+        x)
+    tower_2 = layers.Conv2D(channels, (3, 3), padding='same')(
+        tower_2)
+
+    tower_3 = layers.Conv2D(channels, (1, 1), padding='same')(
+        x)
+    tower_3 = layers.Conv2D(channels, (5, 5), padding='same')(
+        tower_3)
+
+    tower_4 = layers.MaxPooling2D(3, strides=1, padding='same')(x)
+    tower_4 = layers.Conv2D(channels, 1, padding='same')(
+        tower_4)
+
+    merged = layers.concatenate([tower_1, tower_2, tower_3, tower_4], axis=axis)
+
+    return merged
+
+
+def create_resnet(activation, optimizer, loss, input_frames,
+                  image_size=64, channels=3, inception=True, structure=None, names=None):
+    if names is None:
+        names = ["alpha", "beta", "delta", "gamma"]
+    if structure is None:
+        structure = [3, 4, 6, 3]
+    input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels), name="Input layer")
+    x = layers.Conv3D(64, (input_frames, 1, 1), activation='tanh')(input_layer)
+    x = layers.Reshape((image_size, image_size, 64))(x)
+    x = layers.Conv2D(64, 7, strides=2, activation=activation, padding='same')(x)
+    x = layers.MaxPool2D(3, strides=2, padding='same')(x)
+    for index, value in enumerate(structure):
+        for i in range(value):
+            x_temp = x
+            if i == 0 and index != 0:
+                stride_length = 2
+            else:
+                stride_length = 1
+            x = layers.Conv2D(64 * (2 ** index), 1, strides=stride_length,
+                              name="{}-{}".format(names[index], i))(x)
+            x = layers.BatchNormalization()(x)
+            x = layers.Activation(activation)(x)
+            x = layers.Conv2D(64 * (2 ** index), 3, padding='same')(x)
+            if inception:
+                x = inception_cell_revive(x, channels=64 * (2 ** index))
+            x = layers.BatchNormalization()(x)
+            x = layers.Activation(activation)(x)
+            x = layers.Conv2D(64 * (2 ** index) * 4, 1, activation=activation)(x)
+            x = layers.BatchNormalization()(x)
+            x = layers.Activation(activation)(x)
+
+            if i == 0:
+                x_temp = layers.Conv2D(64 * (2 ** index) * 4, 1, strides=stride_length)(x_temp)
+                x_temp = layers.BatchNormalization()(x_temp)
+                x_temp = layers.Activation(activation)(x_temp)
+            x = layers.Add()([x, x_temp])
+
+    for index, value in enumerate(structure):
+        for i in range(value):
+            x_temp = x
+            if i == 0 and index != 0:
+                stride_length = 2
+            else:
+                stride_length = 1
+            x = layers.Conv2DTranspose(64 * (2 ** (index-4)) * 4, 1, strides=stride_length,
+                              name="{}-{}-T".format(names[index], i))(x)
+            x = layers.BatchNormalization()(x)
+            x = layers.Activation(activation)(x)
+            x = layers.Conv2DTranspose(64 * (2 ** (index-4)), 3, padding='same')(x)
+            if inception:
+                x = inception_cell_revive(x, channels=64 * (2 ** index))
+            x = layers.BatchNormalization()(x)
+            x = layers.Activation(activation)(x)
+            x = layers.Conv2DTranspose(64 * (2 ** (index-4)), 1, activation=activation)(x)
+            x = layers.BatchNormalization()(x)
+            x = layers.Activation(activation)(x)
+
+            if i == 0:
+                x_temp = layers.Conv2DTranspose(64 * (2 ** (index-4)), 1, strides=stride_length)(x_temp)
+                x_temp = layers.BatchNormalization()(x_temp)
+                x_temp = layers.Activation(activation)(x_temp)
+            x = layers.Add()([x, x_temp])
+        if index == 0:
+            x = layers.UpSampling2D(2)(x)
+    x = layers.Conv2DTranspose(1, 3, strides=2, activation=activation, padding='same')(x)
+    # x = layers.Reshape((image_size, image_size, 64))(x)
+    # x = layers.Conv3D(64, (input_frames, 1, 1), activation='tanh')(x)
+    # x = layers.Conv2DTranspose(64 * (2 ** len(structure)), 2)(x)
+    # # if inception:
+    # #     x = inception_cell_revive(x, channels=64 * (2 ** (len(structure)+1)))
+    # x = layers.BatchNormalization()(x)
+    # x = layers.Activation(activation)(x)
+    # x = layers.UpSampling2D(3)(x)
+    # x = layers.Conv2DTranspose(64 * (2 ** len(structure)-1), 4)(x)
+    # # if inception:
+    # #     x = inception_cell_revive(x, channels=64 * (2 ** (len(structure))))
+    # x = layers.BatchNormalization()(x)
+    # x = layers.Activation(activation)(x)
+    # x = layers.UpSampling2D(2)(x)
+    # x = layers.Conv2DTranspose(64 * (2 ** (len(structure)-2)), 2)(x)
+    # # if inception:
+    # #     x = inception_cell_revive(x, channels=64 * (2 ** (len(structure)-1)))
+    # x = layers.BatchNormalization()(x)
+    # x = layers.Activation(activation)(x)
+    # x = layers.UpSampling2D(2)(x)
+    # x = layers.Conv2DTranspose(64 * (2 ** (len(structure)-3)), 4)(x)
+    # # if inception:
+    # #     x = inception_cell_revive(x, channels=64 * (2 ** (len(structure)-2)))
+    # x = layers.BatchNormalization()(x)
+    # x = layers.Activation(activation)(x)
+    # x = layers.UpSampling2D(2)(x)
+    # x = layers.Conv2D(64, 3)(x)
+    # # if inception:
+    # #     x = inception_cell_revive(x, channels=64)
+    # x = layers.BatchNormalization()(x)
+    # x = layers.Activation(activation)(x)
+    # x = layers.Conv2D(1, 1)(x)
+    # x = layers.Activation(activations.sigmoid)(x)
+    model = Model(input_layer, x)
+    model.compile(optimizer=optimizer, loss=loss, metrics=[
+        losses.binary_crossentropy, losses.mean_squared_logarithmic_error
+    ])
     return model
 
 

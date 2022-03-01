@@ -218,7 +218,7 @@ def main():
         # exit()
     print(total_sims)
     print(np.shape(answers))
-    model = create_network(0.5, 3, 32, number_of_points)
+    model = create_network(1, 5, 32, number_of_points)
     print(model.summary())
     model.fit(questions, answers, epochs=5, validation_split=0.1)
 
