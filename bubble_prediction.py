@@ -506,7 +506,7 @@ def main():
                 activation_function, optimizer, loss_function, image_frames,
                 image_size=image_size, encode_size=encode_size, allow_pooling=True,
                 allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
-                dropout_rate=dropout_rate, inception=linearity, simple=True
+                dropout_rate=dropout_rate, inception=linearity, simple=False
             )
                 # parameters_line = create_network.interpret_model_summary(model)
                 # print(parameters_line)
@@ -517,12 +517,12 @@ def main():
             #     excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False)
             training_data = dat_to_training.create_training_data(
                 image_frames, timestep, image_size=image_size,
-                excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=True)
+                excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False)
             print(model.summary())
             # exit()
             model, history = create_network.train_model(model, training_data, epochs=epochs)
             model.save("models/{}".format(name))
-            model_analysis.cross_check_easy(name, [12, 20])
+            model_analysis.cross_check(name, [12, 20])
         except Exception as e:
             print("Fail!")
             print(e)
@@ -548,19 +548,6 @@ def main():
         plt.legend()
         plt.savefig("model_performance/{}_Losses_across_epochs.png".format(name), dpi=500)
 
-        input_images = np.zeros((1, image_frames, image_size, image_size, 3))
-        for frame in range(0, image_frames):
-            try:
-                input_images[0, frame, :, :, :] = dat_to_training.process_bmp(
-                    "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
-                        "False", 0, 0.001, 12, 20 + frame * timestep
-                    ), image_size
-                )
-            except IOError as e:
-                print("Error - either invalid simulation number or image out of range!")
-                print(e)
-        results = model(input_images)[0, :]
-        print(results)
         del model
         del training_data
 

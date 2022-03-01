@@ -7,18 +7,24 @@ import tensorflow as tf
 
 
 def main():
-    x, y = dat_to_training.read_file("Simulation_data/r0.54eps18.925/boundaries_750.dat")
-    x, y = dat_to_training.make_lines(x, y)
-    invert = False
-    variant = 0
-    BASE_SIZE = 60
-    h, x_edge, y_edge = np.histogram2d(
-        ((-1) ** (not invert)) * x, y + variant / (BASE_SIZE / 2),
-        # range=[[-1, 1], [-1, 1]], bins=(image_size*multiply + kernel_size - 1, image_size*multiply + kernel_size - 1)
-        range=[[-1, 1], [-1, 1]], bins=(BASE_SIZE, BASE_SIZE)
-    )
-    plt.imshow(h)
-    plt.show()
+    x = [3, 4, 5, 6, 7]
+    y = [6176, 8224, 10272, 12320, 14368]
+    p = np.polyfit(x, y, 1, cov=True)
+    print(p[1])
+    print(p[0])
+
+    # x, y = dat_to_training.read_file("Simulation_data/r0.54eps18.925/boundaries_750.dat")
+    # x, y = dat_to_training.make_lines(x, y)
+    # invert = False
+    # variant = 0
+    # BASE_SIZE = 60
+    # h, x_edge, y_edge = np.histogram2d(
+    #     ((-1) ** (not invert)) * x, y + variant / (BASE_SIZE / 2),
+    #     # range=[[-1, 1], [-1, 1]], bins=(image_size*multiply + kernel_size - 1, image_size*multiply + kernel_size - 1)
+    #     range=[[-1, 1], [-1, 1]], bins=(BASE_SIZE, BASE_SIZE)
+    # )
+    # plt.imshow(h)
+    # plt.show()
     # example_images = np.zeros((1, 4, 54, 54, 1))
     # example_images[0, 0, :, :, 0] = dat_to_training.process_bmp(
     #     "Simulation_images/Simulation_0/img_55.bmp", 54, 1
