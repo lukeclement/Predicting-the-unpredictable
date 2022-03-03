@@ -19,7 +19,8 @@ def get_model(name):
             "UBERLOSS": loss_functions.UBERLOSS,
             "UBERLOSS_minus_dice": loss_functions.UBERLOSS_minus_dice,
             "mse_dice": loss_functions.mse_dice,
-            "bce_dice": loss_functions.bce_dice
+            "bce_dice": loss_functions.bce_dice,
+            "jsd": loss_functions.jsd
         })
     return model
 
@@ -82,7 +83,7 @@ def read_parameters(model_name):
         [loss_functions.bce_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_BCEDICE", 20, False],
 
         [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Aberdeen", 20, False],
+        [loss_functions.UBERLOSS, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Aberdeen", 20, False],
         #
         [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bravo", 20, True],
         [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bristol", 20, False],
@@ -388,101 +389,101 @@ def cross_check_easy(model_name, initial_conditions):
 
 def main():
     to_analyse = [
-        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Aberdeen", 20, False],
+        # [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 20, True],
+        [loss_functions.UBERLOSS, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Aberdeen", 20, False],
         #
-        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bravo", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bristol", 20, False],
-        ##
-        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 3, 0.001, [0], True, [0], 5, "Charlie", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 3, 0.001, [0], True, [0], 5, "Castlebay", 20, False],
-        #
-        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 3, 0.001, [0], True, [0], 5, "Delta", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 3, 0.001, [0], True, [0], 5, "Derby", 20, False],
-        ###
-        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 2, 0.001, [0], True, [0], 5, "Echo", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 2, 0.001, [0], True, [0], 5, "Exeter", 20, False],
-        #
-        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 2, 0.001, [0], True, [0], 5, "Foxtrot", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 2, 0.001, [0], True, [0], 5, "Fleet", 20, False],
-        ##
-        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 2, 0.001, [0], True, [0], 5, "Golf", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 2, 0.001, [0], True, [0], 5, "Glasgow", 20, False],
-        #
-        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 2, 0.001, [0], True, [0], 5, "Hotel", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 2, 0.001, [0], True, [0], 5, "Hartlepool", 20, False],
-        ####
-        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 5, 0.001, [0], True, [0], 5, "India", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 5, 0.001, [0], True, [0], 5, "Inverness", 20, False],
-        #
-        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 5, 0.001, [0], True, [0], 5, "Juliet", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 5, 0.001, [0], True, [0], 5, "JohnOGroats", 20, False],
-        ##
-        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 5, 0.001, [0], True, [0], 5, "Kilo", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 5, 0.001, [0], True, [0], 5, "Kingston", 20, False],
-        #
-        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 5, 0.001, [0], True, [0], 5, "Lima", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 5, 0.001, [0], True, [0], 5, "London", 20, False],
-        ###
-        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 4, 0.001, [0], True, [0], 5, "Mancy", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 4, 0.001, [0], True, [0], 5, "Manchester", 20, False],
-        #
-        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 4, 0.001, [0], True, [0], 5, "November", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 4, 0.001, [0], True, [0], 5, "Nottingham", 20, False],
-        ##
-        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 4, 0.001, [0], True, [0], 5, "Oscar", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 4, 0.001, [0], True, [0], 5, "Oxford", 20, False],
-        #
-        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 4, 0.001, [0], True, [0], 5, "Papa", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 4, 0.001, [0], True, [0], 5, "Portsmouth", 20, False],
-        #####
-        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 3, 0.001, [0], True, [0], 5, "Quebec", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 3, 0.001, [0], True, [0], 5, "Quedgeley", 20, False],
-        #
-        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 3, 0.001, [0], True, [0], 5, "Romeo", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 3, 0.001, [0], True, [0], 5, "Reading", 20, False],
-        ##
-        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 3, 0.001, [0], True, [0], 5, "Sierra", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 3, 0.001, [0], True, [0], 5, "Salisbury", 20, False],
-        #
-        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 3, 0.001, [0], True, [0], 5, "Tango", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 3, 0.001, [0], True, [0], 5, "Taunton", 20, False],
-        ###
-        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 2, 0.001, [0], True, [0], 5, "Uniform", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 2, 0.001, [0], True, [0], 5, "Uxbridge", 20, False],
-        #
-        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 2, 0.001, [0], True, [0], 5, "Victor", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 2, 0.001, [0], True, [0], 5, "Verwood", 20, False],
-        ##
-        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 2, 0.001, [0], True, [0], 5, "Whiskey", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 2, 0.001, [0], True, [0], 5, "Woking", 20, False],
-        #
-        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 2, 0.001, [0], True, [0], 5, "Xray", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 2, 0.001, [0], True, [0], 5, "Xfuckonlyknows", 20, False],
-        ####
-        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 5, 0.001, [0], True, [0], 5, "Yankee", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 5, 0.001, [0], True, [0], 5, "Yateley", 20, False],
-        #
-        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 5, 0.001, [0], True, [0], 5, "Zulu", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 5, 0.001, [0], True, [0], 5, "Zetland", 20, False],
-        ##
-        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 5, 0.001, [0], True, [0], 5, "0_Amsterdam", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 5, 0.001, [0], True, [0], 5, "0_Andover", 20, False],
-        #
-        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 5, 0.001, [0], True, [0], 5, "0_Brussels", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 5, 0.001, [0], True, [0], 5, "0_Birmingham", 20, False],
-        ###
-        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 4, 0.001, [0], True, [0], 5, "0_Copenhagen", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 4, 0.001, [0], True, [0], 5, "0_Cardiff", 20, False],
-        #
-        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 4, 0.001, [0], True, [0], 5, "0_Dublin", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 4, 0.001, [0], True, [0], 5, "0_Dundee", 20, False],
-        ##
-        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_ElAaiun", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Edinburgh", 20, False],
-        #
-        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Freetown", 20, True],
-        [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Frimley", 20, False],
+        # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bravo", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bristol", 20, False],
+        # ##
+        # [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 3, 0.001, [0], True, [0], 5, "Charlie", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 3, 0.001, [0], True, [0], 5, "Castlebay", 20, False],
+        # #
+        # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 3, 0.001, [0], True, [0], 5, "Delta", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 3, 0.001, [0], True, [0], 5, "Derby", 20, False],
+        # ###
+        # [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 2, 0.001, [0], True, [0], 5, "Echo", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 2, 0.001, [0], True, [0], 5, "Exeter", 20, False],
+        # #
+        # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 2, 0.001, [0], True, [0], 5, "Foxtrot", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 2, 0.001, [0], True, [0], 5, "Fleet", 20, False],
+        # ##
+        # [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 2, 0.001, [0], True, [0], 5, "Golf", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 2, 0.001, [0], True, [0], 5, "Glasgow", 20, False],
+        # #
+        # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 2, 0.001, [0], True, [0], 5, "Hotel", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 2, 0.001, [0], True, [0], 5, "Hartlepool", 20, False],
+        # ####
+        # [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 5, 0.001, [0], True, [0], 5, "India", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 5, 0.001, [0], True, [0], 5, "Inverness", 20, False],
+        # #
+        # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 5, 0.001, [0], True, [0], 5, "Juliet", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 5, 0.001, [0], True, [0], 5, "JohnOGroats", 20, False],
+        # ##
+        # [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 5, 0.001, [0], True, [0], 5, "Kilo", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 5, 0.001, [0], True, [0], 5, "Kingston", 20, False],
+        # #
+        # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 5, 0.001, [0], True, [0], 5, "Lima", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 5, 0.001, [0], True, [0], 5, "London", 20, False],
+        # ###
+        # [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 4, 0.001, [0], True, [0], 5, "Mancy", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 4, 0.001, [0], True, [0], 5, "Manchester", 20, False],
+        # #
+        # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 4, 0.001, [0], True, [0], 5, "November", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 4, 0.001, [0], True, [0], 5, "Nottingham", 20, False],
+        # ##
+        # [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 4, 0.001, [0], True, [0], 5, "Oscar", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 5, True, True, 1, 4, 0.001, [0], True, [0], 5, "Oxford", 20, False],
+        # #
+        # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 4, 0.001, [0], True, [0], 5, "Papa", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 1, 4, 0.001, [0], True, [0], 5, "Portsmouth", 20, False],
+        # #####
+        # [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 3, 0.001, [0], True, [0], 5, "Quebec", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 3, 0.001, [0], True, [0], 5, "Quedgeley", 20, False],
+        # #
+        # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 3, 0.001, [0], True, [0], 5, "Romeo", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 3, 0.001, [0], True, [0], 5, "Reading", 20, False],
+        # ##
+        # [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 3, 0.001, [0], True, [0], 5, "Sierra", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 3, 0.001, [0], True, [0], 5, "Salisbury", 20, False],
+        # #
+        # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 3, 0.001, [0], True, [0], 5, "Tango", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 3, 0.001, [0], True, [0], 5, "Taunton", 20, False],
+        # ###
+        # [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 2, 0.001, [0], True, [0], 5, "Uniform", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 2, 0.001, [0], True, [0], 5, "Uxbridge", 20, False],
+        # #
+        # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 2, 0.001, [0], True, [0], 5, "Victor", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 2, 0.001, [0], True, [0], 5, "Verwood", 20, False],
+        # ##
+        # [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 2, 0.001, [0], True, [0], 5, "Whiskey", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 2, 0.001, [0], True, [0], 5, "Woking", 20, False],
+        # #
+        # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 2, 0.001, [0], True, [0], 5, "Xray", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 2, 0.001, [0], True, [0], 5, "Xfuckonlyknows", 20, False],
+        # ####
+        # [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 5, 0.001, [0], True, [0], 5, "Yankee", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 5, 0.001, [0], True, [0], 5, "Yateley", 20, False],
+        # #
+        # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 5, 0.001, [0], True, [0], 5, "Zulu", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 5, 0.001, [0], True, [0], 5, "Zetland", 20, False],
+        # ##
+        # [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 5, 0.001, [0], True, [0], 5, "0_Amsterdam", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 5, 0.001, [0], True, [0], 5, "0_Andover", 20, False],
+        # #
+        # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 5, 0.001, [0], True, [0], 5, "0_Brussels", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 5, 0.001, [0], True, [0], 5, "0_Birmingham", 20, False],
+        # ###
+        # [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 4, 0.001, [0], True, [0], 5, "0_Copenhagen", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 3, True, True, 5, 4, 0.001, [0], True, [0], 5, "0_Cardiff", 20, False],
+        # #
+        # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 4, 0.001, [0], True, [0], 5, "0_Dublin", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 5, 4, 0.001, [0], True, [0], 5, "0_Dundee", 20, False],
+        # ##
+        # [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_ElAaiun", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 3, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Edinburgh", 20, False],
+        # #
+        # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Freetown", 20, True],
+        # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Frimley", 20, False],
     ]
     print(len(to_analyse))
     for model in to_analyse:

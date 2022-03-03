@@ -180,6 +180,39 @@ def inception_cell_revive(x, channels, axis=3):
     return merged
 
 
+def create_basic_network(activation, optimizer, loss, input_frames, image_size, channels=3, latent_dimensions=16):
+    input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
+    x = layers.Conv3D(32, 3, padding="same")(input_layer)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation(activation)(x)
+    x = layers.Conv3D(64, 3, padding="same")(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation(activation)(x)
+    x = layers.Conv3D(64, (input_frames, 1, 1), padding="valid")(x)
+    x = layers.Reshape((image_size, image_size, 64))(x)
+    x = layers.Conv2D(latent_dimensions, 1, padding="same")(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation(activation)(x)
+
+    x = layers.Conv2DTranspose(64, 3, padding="same")(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation(activation)(x)
+    x = layers.Conv2DTranspose(32, 3, padding="same")(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation(activation)(x)
+    x = layers.Conv2DTranspose(1, 3, padding="same")(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation(activations.sigmoid)(x)
+
+    model = Model(input_layer, x)
+    model.compile(optimizer=optimizer, loss=loss, metrics=[
+        losses.binary_crossentropy, losses.mean_squared_logarithmic_error
+    ])
+    return model
+
+
+
+
 def create_resnet(activation, optimizer, loss, input_frames,
                   image_size=64, channels=3, inception=True, structure=None, names=None):
     if names is None:

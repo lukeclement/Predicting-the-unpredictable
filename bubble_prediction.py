@@ -446,10 +446,11 @@ def main():
     ]
 
     parameters_extra = [
-        [losses.binary_crossentropy, 224, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 5, False],
-        [losses.binary_crossentropy, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Aberdeen", 20, False],
-        [losses.binary_crossentropy, 60, 4, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bravo", 20, True],
-        [losses.binary_crossentropy, 60, 4, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bristol", 20, False],
+        # [losses.binary_crossentropy, 224, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 5, False],
+        [loss_functions.jsd, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Aberdeen", 5, True],
+        # [loss_functions.UBERLOSS, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 5, True],
+        # [losses.binary_crossentropy, 60, 4, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bravo", 20, True],
+        # [losses.binary_crossentropy, 60, 4, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bristol", 20, False],
     ]
     for parameters in parameters_extra:
         loss_function = parameters[0]
@@ -465,9 +466,9 @@ def main():
         name = parameters[13]
         linearity = parameters[15]
         try:
-            model = create_network.create_resnet(activation_function, optimizer, loss_function, image_frames,
-                                                 image_size=image_size, inception=linearity)
-            print(model.summary())
+            # model = create_network.create_resnet(activation_function, optimizer, loss_function, image_frames,
+            #                                      image_size=image_size, inception=linearity)
+            # print(model.summary())
             # exit()
             # model = create_network.create_inception_network(
             #     activation_function, optimizer, loss_function, image_frames,
@@ -475,6 +476,9 @@ def main():
             #     allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
             #     dropout_rate=dropout_rate, inception=linearity, simple=False
             # )
+            model = create_network.create_basic_network(
+                activation_function, optimizer, loss_function, image_frames, image_size
+            )
             print(name)
             training_data = dat_to_training.create_training_data(
                 image_frames, timestep, image_size=image_size,

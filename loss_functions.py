@@ -143,15 +143,15 @@ def UBERLOSS_minus_dice(y_true, y_pred):
     # test = tester_loss(y_true, y_pred)
     dice = dice_coef(y_true, y_pred)
     iou = iou_coef(y_true, y_pred)
-    # ssim = ssim_loss(y_true, y_pred)
+    ssim = ssim_loss(y_true, y_pred)
     mse = losses.mean_squared_logarithmic_error(y_true, y_pred)
     bce = losses.binary_crossentropy(y_true, y_pred)
     if k.mean(bce) > 0.1:
-        return (bce)/2
-        # return (bce + k.sigmoid(ssim))/2
+        # return (bce)/2
+        return (bce + k.sigmoid(ssim))/2
     else:
-        return (mse)/2
-        # return (mse + k.sigmoid(ssim))/2
+        # return (mse)/2
+        return (mse + k.sigmoid(ssim))/2
 
 
 def cubic_loss(y_true, y_pred):
@@ -205,11 +205,11 @@ def iou_coef(y_true, y_pred, smooth=1):
     return iou_t
 
 
-# def ssim_loss(y_true, y_pred):
-#     mid_t = k.mean(y_true, axis=1)
-#     mid_p = k.mean(y_pred, axis=1)
-#     return 1 - tf.reduce_sum(tf.image.ssim(mid_t, mid_p, 1.0))
-#     # return 1 - tf.image.ssim(mid_t, mid_p, 1.0)
+def ssim_loss(y_true, y_pred):
+    # mid_t = k.mean(y_true, axis=1)
+    # mid_p = k.mean(y_pred, axis=1)
+    return 1 - tf.reduce_sum(tf.image.ssim_multiscale(y_true, y_pred, 1.0))
+    # return 1 - tf.image.ssim(mid_t, mid_p, 1.0)
 
 
 def mse_dice(y_true, y_pred):
@@ -246,3 +246,10 @@ def mass_preservation(y_true, y_pred, smooth=1):
     true_mass = k.sum(y_true)
     pred_mass = k.sum(y_pred)
     return k.exp(-k.sqrt(k.abs(true_mass - pred_mass)) / 2)
+
+
+def jsd(y_true, y_pred):
+    mean = 0.5*(y_true + y_pred)
+    alpha = losses.kld(y_true, mean)
+    beta = losses.kld(y_pred, mean)
+    return 0.5*alpha + 0.5*beta

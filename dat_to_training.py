@@ -226,7 +226,7 @@ def create_training_data(
         excluded_sims = []
     if variants is None:
         variants = [0]
-    batch_size = 64
+    batch_size = 8
     simulation_names = glob.glob("Simulation_data_extrapolated/*")
     data_sources = []
     refs = []
@@ -382,7 +382,7 @@ def process_bmp(filename, image_size):
         range=[[-1, 1], [-1, 1]], bins=(image_size, image_size)
     )
     output_array = np.zeros((image_size, image_size, 3))
-    h = np.tanh(100 * h)
+    h = np.tanh(0.05 * h)
     output_array[:, :, 1] = h
     output_array = generate_rail(output_array)
     return output_array

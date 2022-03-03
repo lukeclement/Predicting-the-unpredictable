@@ -151,8 +151,8 @@ def main():
     # plt.savefig("y_interpolated.png", dpi=500)
     # plt.clf()
     number_of_points = 100
-    amplification = 50
-    correction = 1
+    amplification = 100
+    correction = 0
     all_data_sources = glob.glob("Simulation_data/*")
     print(all_data_sources)
     questions = np.zeros((14913, number_of_points, 2, 1))
@@ -220,7 +220,7 @@ def main():
     print(np.shape(answers))
     model = create_network(1, 5, 32, number_of_points)
     print(model.summary())
-    model.fit(questions, answers, epochs=5, validation_split=0.1)
+    model.fit(questions, answers, epochs=20, validation_split=0.1)
 
     predictions = np.zeros((900, number_of_points, 2))
     actuals = np.zeros((900, number_of_points, 2))
