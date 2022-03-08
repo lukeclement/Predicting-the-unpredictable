@@ -181,16 +181,51 @@ def inception_cell_revive(x, channels, axis=3):
 
 
 def make_transformer_encoder(inputs, head_size, head_number, full_forward, dropout=0):
-    x = layers.MultiHeadAttention(key_dim=head_size, num_heads=head_number, dropout=dropout)(inputs, inputs, inputs)
+    x = layers.MultiHeadAttention(key_dim=head_size, num_heads=head_number, dropout=dropout, attention_axes=1)(inputs, inputs, inputs)
     total = x + inputs
-    total = layers.LayerNormalization()(total)
-    x = layers.Dense(full_forward, activation='relu')(total)
-    x = layers.Dense(inputs.shape[-1], activation='relu')(x)
-    return layers.LayerNormalization()(total + x)
+    total = layers.LayerNormalization(epsilon=1e-6)(total)
+    x = layers.Dense(full_forward, activation=activations.swish)(total)
+    x = layers.Dense(inputs.shape[-1], activation=activations.swish)(x)
+    return layers.LayerNormalization(epsilon=1e-6)(total + x)
+    # return total + x
 
 
 def make_transformer_decoder(inputs, encodes, head_size, head_number, full_forward, dropout=0):
-    x = layers
+    x = layers.MultiHeadAttention(key_dim=head_size, num_heads=head_number, dropout=dropout, attention_axes=1)(inputs, inputs, inputs)
+    total = layers.LayerNormalization(epsilon=1e-6)(x + inputs)
+    # total = x + inputs
+    x = layers.MultiHeadAttention(key_dim=head_size, num_heads=head_number, dropout=dropout, attention_axes=1)(encodes, total, encodes)
+    # total = x + total
+    total = layers.LayerNormalization(epsilon=1e-6)(x + total)
+    x = layers.Dense(full_forward, activation=activations.swish)(total)
+    x = layers.Dense(inputs.shape[-1], activation=activations.swish)(x)
+    return layers.LayerNormalization(epsilon=1e-6)(x + total)
+
+
+def create_transformer_network(activation, optimizer, loss, input_frames, image_size, channels=3, layering=1):
+    input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
+    # x = layers.Reshape((input_frames*image_size*image_size*channels, 1))(input_layer)
+    # y = layers.Reshape((input_frames*image_size*image_size*channels, 1))(input_layer)
+    inputs = input_layer
+    x = inputs
+    y = inputs
+    for _ in range(layering):
+        x = make_transformer_encoder(x, 64, 4, 10)
+        y = make_transformer_decoder(y, x, 64, 4, 10)
+
+    while y.shape[1] > 2:
+        y = layers.Conv3D(32, (2, 1, 1), activation=activations.swish)(y)
+    if y.shape[1] == 2:
+        y = layers.Conv3D(1, (2, 1, 1), activation=activations.swish)(y)
+        y = layers.Reshape((image_size, image_size, 1))(y)
+        # inputs = layers.Reshape((image_size, image_size, 1))(inputs)
+    y = layers.Reshape((image_size, image_size, 1))(y)
+    model = Model(input_layer, y)
+    model.compile(optimizer=optimizer, loss=loss, metrics=[
+        losses.binary_crossentropy, losses.mean_squared_logarithmic_error
+    ])
+    return model
+
 
 def create_basic_network(activation, optimizer, loss, input_frames, image_size, channels=3, latent_dimensions=16):
     input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
@@ -221,8 +256,6 @@ def create_basic_network(activation, optimizer, loss, input_frames, image_size, 
         losses.binary_crossentropy, losses.mean_squared_logarithmic_error
     ])
     return model
-
-
 
 
 def create_resnet(activation, optimizer, loss, input_frames,

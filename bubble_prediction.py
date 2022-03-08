@@ -467,32 +467,37 @@ def main():
         dropout_rate = 0
         name = parameters[13]
         linearity = parameters[15]
-        try:
-            # model = create_network.create_resnet(activation_function, optimizer, loss_function, image_frames,
-            #                                      image_size=image_size, inception=linearity)
-            # print(model.summary())
-            # exit()
-            model = create_network.create_inception_network(
-                activation_function, optimizer, loss_function, image_frames,
-                image_size=image_size, encode_size=encode_size, allow_pooling=True,
-                allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
-                dropout_rate=dropout_rate, inception=linearity, simple=False
-            )
-            # model = create_network.create_basic_network(
-            #     activation_function, optimizer, loss_function, image_frames, image_size
-            # )
-            print(name)
-            training_data = dat_to_training.create_training_data(
-                image_frames, timestep, image_size=image_size,
-                excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False)
-            print(model.summary())
-            # exit()
-            model, history = create_network.train_model(model, training_data, epochs=epochs)
-            model.save("models/{}".format(name))
-            # model_analysis.cross_check(name, [12, 20])
-        except Exception as e:
-            print("Fail!")
-            print(e)
+        # try:
+        # model = create_network.create_resnet(activation_function, optimizer, loss_function, image_frames,
+        #                                      image_size=image_size, inception=linearity)
+        # print(model.summary())
+        # exit()
+        # model = create_network.create_inception_network(
+        #     activation_function, optimizer, loss_function, image_frames,
+        #     image_size=image_size, encode_size=encode_size, allow_pooling=True,
+        #     allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
+        #     dropout_rate=dropout_rate, inception=linearity, simple=False
+        # )
+        # model = create_network.create_basic_network(
+        #     activation_function, optimizer, loss_function, image_frames, image_size
+        # )
+        model = create_network.create_transformer_network(
+            activation_function, optimizer, loss_function, image_frames, image_size
+        )
+        print(name)
+        print(model.summary())
+        # exit()
+        training_data = dat_to_training.create_training_data(
+            image_frames, timestep, image_size=image_size,
+            excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False)
+        # print(model.summary())
+        # exit()
+        model, history = create_network.train_model(model, training_data, epochs=epochs)
+        model.save("models/{}".format(name))
+        # model_analysis.cross_check(name, [12, 20])
+        # except Exception as e:
+        #     print("Fail!")
+        #     print(e)
 
         overall_loss = history.history["loss"]
         overall_val = history.history["val_loss"]

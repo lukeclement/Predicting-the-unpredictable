@@ -369,11 +369,11 @@ def create_training_data(
     print(np.shape(answers_array_valid))
     testing_data = tf.data.Dataset.from_tensor_slices((questions_array, answers_array))
     testing_data = testing_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
-
     validation_data = tf.data.Dataset.from_tensor_slices((questions_array_valid, answers_array_valid))
     validation_data = validation_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    #
     return [testing_data, validation_data]
-
+    # return questions_array, answers_array
 
 def process_bmp(filename, image_size):
     x, y = np.load(filename)
