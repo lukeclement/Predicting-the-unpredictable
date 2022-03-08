@@ -82,8 +82,9 @@ def read_parameters(model_name):
         [loss_functions.mse_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_MSEDICE", 20, False],
         [loss_functions.bce_dice, 60, 2, 3, True, True, 10, 3, 0.001, [0], True, [0], 5, "Trans_BCEDICE", 20, False],
 
-        [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 20, True],
+        [loss_functions.UBERLOSS, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 20, True],
         [loss_functions.UBERLOSS, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Aberdeen", 20, False],
+        [loss_functions.UBERLOSS, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Andover", 5, True],
         #
         [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bravo", 20, True],
         [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bristol", 20, False],
@@ -389,7 +390,8 @@ def cross_check_easy(model_name, initial_conditions):
 
 def main():
     to_analyse = [
-        # [loss_functions.UBERLOSS, 45, 3, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 20, True],
+        [loss_functions.UBERLOSS, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 20, True],
+        [loss_functions.UBERLOSS, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Andover", 5, True],
         [loss_functions.UBERLOSS, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Aberdeen", 20, False],
         #
         # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bravo", 20, True],

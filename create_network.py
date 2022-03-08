@@ -180,6 +180,18 @@ def inception_cell_revive(x, channels, axis=3):
     return merged
 
 
+def make_transformer_encoder(inputs, head_size, head_number, full_forward, dropout=0):
+    x = layers.MultiHeadAttention(key_dim=head_size, num_heads=head_number, dropout=dropout)(inputs, inputs, inputs)
+    total = x + inputs
+    total = layers.LayerNormalization()(total)
+    x = layers.Dense(full_forward, activation='relu')(total)
+    x = layers.Dense(inputs.shape[-1], activation='relu')(x)
+    return layers.LayerNormalization()(total + x)
+
+
+def make_transformer_decoder(inputs, encodes, head_size, head_number, full_forward, dropout=0):
+    x = layers
+
 def create_basic_network(activation, optimizer, loss, input_frames, image_size, channels=3, latent_dimensions=16):
     input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
     x = layers.Conv3D(32, 3, padding="same")(input_layer)
