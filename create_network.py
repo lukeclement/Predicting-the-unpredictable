@@ -176,8 +176,57 @@ def inception_cell_revive(x, channels, axis=3):
         tower_4)
 
     merged = layers.concatenate([tower_1, tower_2, tower_3, tower_4], axis=axis)
+    return merged
+
+
+def convolutional_transformer(x, channels, activation):
+    key = layers.Conv2D(channels, 1, padding='same')(x)
+    query = layers.Conv2D(channels, 1, padding='same')(x)
+    value = layers.Conv2D(channels, 1, padding='same')(x)
+    attention_map = layers.Multiply()([key, query])
+    attention_map = layers.Softmax()(attention_map)
+    transformed = layers.Multiply()([attention_map, value])
+    transformed = layers.Conv2D(channels, 1, padding='same', activation=activation)(transformed)
+    return transformed
+
+
+def inception_cell_transformer(x, channels, activation, axis=3):
+
+    tower_1 = convolutional_transformer(x, channels, activation)
+    # tower_1 = layers.Conv2D(channels, 1, padding='same', activation=activation)(x)
+
+    tower_2 = layers.Conv2D(channels, 1, padding='same', activation=activation)(x)
+    tower_2 = layers.Conv2D(channels, 3, padding='same', activation=activation)(tower_2)
+    tower_2 = convolutional_transformer(tower_2, channels, activation)
+
+    tower_3 = layers.Conv2D(channels, 1, padding='same', activation=activation)(x)
+    tower_3 = layers.Conv2D(channels, 5, padding='same', activation=activation)(tower_3)
+    tower_3 = convolutional_transformer(tower_3, channels, activation)
+
+    tower_4 = layers.MaxPooling2D(3, strides=1, padding='same')(x)
+    tower_4 = layers.Conv2D(channels, 1, padding='same', activation=activation)(tower_4)
+    tower_4 = convolutional_transformer(tower_4, channels, activation)
+
+    merged = layers.concatenate([tower_1, tower_2, tower_3, tower_4], axis=axis)
 
     return merged
+
+
+def create_inception_transformer_network(activation, optimizer, loss, input_frames, image_size=64, channels=3, num_layers=6):
+
+    input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
+    x = input_layer
+    while x.shape[1] > 1:
+        x = layers.Conv3D(32, (2, 1, 1), activation=activation)(x)
+    x = layers.Reshape((x.shape[2], x.shape[2], 32))(x)
+    for _ in range(num_layers):
+        x = inception_cell_transformer(x, 32, activation)
+    x = layers.Conv2D(1, 1, activation='sigmoid')(x)
+    model = Model(input_layer, x)
+    model.compile(optimizer=optimizer, loss=loss, metrics=[
+        losses.binary_crossentropy, losses.mean_squared_logarithmic_error
+    ])
+    return model
 
 
 def make_transformer_encoder(inputs, head_size, head_number, full_forward, dropout=0):
@@ -194,7 +243,9 @@ def make_transformer_decoder(inputs, encodes, head_size, head_number, full_forwa
     x = layers.MultiHeadAttention(key_dim=head_size, num_heads=head_number, dropout=dropout, attention_axes=1)(inputs, inputs, inputs)
     total = layers.LayerNormalization(epsilon=1e-6)(x + inputs)
     # total = x + inputs
-    x = layers.MultiHeadAttention(key_dim=head_size, num_heads=head_number, dropout=dropout, attention_axes=1)(encodes, total, encodes)
+    # VKQ VK->encodes, Q->total
+    # QVK
+    x = layers.MultiHeadAttention(key_dim=head_size, num_heads=head_number, dropout=dropout, attention_axes=1)(total, encodes, encodes)
     # total = x + total
     total = layers.LayerNormalization(epsilon=1e-6)(x + total)
     x = layers.Dense(full_forward, activation=activations.swish)(total)
@@ -210,8 +261,8 @@ def create_transformer_network(activation, optimizer, loss, input_frames, image_
     x = inputs
     y = inputs
     for _ in range(layering):
-        x = make_transformer_encoder(x, 64, 4, 10)
-        y = make_transformer_decoder(y, x, 64, 4, 10)
+        x = make_transformer_encoder(x, 64, 8, 10)
+        y = make_transformer_decoder(y, x, 64, 8, 10)
 
     while y.shape[1] > 2:
         y = layers.Conv3D(32, (2, 1, 1), activation=activations.swish)(y)

@@ -448,8 +448,8 @@ def main():
     parameters_extra = [
         # [losses.binary_crossentropy, 224, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 5, False],
         # [loss_functions.jsd, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Aberdeen", 5, True],
-        [loss_functions.UBERLOSS, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Andover", 5, True],
-        [loss_functions.UBERLOSS, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 5, False],
+        [loss_functions.UBERLOSS, 45, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Andover", 5, True],
+        # [loss_functions.UBERLOSS, 45, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 5, False],
         # [loss_functions.jsd, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 5, False],
         # [losses.binary_crossentropy, 60, 4, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bravo", 20, True],
         # [losses.binary_crossentropy, 60, 4, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bristol", 20, False],
@@ -481,15 +481,18 @@ def main():
         # model = create_network.create_basic_network(
         #     activation_function, optimizer, loss_function, image_frames, image_size
         # )
-        model = create_network.create_transformer_network(
-            activation_function, optimizer, loss_function, image_frames, image_size
+        # model = create_network.create_transformer_network(
+        #     activation_function, optimizer, loss_function, image_frames, image_size
+        # )
+        model = create_network.create_inception_transformer_network(
+            activation_function, optimizer, loss_function, image_frames, image_size=image_size
         )
         print(name)
         print(model.summary())
         # exit()
         training_data = dat_to_training.create_training_data(
             image_frames, timestep, image_size=image_size,
-            excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False)
+            excluded_sims=[12, 13, 14, 15, 1, 2], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False)
         # print(model.summary())
         # exit()
         model, history = create_network.train_model(model, training_data, epochs=epochs)
