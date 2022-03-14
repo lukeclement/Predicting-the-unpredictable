@@ -9,7 +9,6 @@ def read_file(file_path):
     Input: file path
     Output: A pair of 1D arrays (x and y)
     """
-
     x = []
     y = []
     file = open(file_path, "r")
@@ -19,9 +18,31 @@ def read_file(file_path):
             main_data = True
         if main_data and not "ZONE" in line:
             data_points = line.strip().split(" ")
-            x.append(float(data_points[0]))
-            y.append(float(data_points[1]))
+            x.append(float(data_points[1]))
+            y.append(float(data_points[0]))
+    file.close()
+    x = np.asarray(x)
+    y = np.asarray(y)
     return x, y
+
+
+def transform_into_array_2(x, y, varient, flip, size=128):
+    if not flip:
+        h, x_edge, y_edge, image = plt.hist2d(x + varient/(size/2), y, range=[[-1, 1], [-1, 1]], bins=(size, size))
+    else:
+        h, x_edge, y_edge, image = plt.hist2d(x + varient/(size/2), -y, range=[[-1, 1], [-1, 1]], bins=(size, size))
+    end_file = np.zeros((size, size, 3))
+    end_file[:, :, 1] = np.minimum(h, np.zeros((size, size))+1)
+
+    for i in range(0, size):
+        if i < size / 2:
+            rail = i / (size / 2)
+        else:
+            rail = 2 - i / (size / 2)
+        runway = np.zeros(size) + rail
+        end_file[i, :, 2] = runway
+    plt.close()
+    return end_file
 
 
 def transform_into_array(x, y, varient, size=128):
@@ -38,6 +59,7 @@ def transform_into_array(x, y, varient, size=128):
     h, x_edge, y_edge, image = plt.hist2d(x, y, range=[[-1, 1], [-1, 1]], bins=(size, size))
     news = []
     max_val = np.max(h)
+    end_file = np.zeros((size, size, 3))
     for i in range(0, np.size(h[0])):
         li = []
         for j in range(0, np.size(h[0])):
@@ -99,18 +121,29 @@ def main():
     num_of_sims = np.size(sim_names)
     for sim_number in range(0, num_of_sims):
         files = glob.glob("{}/b*.dat".format(sim_names[sim_number]))
-        for i in range(0, 2):
-            print("Running ({} files found in simulation {})".format(np.size(files), sim_names[sim_number]))
+        index = 0
+        for fi in [[True, 0], [True, 1], [False, 0], [False, 1]]:
+            flip = fi[0]
+            i = fi[1]
+            # print("Running ({} files found in simulation {})".format(np.size(files), sim_names[sim_number]))
+            if flip:
+                print("{}, flipped, shifted {} -> Simulation_{}".format(sim_names[sim_number], i-1, sim_number + index * num_of_sims))
+            else:
+                print("{}, shifted {} -> Simulation_{}".format(sim_names[sim_number], i-1, sim_number + index * num_of_sims))
+
             try:
-                os.mkdir("Simulation_images/Simulation_{}".format(sim_number + i * num_of_sims))
-            except:
+                os.mkdir("Simulation_images/Simulation_{}".format(sim_number + index * num_of_sims))
+            except OSError:
                 print("Folder exists!")
             for file in files:
                 x, y = read_file(file)
                 step_number = int(file[file.find("s_") + 2:-4])
-                np.save("Simulation_images/Simulation_{}/img_{}".format(sim_number + i * num_of_sims, step_number),
-                        transform_into_array(x, y, i - 1, size=64))
+                end_array = transform_into_array_2(x, y, i - 1, flip, size=64)
+                np.save("Simulation_images/Simulation_{}/img_{}".format(sim_number + index * num_of_sims, step_number)
+                        , end_array, allow_pickle=False)
+            index += 1
 
 
 if __name__ == "__main__":
     main()
+

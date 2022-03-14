@@ -5,6 +5,8 @@ import glob
 import matplotlib.pyplot as plt
 from tensorflow.keras import backend as K
 import imageio
+import Generate_sources
+import os
 
 
 def iou_coef(y_true, y_pred, smooth=1):
@@ -16,7 +18,13 @@ def iou_coef(y_true, y_pred, smooth=1):
 
 
 def bce_dice(y_true, y_pred):
-    return losses.binary_crossentropy(y_true, y_pred) - K.log(dice_coef(y_true, y_pred))
+    bce = losses.binary_crossentropy(y_true, y_pred)
+    # bce = losses.MeanSquaredError(y_true, y_pred)
+    di = K.log(dice_coef(y_true, y_pred))
+    iou = K.log(iou_coef(y_true, y_pred))
+    com = K.log(com_coef(y_true, y_pred))
+    # return bce - di - iou + com
+    return bce - di - iou
 
 
 def dice_coef(y_true, y_pred, smooth=1):
@@ -27,11 +35,17 @@ def dice_coef(y_true, y_pred, smooth=1):
 
 
 def com_coef(y_true, y_pred):
-    actual = calculate_com(y_true.eval(session=tf.compat.v1.Session()))
-    predict = calculate_com(y_pred.eval(session=tf.compat.v1.Session()))
-    difference = predict - actual
-    radius_sq = difference[0] ** 2 + difference[1] ** 2
-    return np.exp(radius_sq)
+    i_1, j_1 = tf.meshgrid(tf.range(64), tf.range(64), indexing='ij')
+    coords_1 = tf.stack([tf.reshape(i_1, (-1,)), tf.reshape(j_1, (-1,))], axis=-1)
+    coords_1 = tf.cast(coords_1, tf.float32)
+    volumes_flat_1 = tf.reshape(y_true, [-1, 64 * 64, 1])
+    total_mass_1 = tf.reduce_sum(volumes_flat_1, axis=None)
+    centre_of_mass_1 = tf.reduce_sum(volumes_flat_1 * coords_1, axis=None) / total_mass_1
+    volumes_flat_2 = tf.reshape(y_pred, [-1, 64 * 64, 1])
+    total_mass_2 = tf.reduce_sum(volumes_flat_2, axis=None)
+    centre_of_mass_2 = tf.reduce_sum(volumes_flat_2 * coords_1, axis=None) / total_mass_2
+    difference = centre_of_mass_1 - centre_of_mass_2
+    return K.abs(difference)
 
 
 def mass_preservation(y_true, y_pred, smooth=1):
@@ -111,9 +125,10 @@ def create_neural_net(activation, optimizer, loss, frames=4, size=128, channels=
         The model, ready to be fitted!
     """
     model = models.Sequential()
-    model.add(layers.Conv3D(32, (3, 3, 3), activation=activation, input_shape=(frames, size, size, channels)))
-    model.add(layers.Conv3D(64, (2, 2, 2), activation=activation))
-    model.add(layers.Reshape((61, 61, 64)))
+    model.add(layers.Conv3D(32, (2, 2, 2), activation=activation, input_shape=(frames, size, size, channels)))
+    for frame in range(1, frames-1):
+        model.add(layers.Conv3D(32, (2, 1, 1), activation=activation))
+    model.add(layers.Reshape((63, 63, 32)))
     model.add(layers.MaxPooling2D((2, 2)))
     model.add(layers.Conv2D(64, (3, 3), activation=activation))
     model.add(layers.MaxPooling2D((2, 2)))
@@ -123,10 +138,11 @@ def create_neural_net(activation, optimizer, loss, frames=4, size=128, channels=
     model.add(layers.Conv2DTranspose(64, (4, 4), activation=activation))
     model.add(layers.UpSampling2D((2, 2)))
     model.add(layers.Conv2DTranspose(32, (3, 3), activation=activation))
-    model.add(layers.Conv2DTranspose(channels, (1, 1), activation='sigmoid'))
+    model.add(layers.Conv2DTranspose(1, (1, 1), activation='sigmoid'))
+    # model.add(layers.Conv2DTranspose(1, (1, 1), activation=activation))
 
     print(model.summary())
-    model.compile(optimizer=optimizer, loss=loss, metrics=[iou_coef, dice_coef, mass_preservation])
+    model.compile(optimizer=optimizer, loss=loss, metrics=[iou_coef, dice_coef, mass_preservation, com_coef])
     # model.compile(optimizer=optimizer, loss=loss, metrics=[mass_preservation])
     return model
 
@@ -144,16 +160,56 @@ def train_model(model, training_images, validation_split=0.1, epochs=20):
     """
     questions = training_images[0]
     answers = training_images[1]
-    history = model.fit(questions, answers, epochs=epochs, validation_split=validation_split)
+    history = model.fit(questions, answers, epochs=epochs, validation_split=validation_split, shuffle=True)
 
     return model, history
 
 
-def predict_future(model, start_image_number, sim, number_of_steps, timestep_size, name):
-    initial = np.load("Simulation_images/{}/img_{}.npy".format(sim, start_image_number))
-    initial = [initial]
-    current_imgs = np.stack([x.tolist() for x in initial])
-    plt.imshow(current_imgs[0], cmap=plt.get_cmap(name))
+def predict_future_2(model, timestep_size, simulation_number, start_number,
+                     frames=4, size=128, channels=3, predicition_length=100, name="Model_test"):
+    input_frames = np.zeros((1, frames, size, size, channels))
+    for frame in range(0, frames):
+        input_frames[0, frame, :, :, :] = np.load("Simulation_images/Simulation_{}/img_{}.npy".format(
+            simulation_number, start_number + frame * timestep_size
+        ))
+    generated_frames = []
+    try:
+        os.mkdir("Machine/{}".format(name))
+    except OSError:
+        print("Folder exists!")
+    for prediction in range(0, predicition_length):
+        output_frame = model(input_frames)
+        for frame in range(0, frames):
+            if frame != frames - 1:
+                input_frames[0, frame, :, :, :] = input_frames[0, frame + 1, :, :, :]
+            else:
+                input_frames[0, frame, :, :, 1] = np.around(output_frame[0, :, :, 0])
+                # input_frames[0, frame, :, :, 1] = output_frame[0, :, :, 0]
+                for i in range(0, size):
+                    if i < size / 2:
+                        rail = i / (size / 2)
+                    else:
+                        rail = 2 - i / (size / 2)
+                    runway = np.zeros(size) + rail
+                    input_frames[0, frame, i, :, 2] = runway
+        plt.imshow(input_frames[0, frames-1])
+        plt.savefig("Machine/{}/Test_Predict_{}.png".format(name, prediction))
+        plt.close()
+        # test_img = np.load("Simulation_images/Simulation_{}/img_{}.npy".format(
+        #    simulation_number, start_number + (prediction+frames) * timestep_size
+        # ))
+        # plt.imshow(test_img)
+        # plt.savefig("Machine/Test_Actual_{}.png".format(prediction))
+    return 0
+
+
+def predict_future(model, start_image_number, sim, number_of_steps, timestep_size, name, frames=4):
+    initial = []
+    for f in range(0, frames):
+        temp = np.load("Simulation_images/{}/img_{}.npy".format(sim, start_image_number + frames * timestep_size))
+        initial.append(temp)
+    current_frames = np.stack([x.tolist() for x in initial])
+    plt.imshow(current_frames[0])
     plt.savefig("Machine_predictions/setup.png")
     saved_names = []
     comparison_names = []
@@ -201,11 +257,45 @@ def make_gif(filenames, name):
     imageio.mimsave('Machine_predictions/{}.gif'.format(name), images)
 
 
-def main():
-    files = glob.glob("Simulation_images/*")
+def run_metaparameter_tests(files):
+    loss_results = []
+    frame_numbers = []
+    timestep_sizes = []
     active = 'LeakyReLU'
     optimizer = 'adam'
-    loss = losses.BinaryCrossentropy()
+    #loss = bce_dice
+    loss = losses.binary_crossentropy
+    for j in range(3, 9):
+        for i in range(2, 7):
+            timestep_sizes.append(i)
+            frame_numbers.append(j)
+            training_data = Generate_sources.get_source_arrays_2(files, timestep_size=i, frames=j, size=64, channels=3)
+            # training_data = [np.load("Questions.npy"), np.load("Answers.npy")]
+            model = create_neural_net(active, optimizer, loss, size=64, frames=j)
+            model, history = train_model(model, training_data, epochs=1)
+            del training_data[:]
+            loss_results.append(history.history['loss'][0])
+            for k in range(0, 500, 50):
+                print(k)
+                predict_future_2(model, i, 48, k, size=64, frames=j, name="{}_{}_{}".format(i, j, k))
+                plt.close('all')
+            print(loss_results)
+            print(frame_numbers)
+            print(timestep_sizes)
+    plt.hist2d(frame_numbers, timestep_sizes, weights=loss_results, bins=(19, 9))
+    plt.savefig("Overall_picture.png")
+    plt.close()
+
+
+def main():
+    files = glob.glob("Simulation_images/*")
+    run_metaparameter_tests(files)
+    exit()
+    active = 'LeakyReLU'
+    optimizer = 'adam'
+    # loss = losses.BinaryCrossentropy()
+    loss = bce_dice
+    # loss = com_coef
     # loss = losses.CategoricalCrossentropy()
     # loss = losses.KLDivergence()
     # loss = losses.CosineSimilarity()#Works goodish
@@ -218,25 +308,25 @@ def main():
     # loss = losses.LogCosh()
     # loss = losses.Huber()
     timestep_size = 20
+    print("Getting source files...")
+    training_data = [np.load("Questions.npy"), np.load("Answers.npy")]
+    print(np.shape(training_data[0]))
     print("Do you want to generate a new model? [Y/N]")
     choice = input(">>")
     if choice == "Y":
-        print("Getting source files...")
-        training_data = get_source_arrays(files[:], timestep_size)
+        # training_data = get_source_arrays(files[:], timestep_size)
         # np.save("Qs", training_data[0])
         # np.save("As", training_data[1])
-        # training_data = [np.load("Qs.npy"), np.load("As.npy")]
         print("Creating CNN...")
         model = create_neural_net(active, optimizer, loss, size=64)
 
         print("Training montage begins...")
-        model, history = train_model(model, training_data, epochs=10)
+        model, history = train_model(model, training_data, epochs=1)
         model.save("Model_{}_{}_{}_{}".format(active, optimizer, "BinaryCrossEntropy", timestep_size))
     else:
-        training_data = get_source_arrays(files[0:1], timestep_size)
         model = models.load_model("Model_{}_{}_{}_{}".format(active, optimizer, "BinaryCrossEntropy", timestep_size),
                                   custom_objects={"iou_coef": iou_coef, "dice_coef": dice_coef,
-                                                  "mass_preservation": mass_preservation})
+                                                  "mass_preservation": mass_preservation}, compile=False)
 
     print("Diagnosing...")
     out = model(training_data[0][0:1])
@@ -251,16 +341,16 @@ def main():
     plt.savefig("Second.png")
     plt.clf()
     print("Getting metrics info...")
-    plt.plot(history.history['dice_coef'], label='dice_coef')
-    plt.plot(history.history['val_dice_coef'], label='val_dice_coef')
-    plt.plot(history.history['iou_coef'], label='iou_coef')
-    plt.plot(history.history['val_iou_coef'], label='val_iou_coef')
-    plt.plot(history.history['mass_preservation'], label='mass_preservation')
-    plt.plot(history.history['val_mass_preservation'], label='val_mass_preservation')
-    plt.xlabel('Epoch')
-    plt.ylabel('Accuracy')
-    plt.legend()
-    plt.savefig("Metrics.png")
+    # plt.plot(history.history['dice_coef'], label='dice_coef')
+    # plt.plot(history.history['val_dice_coef'], label='val_dice_coef')
+    # plt.plot(history.history['iou_coef'], label='iou_coef')
+    # plt.plot(history.history['val_iou_coef'], label='val_iou_coef')
+    # plt.plot(history.history['mass_preservation'], label='mass_preservation')
+    # plt.plot(history.history['val_mass_preservation'], label='val_mass_preservation')
+    # plt.xlabel('Epoch')
+    # plt.ylabel('Accuracy')
+    # plt.legend()
+    # plt.savefig("Metrics.png")
     # test_loss, test_acc = model.evaluate(test_set, test_solutions, verbose=2)
     # plt.show()
     plt.clf()
@@ -270,7 +360,7 @@ def main():
     start_sim = "Simulation_10"
     max_sim_num = np.size(glob.glob("Simulation_images/{}/*".format(start_sim)))
     max_steps = int((max_sim_num - starting) / timestep_size)
-    predict_future(model, starting, start_sim, 100, timestep_size, name)
+    predict_future_2(model, timestep_size, 12, 10, size=64)
 
 
 if __name__ == "__main__":
