@@ -4,6 +4,9 @@ from tensorflow.keras import backend as k, losses
 
 
 def construct_r_table(image, seeking_range=5):
+    """
+    Construct the reference table for an image.
+    """
     data = image[:, :, 1]
     reference_point = calculate_com(image, both=True)
     r_values = []
