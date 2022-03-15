@@ -532,9 +532,9 @@ def create_parallel_network(activation, optimizer, loss, input_frames, image_siz
     x = layers.concatenate(streams, axis=3)
     x = layers.Conv2D(32 * input_frames, 1, activation=activation)(x)
     while final_axis < image_size:
+        x = layers.UpSampling2D(2)(x)
         x = layers.Conv2DTranspose(64, kernel_size, padding='same', activation=activation)(x)
         # x = layers.Conv2DTranspose(64, kernel_size, padding='same', activation=activation)(x)
-        x = layers.UpSampling2D(2)(x)
         final_axis *= 2
     x = layers.Conv2D(1, 1, padding='same', activation='sigmoid')(x)
     model = Model(input_layer, x)
@@ -543,6 +543,36 @@ def create_parallel_network(activation, optimizer, loss, input_frames, image_siz
     ])
     return model
 
+
+def create_u_network(activation, optimizer, loss, input_frames,
+                     image_size=64, channels=3, encode_size=2, kernel_size=3, inception=False):
+    input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
+    saving_layers = []
+    x = layers.Conv3D(32, (input_frames, 1, 1), activation=activation)(input_layer)
+    x = layers.Reshape((image_size, image_size, 32))
+    current_axis = image_size
+    loops = 0
+    while current_axis > encode_size:
+        loops += 1
+        x = layers.Conv2D(16*2**loops, kernel_size, padding='same', activation=activation)(x)
+        # x = layers.Conv2D(32, kernel_size, padding='same', activation=activation)(x)
+        if inception:
+            x = inception_cell_revive(x, channels)
+        x = layers.MaxPooling2D(2)(x)
+        current_axis = int(np.floor(current_axis / 2))
+        saving_layers.append(x)
+    x = layers.Conv2D(16*2**loops, 1, activation=activation)(x)
+
+    for loop in range(loops):
+        x = layers.concatenate([saving_layers[loops - loop - 1], x], axis=3)
+        x = layers.UpSampling2D(2)(x)
+        x = layers.Conv2DTranspose(16*2**(loops - loop), kernel_size, padding='same', activation=activation)(x)
+    x = layers.Conv2D(1, 1, padding='same', activation='sigmoid')(x)
+    model = Model(input_layer, x)
+    model.compile(optimizer=optimizer, loss=loss, metrics=[
+        losses.binary_crossentropy, losses.mean_squared_logarithmic_error
+    ])
+    return model
 
 class ClearMemory(Callback):
     def on_epoch_end(self, epoch, logs=None):
