@@ -522,7 +522,9 @@ def create_parallel_network(activation, optimizer, loss, input_frames, image_siz
         current_axis = image_size
         while current_axis/2 >= encode_size:
             x = layers.Conv2D(32, kernel_size, padding='same', activation=activation)(x)
-            x = layers.Conv2D(32, kernel_size, padding='same', activation=activation)(x)
+            # x = layers.Conv2D(32, kernel_size, padding='same', activation=activation)(x)
+            if inception:
+                x = inception_cell_revive(x, channels)
             x = layers.MaxPooling2D(2)(x)
             current_axis = int(np.floor(current_axis/2))
             final_axis = current_axis
@@ -531,7 +533,7 @@ def create_parallel_network(activation, optimizer, loss, input_frames, image_siz
     x = layers.Conv2D(32 * input_frames, 1, activation=activation)(x)
     while final_axis < image_size:
         x = layers.Conv2DTranspose(64, kernel_size, padding='same', activation=activation)(x)
-        x = layers.Conv2DTranspose(64, kernel_size, padding='same', activation=activation)(x)
+        # x = layers.Conv2DTranspose(64, kernel_size, padding='same', activation=activation)(x)
         x = layers.UpSampling2D(2)(x)
         final_axis *= 2
     x = layers.Conv2D(1, 1, padding='same', activation='sigmoid')(x)

@@ -84,7 +84,7 @@ def read_parameters(model_name):
 
         [loss_functions.UBERLOSS, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 20, True],
         [loss_functions.UBERLOSS, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Aberdeen", 20, False],
-        [loss_functions.UBERLOSS, 45, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Andover", 5, True],
+        [loss_functions.UBERLOSS, 64, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Andover", 5, True],
         #
         [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bravo", 20, True],
         [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bristol", 20, False],
@@ -199,7 +199,7 @@ def generate_predictions(model_name, initial_conditions, length=FUTURE_DISTANCE,
         get_model(model_name),
         initial_conditions[0], initial_conditions[1],
         parameters[2], parameters[12], parameters[1], length, parameters[8],
-        round_result=False, extra=True, dry_run=dry_run
+        dry_run=dry_run
     )
 
 
@@ -391,7 +391,7 @@ def cross_check_easy(model_name, initial_conditions):
 def main():
     to_analyse = [
         # [loss_functions.UBERLOSS, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 20, True],
-        [loss_functions.UBERLOSS, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Andover", 5, True],
+        [loss_functions.UBERLOSS, 64, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Andover", 5, True],
         # [loss_functions.UBERLOSS, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Aberdeen", 20, False],
         #
         # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bravo", 20, True],

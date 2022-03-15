@@ -65,7 +65,12 @@ def calculate_com(image, both=False):
 def main():
     tf.random.set_seed(100)
     activation_function = layers.LeakyReLU()
-    optimizer = optimizers.Adam(learning_rate=0.001, epsilon=0.1)
+    lr_schedule = optimizers.schedules.ExponentialDecay(
+        initial_learning_rate=1e-2,
+        decay_steps=10000,
+        decay_rate=0.9
+    )
+    optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
     # optimizer = optimizers.Adam()
 
     parameters_extra = [
