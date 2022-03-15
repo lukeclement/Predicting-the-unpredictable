@@ -308,7 +308,7 @@ def create_basic_network(activation, optimizer, loss, input_frames, image_size, 
     ])
     return model
 
-
+#DEFULT IS RESNET 50
 def create_resnet(activation, optimizer, loss, input_frames,
                   image_size=64, channels=3, inception=True, structure=None, names=None):
     if names is None:
