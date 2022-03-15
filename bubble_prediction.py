@@ -69,9 +69,9 @@ def main():
     # optimizer = optimizers.Adam()
 
     parameters_extra = [
-        [loss_functions.UBERLOSS, 4, 45, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Andover", 5, True],
+        [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Andover", 20, True],
     ]
-    scenario = 0
+    scenario = 5
     for parameters in parameters_extra:
         loss_function = parameters[0]
         epochs = parameters[14]
@@ -108,12 +108,20 @@ def main():
             model = create_network.create_resnet(
                 activation_function, optimizer, loss_function, image_frames, image_size=image_size, inception=linearity
             )
+        elif scenario == 5:
+            model = create_network.create_parallel_network(
+                activation_function, optimizer, loss_function, image_frames,
+                image_size=image_size, encode_size=encode_size, allow_pooling=True,
+                allow_upsampling=True, max_transpose_layers=max_transpose_layers, kernel_size=kernel_size,
+                dropout_rate=dropout_rate, inception=linearity
+            )
         else:
             model = create_network.create_basic_network(
                 activation_function, optimizer, loss_function, image_frames, image_size
             )
         print(name)
         print(model.summary())
+        # exit()
         training_data = dat_to_training.create_training_data(
             image_frames, timestep, image_size=image_size,
             excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False)

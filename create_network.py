@@ -3,14 +3,12 @@ from tensorflow.keras import layers, models, Model, initializers, losses, optimi
 import gc
 from tensorflow.keras import backend as k
 from tensorflow.keras.callbacks import Callback
-
 import loss_functions
 
 
 def interpret_model_summary(model):
     line_list = []
     model.summary(line_length=70, print_fn=lambda x: line_list.append(x))
-    # print(line_list)
     for line in line_list:
         if "Trainable params:" in line:
             return line
@@ -253,6 +251,22 @@ def make_transformer_decoder(inputs, encodes, head_size, head_number, full_forwa
     return layers.LayerNormalization(epsilon=1e-6)(x + total)
 
 
+def create_basic_transformer_network(activation, optimizer, loss, input_frames, data_points, layering=3):
+    input_layer = layers.Input(shape=(input_frames, data_points))
+    inputs = input_layer
+    x = inputs
+    y = inputs
+    for _ in range(layering):
+        x = make_transformer_encoder(x, 64, 8, 10)
+        y = make_transformer_decoder(y, x, 64, 8, 10)
+
+    model = Model(input_layer, y)
+    model.compile(optimizer=optimizer, loss=loss, metrics=[
+        losses.binary_crossentropy, losses.mean_squared_logarithmic_error
+    ])
+    return model
+
+
 def create_transformer_network(activation, optimizer, loss, input_frames, image_size, channels=3, layering=1):
     input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
     # x = layers.Reshape((input_frames*image_size*image_size*channels, 1))(input_layer)
@@ -491,6 +505,37 @@ def create_inception_network(activation, optimizer, loss, input_frames, image_si
         current_axis_size = (current_axis_size**2) * 32 * 2**laps
         model.add(layers.Dense(np.sqrt(current_axis_size), activation=activation, kernel_initializer=initializer))
         model.add(layers.Dense(4, activation='sigmoid', kernel_initializer=initializer))
+    model.compile(optimizer=optimizer, loss=loss, metrics=[
+        losses.binary_crossentropy, losses.mean_squared_logarithmic_error
+    ])
+    return model
+
+
+def create_parallel_network(activation, optimizer, loss, input_frames, image_size, channels=3, encode_size=2,
+                             allow_upsampling=True, allow_pooling=True, kernel_size=3, max_transpose_layers=3,
+                             dropout_rate=0.2, inception=True):
+    input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
+    streams = []
+    final_axis = 1
+    for i in range(input_frames):
+        x = layers.Lambda(lambda l: l[:, i, :, :, :])(input_layer)
+        current_axis = image_size
+        while current_axis/2 >= encode_size:
+            x = layers.Conv2D(32, kernel_size, padding='same', activation=activation)(x)
+            x = layers.Conv2D(32, kernel_size, padding='same', activation=activation)(x)
+            x = layers.MaxPooling2D(2)(x)
+            current_axis = int(np.floor(current_axis/2))
+            final_axis = current_axis
+        streams.append(x)
+    x = layers.concatenate(streams, axis=3)
+    x = layers.Conv2D(32 * input_frames, 1, activation=activation)(x)
+    while final_axis < image_size:
+        x = layers.Conv2DTranspose(64, kernel_size, padding='same', activation=activation)(x)
+        x = layers.Conv2DTranspose(64, kernel_size, padding='same', activation=activation)(x)
+        x = layers.UpSampling2D(2)(x)
+        final_axis *= 2
+    x = layers.Conv2D(1, 1, padding='same', activation='sigmoid')(x)
+    model = Model(input_layer, x)
     model.compile(optimizer=optimizer, loss=loss, metrics=[
         losses.binary_crossentropy, losses.mean_squared_logarithmic_error
     ])
