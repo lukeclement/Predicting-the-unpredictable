@@ -178,6 +178,29 @@ def inception_cell_revive(x, channels, axis=3):
     return merged
 
 
+def inception_cell_revive3d(x, channels, axis=3):
+
+    tower_1 = layers.Conv3D(channels, (1, 1), padding='same')(
+        x)
+
+    tower_2 = layers.Conv3D(channels, (1, 1), padding='same')(
+        x)
+    tower_2 = layers.Conv3D(channels, (3, 3), padding='same')(
+        tower_2)
+
+    tower_3 = layers.Conv3D(channels, (1, 1), padding='same')(
+        x)
+    tower_3 = layers.Conv3D(channels, (5, 5), padding='same')(
+        tower_3)
+
+    tower_4 = layers.MaxPooling3D(3, strides=1, padding='same')(x)
+    tower_4 = layers.Conv3D(channels, 1, padding='same')(
+        tower_4)
+
+    merged = layers.concatenate([tower_1, tower_2, tower_3, tower_4], axis=axis)
+    return merged
+
+
 def convolutional_transformer(x, channels, activation):
     key = layers.Conv2D(channels, 1, padding='same')(x)
     query = layers.Conv2D(channels, 1, padding='same')(x)
@@ -584,12 +607,12 @@ def sampling(args, latent_dim=6):
 
 
 def create_autoencoder(optimizer, loss, latent_dim=2, image_size=64, image_frames=1, channels=3):
-    encoder_inputs = Input(shape=(image_size, image_size, 1))
-    x = layers.Conv2D(32, 3, activation="relu", strides=2, padding="same")(encoder_inputs)
+    encoder_inputs = Input(shape=(image_frames, image_size, image_size, 1))
+    x = layers.Conv3D(32, 3, activation="relu", strides=2, padding="same")(encoder_inputs)
     # x = layers.Reshape((image_size//2, image_size//2, 32))(x)
-    x = inception_cell_revive(x, 1)
-    x = layers.Conv2D(64, 3, activation="relu", strides=2, padding="same")(x)
-    x = inception_cell_revive(x, 1)
+    # x = inception_cell_revive(x, 1)
+    x = layers.Conv3D(64, 3, activation="relu", strides=2, padding="same")(x)
+    # x = inception_cell_revive(x, 1)
     x = layers.Flatten()(x)
     x = layers.Dense(16, activation="relu")(x)
     z_mean = layers.Dense(latent_dim, name="z_mean")(x)
@@ -600,14 +623,14 @@ def create_autoencoder(optimizer, loss, latent_dim=2, image_size=64, image_frame
 
     latent_inputs = Input(shape=(latent_dim, ), name='z_sampling')
     x = layers.Dense(8 * 8 * 128, activation="relu")(latent_inputs)
-    x = layers.Reshape((8, 8, 128))(x)
-    x = layers.Conv2DTranspose(128, 3, activation="relu", strides=2, padding="same")(x)
-    x = inception_cell_revive(x, 1)
-    x = layers.Conv2DTranspose(64, 3, activation="relu", strides=2, padding="same")(x)
-    x = inception_cell_revive(x, 1)
-    x = layers.Conv2DTranspose(32, 3, activation="relu", strides=2, padding="same")(x)
-    x = inception_cell_revive(x, 1)
-    x = layers.Conv2DTranspose(1, 3, activation="sigmoid", padding="same")(x)
+    x = layers.Reshape((1, 8, 8, 128))(x)
+    x = layers.Conv3DTranspose(128, 3, activation="relu", strides=2, padding="same")(x)
+    # x = inception_cell_revive(x, 1)
+    x = layers.Conv3DTranspose(64, 3, activation="relu", strides=2, padding="same")(x)
+    # x = inception_cell_revive(x, 1)
+    x = layers.Conv3DTranspose(32, 3, activation="relu", strides=(1, 2, 2), padding="same")(x)
+    # x = inception_cell_revive(x, 1)
+    x = layers.Conv3DTranspose(1, 3, activation="sigmoid", padding="same")(x)
 
     decoder = Model(latent_inputs, x, name="decoder")
 

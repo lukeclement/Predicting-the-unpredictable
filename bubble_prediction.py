@@ -74,7 +74,7 @@ def main():
     # optimizer = optimizers.Adam()
 
     parameters_extra = [
-        [loss_functions.UBERLOSS, 1, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Andover", 20, True],
+        [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Andover", 20, True],
     ]
     scenario = 6
     for parameters in parameters_extra:
@@ -130,9 +130,20 @@ def main():
             training_data = dat_to_training.create_training_data(
                 image_frames, timestep, image_size=image_size,
                 excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False, var=True)
-            model.fit(training_data[0], epochs=1, validation_data=training_data[1])
+            model.fit(training_data[0], epochs=20, validation_data=training_data[1])
             model.save("models/{}".format(name))
-            exit()
+            decoder.save("models/{}_decoder".format(name))
+            sample = np.array([[0, 0, 0, 0, 0, 0]])
+            test = decoder.predict(sample)
+            plt.imshow(test[0][0])
+            plt.savefig("A.png")
+            plt.imshow(test[0][1])
+            plt.savefig("B.png")
+            plt.imshow(test[0][2])
+            plt.savefig("C.png")
+            plt.imshow(test[0][3])
+            plt.savefig("D.png")
+            break
         else:
             model = create_network.create_basic_network(
                 activation_function, optimizer, loss_function, image_frames, image_size

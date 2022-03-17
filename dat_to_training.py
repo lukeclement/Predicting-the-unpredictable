@@ -373,10 +373,10 @@ def create_training_data(
     validation_data = validation_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
     #
     if var:
-        testing_data = tf.data.Dataset.from_tensor_slices(questions_array[:, 0, :, :, 1:2])
+        testing_data = tf.data.Dataset.from_tensor_slices(questions_array[:, :, :, :, 1:2])
         testing_data = testing_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
 
-        validation_data = tf.data.Dataset.from_tensor_slices(questions_array_valid[:, 0, :, :, 1:2])
+        validation_data = tf.data.Dataset.from_tensor_slices(questions_array_valid[:, :, :, :, 1:2])
         validation_data = validation_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
     return [testing_data, validation_data]
     # return questions_array, answers_array
