@@ -121,52 +121,17 @@ def main():
                 dropout_rate=dropout_rate, inception=linearity
             )
         elif scenario == 6:
-            # vae = create_network.VAE(
-            #     create_network.create_encoder(6, image_size, image_frames),
-            #     create_network.create_decoder(6),
-            #     (image_size, image_size, 1)
-            # )
-            # vae.compile(optimizer=optimizer)
-            # training_data = dat_to_training.create_training_data(
-            #     image_frames, timestep, image_size=image_size,
-            #     excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False, var=True)
-            # print(training_data[0])
-            # vae.fit(training_data[0], epochs=1)
-            # vae.save("models/{}".format("VAR"))
-            #
-            # samples = 30
-            # figure = np.zeros((image_size*samples, image_size*samples))
-            # grid_x = np.linspace(-1, 1, samples)
-            # grid_y = np.linspace(-1, 1, samples)[::-1]
-            #
-            # for i, yi in enumerate(grid_y):
-            #     for j, xi in enumerate(grid_x):
-            #         z_sample = np.array([[xi, yi]])
-            #         x_decoded = vae.decoder.predict(z_sample)
-            #         digit = x_decoded[0].reshape(image_size, image_size)
-            #         figure[
-            #             i * image_size: (i + 1) * image_size,
-            #             j * image_size: (j + 1) * image_size,
-            #         ] = digit
-            #
-            # plt.figure(figsize=(30, 30))
-            # start_range = image_size // 2
-            # end_range = samples * image_size + start_range
-            # pixel_range = np.arange(start_range, end_range, image_size)
-            # sample_range_x = np.round(grid_x, 1)
-            # sample_range_y = np.round(grid_y, 1)
-            # plt.xticks(pixel_range, sample_range_x)
-            # plt.yticks(pixel_range, sample_range_y)
-            # plt.xlabel("z[0]")
-            # plt.ylabel("z[1]")
-            # plt.imshow(figure, cmap="Greys_r")
-            # plt.savefig("VAE_test.png", dpi=1000)
-            # plt.show()
-            sample = np.array([[1, 2, -3, 4, 5, -6]])
-            sample = np.tanh(sample)
-            decoded = vae.decoder.predict(sample)
-            plt.imshow(decoded)
-            plt.show()
+            encoder, decoder, model = create_network.create_autoencoder(
+                optimizer, loss_function, 6, image_size, image_frames
+            )
+            print(encoder.summary())
+            print(decoder.summary())
+            print(model.summary())
+            training_data = dat_to_training.create_training_data(
+                image_frames, timestep, image_size=image_size,
+                excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False, var=True)
+            model.fit(training_data[0], epochs=1, validation_data=training_data[1])
+            model.save("models/{}".format(name))
             exit()
         else:
             model = create_network.create_basic_network(
