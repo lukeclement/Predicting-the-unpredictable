@@ -75,14 +75,17 @@ def generate_and_save_images(model, epoch):
     predictions = model(seed, training=False)
 
     fig = plt.figure(figsize=(4, 4))
-
-    for i in range(predictions.shape[0]):
-        plt.subplot(4, 4, i + 1)
-        plt.imshow(predictions[i, :, :, 0])
-        plt.axis('off')
-
-    plt.savefig('image_at_epoch_{:04d}.png'.format(epoch), dpi=500)
-    plt.clf()
+    images = []
+    for j in range(predictions.shape[1]):
+        # for i in range(predictions.shape[1]):
+        #     plt.subplot(4, 4, i + 1)
+        #     plt.imshow(predictions[i, :, :, 0])
+        #     plt.axis('off')
+        #
+        # plt.savefig('image_at_epoch_{:04d}_{}.png'.format(epoch, j), dpi=500)
+        # plt.clf()
+        images.append(predictions[0, j, :, :, 0])
+    make_gif(images, "gan_at_epoch{:04d}".format(epoch))
 
 
 def main():
@@ -99,7 +102,7 @@ def main():
 
     parameters_extra = [
         # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "AutoEncoder", 20, True, 6],
-        [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "GAN", 60, True, 7],
+        [loss_functions.UBERLOSS, 8, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "GAN", 60, True, 7],
         # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Basic", 20, True, 1],
         # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Transformer", 20, True, 2],
         # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Deceptive", 20, True, 3],
@@ -189,7 +192,7 @@ def main():
             print(discriminator.summary())
             training_data = dat_to_training.create_training_data(
                 image_frames, timestep, image_size=image_size,
-                excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False, var_2=True)
+                excluded_sims=[12, 9, 11], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False, var_2=True)
 
             @tf.function
             def train_step(images):

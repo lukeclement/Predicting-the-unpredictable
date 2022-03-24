@@ -256,7 +256,7 @@ def create_training_data(
             files = glob.glob("{}/*".format(simulation))
             number_of_files = len(files)
             sub_total += len(files)
-            for i in range(3, number_of_files-timestep*frames*2):
+            for i in range(3, number_of_files-timestep*frames):
                 total += 1
                 data_sources.append("{}/data_{}.npy".format(simulation, i))
                 refs.append([simulation, i])
@@ -379,10 +379,10 @@ def create_training_data(
         validation_data = tf.data.Dataset.from_tensor_slices(questions_array_valid[:, :, :, :, 1:2])
         validation_data = validation_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
     elif var_2:
-        testing_data = tf.data.Dataset.from_tensor_slices(questions_array[:, 0, :, :, 1:2])
+        testing_data = tf.data.Dataset.from_tensor_slices(questions_array[:, :, :, :, 1:2])
         testing_data = testing_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
 
-        validation_data = tf.data.Dataset.from_tensor_slices(questions_array_valid[:, 0, :, :, 1:2])
+        validation_data = tf.data.Dataset.from_tensor_slices(questions_array_valid[:, :, :, :, 1:2])
         validation_data = validation_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
 
     return [testing_data, validation_data]

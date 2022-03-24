@@ -655,40 +655,40 @@ def create_autoencoder(optimizer, loss, latent_dim=2, image_size=64, image_frame
 
 def create_generator():
     input_layer = Input(shape=(100, ))
-    x = layers.Dense(8 * 8 * 256, use_bias=False)(input_layer)
+    x = layers.Dense(1 * 8 * 8 * 256, use_bias=False)(input_layer)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU()(x)
-    x = layers.Reshape((8, 8, 256))(x)
+    x = layers.Reshape((1, 8, 8, 256))(x)
 
-    x = layers.Conv2DTranspose(128, 5, strides=1, padding='same', use_bias=False)(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU()(x)
-
-    x = layers.Conv2DTranspose(64, 5, strides=2, padding='same', use_bias=False)(x)
+    x = layers.Conv3DTranspose(128, 5, strides=1, padding='same', use_bias=False)(x)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU()(x)
 
-    x = layers.Conv2DTranspose(32, 5, strides=2, padding='same', use_bias=False)(x)
+    x = layers.Conv3DTranspose(64, 5, strides=2, padding='same', use_bias=False)(x)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU()(x)
 
-    x = layers.Conv2DTranspose(1, 5, strides=2, padding='same', use_bias=False, activation='sigmoid')(x)
+    x = layers.Conv3DTranspose(32, 5, strides=2, padding='same', use_bias=False)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU()(x)
+
+    x = layers.Conv3DTranspose(1, 5, strides=2, padding='same', use_bias=False, activation='sigmoid')(x)
 
     model = Model(input_layer, x, name='generator')
     return model
 
 
 def create_discriminator():
-    input_layer = Input(shape=(64, 64, 1))
-    x = layers.Conv2D(32, 5, strides=2, padding='same')(input_layer)
+    input_layer = Input(shape=(8, 64, 64, 1))
+    x = layers.Conv3D(32, 5, strides=2, padding='same')(input_layer)
     x = layers.LeakyReLU()(x)
     x = layers.Dropout(0.3)(x)
 
-    x = layers.Conv2D(64, 5, strides=2, padding='same')(x)
+    x = layers.Conv3D(64, 5, strides=2, padding='same')(x)
     x = layers.LeakyReLU()(x)
     x = layers.Dropout(0.3)(x)
 
-    x = layers.Conv2D(128, 5, strides=2, padding='same')(x)
+    x = layers.Conv3D(128, 5, strides=2, padding='same')(x)
     x = layers.LeakyReLU()(x)
     x = layers.Dropout(0.3)(x)
 
