@@ -3,6 +3,12 @@ import numpy as np
 from tensorflow.keras import backend as k, losses
 
 
+def discriminator_loss(real, fake):
+    real_loss = losses.BinaryCrossentropy(from_logits=True)(tf.ones_like(real), real)
+    fake_loss = losses.BinaryCrossentropy(from_logits=True)(tf.ones_like(fake), fake)
+    return real_loss + fake_loss
+
+
 def construct_r_table(image, seeking_range=5):
     """
     Construct the reference table for an image.

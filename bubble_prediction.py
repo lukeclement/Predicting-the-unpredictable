@@ -130,19 +130,24 @@ def main():
             training_data = dat_to_training.create_training_data(
                 image_frames, timestep, image_size=image_size,
                 excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False, var=True)
-            model.fit(training_data[0], epochs=20, validation_data=training_data[1])
+            model.fit(training_data[0], epochs=5, validation_data=training_data[1])
             model.save("models/{}".format(name))
             decoder.save("models/{}_decoder".format(name))
+            encoder.save("models/{}_encoder".format(name))
             sample = np.array([[0, 0, 0, 0, 0, 0]])
             test = decoder.predict(sample)
             plt.imshow(test[0][0])
             plt.savefig("A.png")
+            plt.clf()
             plt.imshow(test[0][1])
             plt.savefig("B.png")
+            plt.clf()
             plt.imshow(test[0][2])
             plt.savefig("C.png")
+            plt.clf()
             plt.imshow(test[0][3])
             plt.savefig("D.png")
+            plt.clf()
             break
         else:
             model = create_network.create_basic_network(

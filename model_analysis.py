@@ -487,11 +487,18 @@ def main():
         # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Freetown", 20, True],
         # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Frimley", 20, False],
     ]
-    print(len(to_analyse))
-    for model in to_analyse:
-        print(model[13])
-        cross_check(model[13], [13, 10])
-
+    # print(len(to_analyse))
+    # for model in to_analyse:
+    #     print(model[13])
+    #     cross_check(model[13], [13, 10])
+    decoder = models.load_model("models/Andover_decoder")
+    while True:
+        sample = (np.random.random((1, 6)) - 0.5) * 2
+        result = decoder.predict(sample)[0]
+        plt.title("{}".format(sample))
+        plt.imshow(result[0])
+        plt.show()
+        plt.clf()
 
 if __name__ == "__main__":
     main()
