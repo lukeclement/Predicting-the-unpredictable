@@ -1,9 +1,14 @@
+import time
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers, models, Model, initializers, losses, optimizers, activations, Input, metrics
 import gc
 from tensorflow.keras import backend as k
 from tensorflow.keras.callbacks import Callback
+from tqdm import tqdm
+
+import bubble_prediction
 import loss_functions
 
 
@@ -667,7 +672,7 @@ def create_generator():
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU()(x)
 
-    x = layers.Conv2DTranspose(1, 5, strides=2, padding='same', use_bias=False, activation='tanh')(x)
+    x = layers.Conv2DTranspose(1, 5, strides=2, padding='same', use_bias=False, activation='sigmoid')(x)
 
     model = Model(input_layer, x, name='generator')
     return model
@@ -688,16 +693,18 @@ def create_discriminator():
     x = layers.Dropout(0.3)(x)
 
     x = layers.Flatten()(x)
-    x = layers.Dense(1)(x)
+    x = layers.Dense(1, activation='sigmoid')(x)
 
     model = Model(input_layer, x, name='discriminator')
     return model
 
 
-class ClearMemory(Callback):
-    def on_epoch_end(self, epoch, logs=None):
-        gc.collect()
-        k.clear_session()
+
+
+# class ClearMemory(Callback):
+#     def on_epoch_end(self, epoch, logs=None):
+#         gc.collect()
+#         k.clear_session()
 
 
 def train_model(model, training_images, validation_split=0.1, epochs=2):

@@ -4,9 +4,13 @@ from tensorflow.keras import backend as k, losses
 
 
 def discriminator_loss(real, fake):
-    real_loss = losses.BinaryCrossentropy(from_logits=True)(tf.ones_like(real), real)
-    fake_loss = losses.BinaryCrossentropy(from_logits=True)(tf.ones_like(fake), fake)
+    real_loss = losses.BinaryCrossentropy()(tf.ones_like(real), real)
+    fake_loss = losses.BinaryCrossentropy()(tf.zeros_like(fake), fake)
     return real_loss + fake_loss
+
+
+def generator_loss(fake):
+    return losses.BinaryCrossentropy()(tf.ones_like(fake), fake)
 
 
 def construct_r_table(image, seeking_range=5):

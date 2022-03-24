@@ -1,3 +1,7 @@
+import time
+
+from tqdm import tqdm
+
 import dat_to_training
 import create_network
 import loss_functions
@@ -6,6 +10,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import imageio
+
+
+seed = tf.random.normal([16, 100])
 
 
 def long_term_prediction(
@@ -62,6 +69,22 @@ def calculate_com(image, both=False):
     return np.sqrt((x_com-(float(image_size)/2))**2 + (y_com-(float(image_size)/2))**2)
 
 
+def generate_and_save_images(model, epoch):
+    # Notice `training` is set to False.
+    # This is so all layers run in inference mode (batchnorm).
+    predictions = model(seed, training=False)
+
+    fig = plt.figure(figsize=(4, 4))
+
+    for i in range(predictions.shape[0]):
+        plt.subplot(4, 4, i + 1)
+        plt.imshow(predictions[i, :, :, 0])
+        plt.axis('off')
+
+    plt.savefig('image_at_epoch_{:04d}.png'.format(epoch), dpi=500)
+    plt.clf()
+
+
 def main():
     tf.random.set_seed(100)
     activation_function = layers.LeakyReLU()
@@ -71,10 +94,12 @@ def main():
         decay_rate=0.9
     )
     optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
+    optimizer_2 = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
     # optimizer = optimizers.Adam()
 
     parameters_extra = [
-        [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "AutoEncoder", 20, True, 6],
+        # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "AutoEncoder", 20, True, 6],
+        [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "GAN", 60, True, 7],
         # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Basic", 20, True, 1],
         # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Transformer", 20, True, 2],
         # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Deceptive", 20, True, 3],
@@ -154,6 +179,66 @@ def main():
             plt.savefig("D.png")
             plt.clf()
             break
+        elif scenario == 7:
+            generator_optimizer = optimizers.Adam(1e-4)
+            discriminator_optimizer = optimizers.Adam(1e-4)
+            generator = create_network.create_generator()
+            discriminator = create_network.create_discriminator()
+            noise_len = 100
+            print(generator.summary())
+            print(discriminator.summary())
+            training_data = dat_to_training.create_training_data(
+                image_frames, timestep, image_size=image_size,
+                excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False, var_2=True)
+
+            @tf.function
+            def train_step(images):
+                noise = tf.random.normal([8, 100])
+
+                with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
+                    generated_images = generator(noise, training=True)
+
+                    real_output = discriminator(images, training=True)
+                    fake_output = discriminator(generated_images, training=True)
+
+                    gen_loss = loss_functions.generator_loss(fake_output)
+                    disc_loss = loss_functions.discriminator_loss(real_output, fake_output)
+
+                gen_grad = gen_tape.gradient(gen_loss, generator.trainable_variables)
+                disc_grad = disc_tape.gradient(disc_loss, discriminator.trainable_variables)
+
+                generator_optimizer.apply_gradients(zip(gen_grad, generator.trainable_variables))
+                discriminator_optimizer.apply_gradients(zip(disc_grad, discriminator.trainable_variables))
+                return gen_loss, disc_loss
+
+            def train_gan(dataset):
+                times_so_far = []
+                for epoch in range(epochs):
+                    start = time.time()
+                    gen_losses = []
+                    disc_losses = []
+                    pbar = tqdm(total=12222 / 8)
+                    for image_batch in dataset:
+                        gen_loss, disc_loss = train_step(image_batch)
+                        gen_losses.append(gen_loss)
+                        disc_losses.append(disc_loss)
+                        pbar.update(1)
+                    pbar.close()
+                    generate_and_save_images(generator, epoch + 1)
+                    times_so_far.append(time.time() - start)
+                    print("Time for epoch {} was {:.0f}s".format(epoch + 1, times_so_far[epoch]))
+                    print("Losses were {:.4f} for generator and {:.4f} for discriminator".format(
+                        np.mean(gen_losses), np.mean(disc_losses))
+                    )
+                    if np.mean(gen_losses) > np.mean(disc_losses):
+                        print("Discriminator winning!")
+                    else:
+                        print("Generator winning!")
+                    print("ETA currently stands at {:.1f}min from now".format(
+                        np.mean(times_so_far) * (epochs - epoch - 1) / 60))
+
+                generate_and_save_images(generator, epochs)
+            train_gan(training_data[0])
         else:
             model = create_network.create_basic_network(
                 activation_function, optimizer, loss_function, image_frames, image_size

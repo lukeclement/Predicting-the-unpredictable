@@ -221,7 +221,7 @@ def get_sim_result(source):
 
 def create_training_data(
         frames: int, timestep: int, validation_split=0.1, image_size=64,
-        variants=None, flips_allowed=True, resolution=0.001, excluded_sims=None, easy_mode=False, var=False):
+        variants=None, flips_allowed=True, resolution=0.001, excluded_sims=None, easy_mode=False, var=False, var_2=False):
     if excluded_sims is None:
         excluded_sims = []
     if variants is None:
@@ -378,6 +378,13 @@ def create_training_data(
 
         validation_data = tf.data.Dataset.from_tensor_slices(questions_array_valid[:, :, :, :, 1:2])
         validation_data = validation_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    elif var_2:
+        testing_data = tf.data.Dataset.from_tensor_slices(questions_array[:, 0, :, :, 1:2])
+        testing_data = testing_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+
+        validation_data = tf.data.Dataset.from_tensor_slices(questions_array_valid[:, 0, :, :, 1:2])
+        validation_data = validation_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+
     return [testing_data, validation_data]
     # return questions_array, answers_array
 
