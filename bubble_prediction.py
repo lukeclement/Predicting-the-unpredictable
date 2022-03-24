@@ -220,7 +220,7 @@ def main():
                     start = time.time()
                     gen_losses = []
                     disc_losses = []
-                    pbar = tqdm(total=12222 / 8)
+                    pbar = tqdm(total=9016 / 8)
                     for image_batch in dataset:
                         gen_loss, disc_loss = train_step(image_batch)
                         gen_losses.append(gen_loss)
