@@ -74,9 +74,13 @@ def main():
     # optimizer = optimizers.Adam()
 
     parameters_extra = [
-        [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Andover", 20, True],
+        [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "AutoEncoder", 20, True, 6],
+        # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Basic", 20, True, 1],
+        # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Transformer", 20, True, 2],
+        # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Deceptive", 20, True, 3],
+        # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Resnet", 20, True, 4],
+        # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Parallel", 20, True, 5],
     ]
-    scenario = 6
     for parameters in parameters_extra:
         loss_function = parameters[0]
         epochs = parameters[14]
@@ -90,6 +94,7 @@ def main():
         dropout_rate = 0
         name = parameters[13]
         linearity = parameters[15]
+        scenario = parameters[16]
         if scenario == 0:
             model = create_network.create_inception_network(
                 activation_function, optimizer, loss_function, image_frames,

@@ -6,7 +6,7 @@ import numpy as np
 import keras.backend as k
 from tqdm import tqdm
 
-FUTURE_DISTANCE = 200
+FUTURE_DISTANCE = 300
 
 
 def get_model(name):
@@ -179,13 +179,19 @@ def read_parameters(model_name):
         [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Freetown", 20, True],
         [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Frimley", 20, False],
 
+        [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Inception", 20, True, 0],
+        [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Basic", 20, True, 1],
+        [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Transformer", 20, True, 2],
+        [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Deceptive", 20, True, 3],
+        [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Resnet", 20, True, 4],
+        [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Parallel", 20, True, 5],
     ]
 
-    for i in range(len(parameter_options)):
-        temp_s = parameter_options[i][1]
-        temp_l = parameter_options[i][2]
-        parameter_options[i][1] = temp_l
-        parameter_options[i][2] = temp_s
+    # for i in range(len(parameter_options)):
+    #     temp_s = parameter_options[i][1]
+    #     temp_l = parameter_options[i][2]
+    #     parameter_options[i][1] = temp_l
+    #     parameter_options[i][2] = temp_s
 
     for p in parameter_options:
         if model_name == p[13]:
@@ -324,19 +330,19 @@ def cross_check(model_name, initial_conditions):
     fig, (ax_1, ax_2) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]}, sharey=True)
     ax_1.grid()
     print("Intensive...")
-    length_actual = np.shape(actual_2_raw)[0]
-    pbar = tqdm(total=len(actual_2))
+    length_actual = np.shape(actual_raw)[0]
+    pbar = tqdm(total=len(actual))
     final_positions = []
     close = []
     far = []
     for start_point in range(0, length_actual*parameters[12], parameters[12]):
         new_guess = np.asarray(generate_predictions(
-            model_name, [15, start_point + initial_conditions[1]],
+            model_name, [12, start_point + initial_conditions[1]],
             length=length_actual - int(start_point/parameters[12])
         ))
         points = []
         for i in range(0, int(start_point/parameters[12])):
-            points.append(actual_2_y[i])
+            points.append(actual_y[i])
         for point in new_guess:
             point_y, point_x = bubble_prediction.calculate_com(point, True)
             points.append(point_y)
@@ -352,10 +358,10 @@ def cross_check(model_name, initial_conditions):
     ax_1.plot([100, 100], [-5, 5], 'g-')
     ax_1.plot(actual_2_y, 'b--')
     n, b, p = ax_2.hist(final_positions, orientation='horizontal', bins=50, color='m')
-    ax_2.plot([0, max(n)], [np.asarray(actual_2_y)[-1], np.asarray(actual_2_y)[-1]], 'b--')
+    ax_2.plot([0, max(n)], [np.asarray(actual_y)[-1], np.asarray(actual_y)[-1]], 'b--')
     ax_2.plot([0, max(n)], [np.mean(far), np.mean(far)], 'r:')
     ax_2.plot([0, max(n)], [np.mean(close), np.mean(close)], 'g:')
-    plt.savefig("model_performance/{}_y_pos_evolve_15.png".format(model_name), dpi=500)
+    plt.savefig("model_performance/{}_y_pos_evolve_12.png".format(model_name), dpi=500)
     plt.clf()
     plt.grid()
     plt.scatter(np.linspace(0, len(final_positions)-1, len(final_positions)), final_positions)
@@ -364,7 +370,7 @@ def cross_check(model_name, initial_conditions):
         current_mean.append(np.mean(final_positions[:i]))
     plt.plot(current_mean, "b:")
     plt.plot([0, len(final_positions)], [np.asarray(actual_2_y)[-1], np.asarray(actual_2_y)[-1]], "r--")
-    plt.savefig("model_performance/{}_predictions_evolve_15.png".format(model_name), dpi=500)
+    plt.savefig("model_performance/{}_predictions_evolve_12.png".format(model_name), dpi=500)
 
 
 def cross_check_easy(model_name, initial_conditions):
@@ -391,7 +397,7 @@ def cross_check_easy(model_name, initial_conditions):
 def main():
     to_analyse = [
         # [loss_functions.UBERLOSS, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Alpha", 20, True],
-        [loss_functions.UBERLOSS, 64, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Andover", 5, True],
+        # [loss_functions.UBERLOSS, 64, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Andover", 5, True],
         # [loss_functions.UBERLOSS, 60, 4, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Aberdeen", 20, False],
         #
         # [loss_functions.UBERLOSS, 45, 3, 10, True, True, 5, 3, 0.001, [0], True, [0], 5, "Bravo", 20, True],
@@ -486,7 +492,19 @@ def main():
         # #
         # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Freetown", 20, True],
         # [loss_functions.UBERLOSS, 45, 3, 7, True, True, 1, 4, 0.001, [0], True, [0], 5, "0_Frimley", 20, False],
+
+        # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Inception", 20, True, 0],
+        # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Basic", 20, True, 1],
+        # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Transformer", 20, True, 2],
+        # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Deceptive", 20, True, 3],
+        # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Resnet", 20, True, 4],
+        [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Parallel", 20, True, 5],
     ]
+    print(len(to_analyse))
+    for model in to_analyse:
+        print(model[13])
+        cross_check(model[13], [12, 10])
+
     # print(len(to_analyse))
     # for model in to_analyse:
     #     print(model[13])
