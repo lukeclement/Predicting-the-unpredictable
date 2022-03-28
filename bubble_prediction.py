@@ -85,14 +85,14 @@ def generate_and_save_images(model, epoch):
         # plt.savefig('image_at_epoch_{:04d}_{}.png'.format(epoch, j), dpi=500)
         # plt.clf()
         images.append(predictions[0, j, :, :, 0])
-    make_gif(images, "gan_at_epoch{:04d}".format(epoch))
+    make_gif(images, "kernel_low_res_gan_at_epoch{:04d}".format(epoch))
 
 
 def main():
     tf.random.set_seed(100)
     activation_function = layers.LeakyReLU()
     lr_schedule = optimizers.schedules.ExponentialDecay(
-        initial_learning_rate=1e-2,
+        initial_learning_rate=1e-4,
         decay_steps=10000,
         decay_rate=0.9
     )
@@ -102,7 +102,7 @@ def main():
 
     parameters_extra = [
         # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "AutoEncoder", 20, True, 6],
-        [loss_functions.UBERLOSS, 8, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "GAN", 60, True, 7],
+        [loss_functions.UBERLOSS, 32, 32, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "GAN", 500, True, 7],
         # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Basic", 20, True, 1],
         # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Transformer", 20, True, 2],
         # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Deceptive", 20, True, 3],
@@ -183,8 +183,10 @@ def main():
             plt.clf()
             break
         elif scenario == 7:
-            generator_optimizer = optimizers.Adam(1e-4)
-            discriminator_optimizer = optimizers.Adam(1e-4)
+            # generator_optimizer = optimizers.Adam(1e-4)
+            # discriminator_optimizer = optimizers.Adam(1e-4)
+            generator_optimizer = optimizer
+            discriminator_optimizer = optimizer_2
             generator = create_network.create_generator()
             discriminator = create_network.create_discriminator()
             noise_len = 100
@@ -220,7 +222,7 @@ def main():
                     start = time.time()
                     gen_losses = []
                     disc_losses = []
-                    pbar = tqdm(total=9016 / 8)
+                    pbar = tqdm(total=8604 / 8)
                     for image_batch in dataset:
                         gen_loss, disc_loss = train_step(image_batch)
                         gen_losses.append(gen_loss)
@@ -242,6 +244,8 @@ def main():
 
                 generate_and_save_images(generator, epochs)
             train_gan(training_data[0])
+            generator.save("models/{}_gen".format(name))
+            discriminator.save("models/{}_disc".format(name))
         else:
             model = create_network.create_basic_network(
                 activation_function, optimizer, loss_function, image_frames, image_size
