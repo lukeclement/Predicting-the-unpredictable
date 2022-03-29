@@ -573,12 +573,12 @@ def create_parallel_network(activation, optimizer, loss, input_frames, image_siz
     return model
 
 
-def create_u_network(activation, optimizer, loss, input_frames,
+def create_u_network(activation, input_frames,
                      image_size=64, channels=3, encode_size=2, kernel_size=3, inception=False):
     input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
     saving_layers = []
     x = layers.Conv3D(32, (input_frames, 1, 1), activation=activation)(input_layer)
-    x = layers.Reshape((image_size, image_size, 32))
+    x = layers.Reshape((image_size, image_size, 32))(x)
     current_axis = image_size
     loops = 0
     while current_axis > encode_size:
@@ -597,10 +597,10 @@ def create_u_network(activation, optimizer, loss, input_frames,
         x = layers.UpSampling2D(2)(x)
         x = layers.Conv2DTranspose(16*2**(loops - loop), kernel_size, padding='same', activation=activation)(x)
     x = layers.Conv2D(1, 1, padding='same', activation='sigmoid')(x)
-    model = Model(input_layer, x)
-    model.compile(optimizer=optimizer, loss=loss, metrics=[
-        losses.binary_crossentropy, losses.mean_squared_logarithmic_error
-    ])
+    model = Model(input_layer, x, name='u-net')
+    # model.compile(optimizer=optimizer, loss=loss, metrics=[
+    #     losses.binary_crossentropy, losses.mean_squared_logarithmic_error
+    # ])
     return model
 
 
@@ -678,8 +678,8 @@ def create_generator():
     return model
 
 
-def create_discriminator():
-    input_layer = Input(shape=(32, 32, 32, 1))
+def create_discriminator(input_frames, input_size):
+    input_layer = Input(shape=(input_frames, input_size, input_size, 1))
     x = layers.Conv3D(32, 3, strides=2, padding='same')(input_layer)
     x = layers.LeakyReLU()(x)
     x = layers.Dropout(0.3)(x)
@@ -689,6 +689,27 @@ def create_discriminator():
     x = layers.Dropout(0.3)(x)
 
     x = layers.Conv3D(128, 3, strides=2, padding='same')(x)
+    x = layers.LeakyReLU()(x)
+    x = layers.Dropout(0.3)(x)
+
+    x = layers.Flatten()(x)
+    x = layers.Dense(1, activation='sigmoid')(x)
+
+    model = Model(input_layer, x, name='discriminator')
+    return model
+
+
+def create_special_discriminator(input_size):
+    input_layer = Input(shape=(input_size, input_size, 1))
+    x = layers.Conv2D(32, 3, strides=2, padding='same')(input_layer)
+    x = layers.LeakyReLU()(x)
+    x = layers.Dropout(0.3)(x)
+
+    x = layers.Conv2D(64, 3, strides=2, padding='same')(x)
+    x = layers.LeakyReLU()(x)
+    x = layers.Dropout(0.3)(x)
+
+    x = layers.Conv2D(128, 3, strides=2, padding='same')(x)
     x = layers.LeakyReLU()(x)
     x = layers.Dropout(0.3)(x)
 

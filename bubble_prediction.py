@@ -188,10 +188,12 @@ def main():
             generator_optimizer = optimizer
             discriminator_optimizer = optimizer_2
             generator = create_network.create_generator()
-            discriminator = create_network.create_discriminator()
+            discriminator = create_network.create_discriminator(32, 32)
             noise_len = 100
             print(generator.summary())
             print(discriminator.summary())
+            print(type(discriminator))
+            # print(discriminator.trainable_parameters)
             training_data = dat_to_training.create_training_data(
                 image_frames, timestep, image_size=image_size,
                 excluded_sims=[12, 9, 11], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False, var_2=True)
