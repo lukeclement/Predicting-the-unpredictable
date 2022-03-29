@@ -17,12 +17,12 @@ def generate_images(model, epoch, input_images_index):
                 "Simulation_data_extrapolated/Simulation_False_0_0.001_12/data_{}.npy".format(input_images_index[i] + j), 64)
     predictions = model(images, training=False)
 
-    fig = plt.figure(figsize=(5, 5))
+    fig = plt.figure(figsize=(10, 10))
     for i in range(predictions.shape[0]):
         plt.subplot(4, 4, i + 1)
         plt.imshow(predictions[i, :, :, 0], cmap='Blues')
         plt.axis('off')
-    plt.savefig("predictions_at_epoch_{:04d}.png".format(epoch), dpi=500)
+    plt.savefig("predictions_at_epoch_{:04d}.png".format(epoch))
 
 
 def main():
@@ -39,15 +39,16 @@ def main():
     timestep = 5
     resolution = 0.001
 
-    network = create_network.create_u_network(layers.LeakyReLU(), image_frames, image_size, encode_size=5)
+    network = create_network.create_u_network(layers.LeakyReLU(), image_frames, image_size, encode_size=10, kernel_size=5)
+    # network = create_network.create_basic_network(layers.LeakyReLU(), image_frames, image_size)
     discriminator = create_network.create_special_discriminator(image_size)
 
+    print(network.summary())
     print(type(network))
     print(type(discriminator))
     training_data = dat_to_training.create_training_data(
         image_frames, timestep, image_size=image_size,
         excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False)
-    print(network.summary())
     print(discriminator.summary())
     train_network(training_data[0], network, discriminator, network_optimizer, discriminator_optimizer, 20)
     network.save("models/new_try")
@@ -60,11 +61,9 @@ def train_step(input_images, expected_output, network, discriminator, net_op, di
 
         real_output = discriminator(expected_output, training=True)
         actual_output = discriminator(predictions, training=True)
-        network_disc_loss = tf.cast(loss_functions.generator_loss(actual_output), tf.float16)
-        network_mse = k.mean(losses.mean_squared_error(
-            predictions * tf.cast(expected_output != 0, tf.float32), expected_output
-        ), axis=0)
-        network_loss = network_disc_loss + network_mse
+        network_disc_loss = loss_functions.generator_loss(actual_output)
+        network_mse = k.mean(losses.mean_squared_error(expected_output, predictions), axis=0)
+        network_loss = network_disc_loss
         disc_loss = loss_functions.discriminator_loss(real_output, actual_output)
 
     net_grad = net_tape.gradient(network_loss, network.trainable_variables)
@@ -78,11 +77,14 @@ def train_step(input_images, expected_output, network, discriminator, net_op, di
 def train_network(dataset, network, discriminator, net_op, disc_op, epochs):
     times_so_far = []
     ref_index = [4, 42, 69, 72, 104, 254, 298, 339, 347, 420, 481, 482, 555, 663, 681, 701]
+    ref_index_float = np.linspace(3, 730, 16, endpoint=True)
+    for i, r in enumerate(ref_index_float):
+        ref_index[i] = int(r)
     for epoch in range(epochs):
         start = time.time()
         gen_losses = []
         disc_losses = []
-        print("Running epoch {}...".format(epoch))
+        print("Running epoch {}...".format(epoch + 1))
         for questions, answers in dataset:
             gen_loss, disc_loss = train_step(questions, answers,
                                              network, discriminator,

@@ -321,34 +321,41 @@ def create_transformer_network(activation, optimizer, loss, input_frames, image_
     return model
 
 
-def create_basic_network(activation, optimizer, loss, input_frames, image_size, channels=3, latent_dimensions=16):
+def create_basic_network(activation, input_frames, image_size, channels=3, latent_dimensions=100):
     input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
-    x = layers.Conv3D(32, 3, padding="same")(input_layer)
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation(activation)(x)
-    x = layers.Conv3D(64, 3, padding="same")(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation(activation)(x)
-    x = layers.Conv3D(64, (input_frames, 1, 1), padding="valid")(x)
-    x = layers.Reshape((image_size, image_size, 64))(x)
-    x = layers.Conv2D(latent_dimensions, 1, padding="same")(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation(activation)(x)
+    layer_depth = -1
+    frames = input_frames
+    size = image_size
+    x = input_layer
+    while frames * size * size > 100:
+        layer_depth += 1
+        if frames > 1:
+            x = layers.Conv3D(32*2**layer_depth, 5, strides=2, padding='same')(x)
+            x = activation(x)
+            frames = frames // 2
+            size = size // 2
+        else:
+            if frames == 1:
+                x = layers.Reshape((size, size, 32*2**layer_depth))(x)
+                frames = 0
+            x = layers.Conv2D(32*2**layer_depth, 5, strides=2, padding='same')(x)
+            x = activation(x)
 
-    x = layers.Conv2DTranspose(64, 3, padding="same")(x)
+    x = layers.Flatten()(x)
+    x = layers.Dense(4 * 4 * 32 * 2**layer_depth)(x)
     x = layers.BatchNormalization()(x)
-    x = layers.Activation(activation)(x)
-    x = layers.Conv2DTranspose(32, 3, padding="same")(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation(activation)(x)
-    x = layers.Conv2DTranspose(1, 3, padding="same")(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation(activations.sigmoid)(x)
+    x = activation(x)
+    x = layers.Reshape((4, 4, 32 * 2**layer_depth))(x)
+
+    while size != image_size:
+        layer_depth -= 1
+        x = layers.Conv2DTranspose(32*2**layer_depth, 5, strides=2, padding='same', use_bias=False)(x)
+        x = layers.BatchNormalization()(x)
+        x = activation(x)
+
+    x = layers.Conv2DTranspose(1, 5, activation='sigmoid', use_bias=False)
 
     model = Model(input_layer, x)
-    model.compile(optimizer=optimizer, loss=loss, metrics=[
-        losses.binary_crossentropy, losses.mean_squared_logarithmic_error
-    ])
     return model
 
 #DEFULT IS RESNET 50
@@ -577,25 +584,31 @@ def create_u_network(activation, input_frames,
                      image_size=64, channels=3, encode_size=2, kernel_size=3, inception=False):
     input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
     saving_layers = []
-    x = layers.Conv3D(32, (input_frames, 1, 1), activation=activation)(input_layer)
+    x = layers.Conv3D(32, (input_frames, 1, 1))(input_layer)
+    x = layers.LeakyReLU()(x)
     x = layers.Reshape((image_size, image_size, 32))(x)
     current_axis = image_size
     loops = 0
     while current_axis > encode_size:
         loops += 1
-        x = layers.Conv2D(16*2**loops, kernel_size, padding='same', activation=activation)(x)
+        x = layers.Conv2D(16*2**loops, kernel_size, strides=2, padding='same', use_bias=False)(x)
+        # x= layers.BatchNormalization()(x)
+        x = layers.LeakyReLU()(x)
         # x = layers.Conv2D(32, kernel_size, padding='same', activation=activation)(x)
         if inception:
             x = inception_cell_revive(x, channels)
-        x = layers.MaxPooling2D(2)(x)
+        # x = layers.MaxPooling2D(2)(x)
         current_axis = int(np.floor(current_axis / 2))
         saving_layers.append(x)
-    x = layers.Conv2D(16*2**loops, 1, activation=activation)(x)
+    x = layers.Conv2D(16*2**loops, 1)(x)
+    x = layers.LeakyReLU()(x)
 
     for loop in range(loops):
         x = layers.concatenate([saving_layers[loops - loop - 1], x], axis=3)
-        x = layers.UpSampling2D(2)(x)
-        x = layers.Conv2DTranspose(16*2**(loops - loop), kernel_size, padding='same', activation=activation)(x)
+        # x = layers.UpSampling2D(2)(x)
+        x = layers.Conv2DTranspose(16*2**(loops - loop), kernel_size, strides=2, padding='same', use_bias=False)(x)
+        x = layers.BatchNormalization()(x)
+        x = layers.LeakyReLU()(x)
     x = layers.Conv2D(1, 1, padding='same', activation='sigmoid')(x)
     model = Model(input_layer, x, name='u-net')
     # model.compile(optimizer=optimizer, loss=loss, metrics=[
