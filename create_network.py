@@ -336,24 +336,25 @@ def create_basic_network(activation, input_frames, image_size, channels=3, laten
             size = size // 2
         else:
             if frames == 1:
-                x = layers.Reshape((size, size, 32*2**layer_depth))(x)
+                x = layers.Reshape((size, size, 32*2**(layer_depth-1)))(x)
                 frames = 0
             x = layers.Conv2D(32*2**layer_depth, 5, strides=2, padding='same')(x)
             x = activation(x)
+            size = size // 2
 
     x = layers.Flatten()(x)
-    x = layers.Dense(4 * 4 * 32 * 2**layer_depth)(x)
+    x = layers.Dense(8 * 8 * 32 * 2**layer_depth)(x)
     x = layers.BatchNormalization()(x)
     x = activation(x)
-    x = layers.Reshape((4, 4, 32 * 2**layer_depth))(x)
-
+    x = layers.Reshape((8, 8, 32 * 2**layer_depth))(x)
     while size != image_size:
         layer_depth -= 1
         x = layers.Conv2DTranspose(32*2**layer_depth, 5, strides=2, padding='same', use_bias=False)(x)
         x = layers.BatchNormalization()(x)
         x = activation(x)
+        size = size * 2
 
-    x = layers.Conv2DTranspose(1, 5, activation='sigmoid', use_bias=False)
+    x = layers.Conv2DTranspose(1, 5, activation='sigmoid', padding='same', use_bias=False)(x)
 
     model = Model(input_layer, x)
     return model

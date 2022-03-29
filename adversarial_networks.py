@@ -39,8 +39,8 @@ def main():
     timestep = 5
     resolution = 0.001
 
-    network = create_network.create_u_network(layers.LeakyReLU(), image_frames, image_size, encode_size=10, kernel_size=5)
-    # network = create_network.create_basic_network(layers.LeakyReLU(), image_frames, image_size)
+    # network = create_network.create_u_network(layers.LeakyReLU(), image_frames, image_size, encode_size=10, kernel_size=5)
+    network = create_network.create_basic_network(layers.LeakyReLU(), image_frames, image_size)
     discriminator = create_network.create_special_discriminator(image_size)
 
     print(network.summary())
@@ -91,6 +91,7 @@ def train_network(dataset, network, discriminator, net_op, disc_op, epochs):
                                              net_op, disc_op)
             gen_losses.append(k.mean(gen_loss))
             disc_losses.append(k.mean(disc_loss))
+            print(np.mean(gen_losses))
         generate_images(network, epoch + 1, ref_index)
         times_so_far.append(time.time() - start)
         print("Time for epoch {} was {:.0f}s".format(epoch + 1, times_so_far[epoch]))
