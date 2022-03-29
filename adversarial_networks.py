@@ -21,6 +21,7 @@ def generate_images(model, epoch, input_images_index):
     for i in range(predictions.shape[0]):
         plt.subplot(4, 4, i + 1)
         plt.imshow(predictions[i, :, :, 0], cmap='Blues')
+        plt.axis('off')
     plt.savefig("predictions_at_epoch_{:04d}.png".format(epoch), dpi=500)
 
 
@@ -48,7 +49,8 @@ def main():
         excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False)
     print(network.summary())
     print(discriminator.summary())
-    train_network(training_data[0], network, discriminator, network_optimizer, discriminator_optimizer, 5)
+    train_network(training_data[0], network, discriminator, network_optimizer, discriminator_optimizer, 20)
+    network.save("models/new_try")
 
 
 @tf.function
@@ -59,9 +61,9 @@ def train_step(input_images, expected_output, network, discriminator, net_op, di
         real_output = discriminator(expected_output, training=True)
         actual_output = discriminator(predictions, training=True)
         network_disc_loss = tf.cast(loss_functions.generator_loss(actual_output), tf.float16)
-        network_mse = k.mean(losses.mean_squared_error(predictions, expected_output), axis=0)
-        print(network_mse.shape)
-        print(network_disc_loss.shape)
+        network_mse = k.mean(losses.mean_squared_error(
+            predictions * tf.cast(expected_output != 0, tf.float32), expected_output
+        ), axis=0)
         network_loss = network_disc_loss + network_mse
         disc_loss = loss_functions.discriminator_loss(real_output, actual_output)
 
@@ -85,8 +87,8 @@ def train_network(dataset, network, discriminator, net_op, disc_op, epochs):
             gen_loss, disc_loss = train_step(questions, answers,
                                              network, discriminator,
                                              net_op, disc_op)
-            gen_losses.append(gen_loss)
-            disc_losses.append(disc_loss)
+            gen_losses.append(k.mean(gen_loss))
+            disc_losses.append(k.mean(disc_loss))
         generate_images(network, epoch + 1, ref_index)
         times_so_far.append(time.time() - start)
         print("Time for epoch {} was {:.0f}s".format(epoch + 1, times_so_far[epoch]))
