@@ -185,7 +185,7 @@ def convert_dat_files(variant_range, resolution=0.0001):
                 pbar = tqdm(total=len(dat_files))
                 for file in dat_files:
                     pbar.update(1)
-                    # Extracting data
+                # Extracting data
                     x, y = read_file(file)
                     # Finding the actual frame number
                     step_number = int(file[file.find("s_")+2:-4])
@@ -217,6 +217,63 @@ def get_sim_result(source):
     final_array = np.zeros(4)
     final_array[output] = 1
     return final_array
+
+
+def generate_data(frames: int, size: int, timestep: int, future_look: int,
+                variants=None, flips_allowed=True, resolution=0.001, excluded_sims=None):
+    if excluded_sims is None:
+        excluded_sims = []
+    if variants is None:
+        variants = [0]
+    batch_size = 8
+    all_simulations = glob.glob("Simulation_data_extrapolated/*")
+    # All the simulations that will be transformed into data
+    looking_for = []
+    for sim in range(0, 16):
+        for flip in ["True", "False"]:
+            for variant in variants:
+                if sim not in excluded_sims and ((flips_allowed and flip == "True") or flip == "False"):
+                    looking_for.append("Simulation_data_extrapolated/Simulation_{}_{}_{}_{}".format(
+                        flip, variant, resolution, sim
+                    ))
+    # Look through simulations and get metadata
+    total_number_questions = 0
+    for simulation in looking_for:
+        if simulation not in all_simulations:
+            convert_dat_files([min(variants), max(variants)], resolution)
+        all_simulations = glob.glob("Simulation_data_extrapolated/*")
+
+        steps = glob.glob(simulation+"/*")
+        num_steps = len(steps) - 3
+        maximum_question_start = num_steps - timestep*(frames + future_look)
+        total_number_questions += maximum_question_start
+
+    questions = np.zeros((total_number_questions, frames, size, size, 3))
+    answers = np.zeros((total_number_questions, future_look, size, size, 1))
+
+    tracker = 0
+    print("Loading in data...")
+    progress = tqdm(total=total_number_questions)
+    for simulation in looking_for:
+        steps = glob.glob(simulation + "/*")
+
+        num_steps = len(steps)
+        maximum_question_start = num_steps - timestep*(frames + future_look)
+        for step in range(3, maximum_question_start):
+            progress.update(1)
+            for frame in range(frames):
+                questions[tracker, frame, :, :, :] = process_bmp(
+                    simulation+"/data_{}.npy".format(step + frame * timestep), size
+                )
+            for future_frame in range(future_look):
+                answers[tracker, future_frame, :, :, 0] = process_bmp(
+                    simulation + "/data_{}.npy".format(step + (frames + future_frame) * timestep), size
+                )[:, :, 1]
+            tracker += 1
+    progress.close()
+    testing_data = tf.data.Dataset.from_tensor_slices((questions, answers))
+    testing_data = testing_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    return testing_data
 
 
 def create_training_data(

@@ -45,9 +45,8 @@ def main():
     # print(network.summary())
     # print(type(network))
     # print(type(discriminator))
-    training_data = dat_to_training.create_training_data(
-        image_frames, timestep, image_size=image_size,
-        excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False)
+    training_data = dat_to_training.generate_data(image_frames, image_size, timestep, 1, [0], False, 0.001, [12])
+
     # print(discriminator.summary())
     # train_network(training_data[0], network, discriminator, network_optimizer, discriminator_optimizer, 500, 'basic')
     # network.save("models/basic_network")
@@ -63,7 +62,7 @@ def main():
                                               kernel_size=5)
     discriminator = create_network.create_special_discriminator(image_size)
     print(network.summary())
-    train_network(training_data[0], network, discriminator, network_optimizer, discriminator_optimizer, 500, "u-net")
+    train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 500, "u-net")
     network.save("models/u_network")
 
 
