@@ -248,7 +248,7 @@ def generate_data(frames: int, size: int, timestep: int, future_look: int,
         maximum_question_start = num_steps - timestep*(frames + future_look)
         total_number_questions += maximum_question_start
 
-    questions = np.zeros((total_number_questions, frames, size, size, 3))
+    questions = np.zeros((total_number_questions, frames, size, size, 1))
     answers = np.zeros((total_number_questions, future_look, size, size, 1))
 
     tracker = 0
@@ -262,9 +262,9 @@ def generate_data(frames: int, size: int, timestep: int, future_look: int,
         for step in range(3, maximum_question_start):
             progress.update(1)
             for frame in range(frames):
-                questions[tracker, frame, :, :, :] = process_bmp(
+                questions[tracker, frame, :, :, 0] = process_bmp(
                     simulation+"/data_{}.npy".format(step + frame * timestep), size
-                )
+                )[:, :, 1]
             for future_frame in range(future_look):
                 answers[tracker, future_frame, :, :, 0] = process_bmp(
                     simulation + "/data_{}.npy".format(step + (frames + future_frame) * timestep), size
