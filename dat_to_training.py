@@ -249,7 +249,7 @@ def generate_data(frames: int, size: int, timestep: int, future_look: int,
         total_number_questions += maximum_question_start
 
     questions = np.zeros((total_number_questions, frames, size, size, 1))
-    answers = np.zeros((total_number_questions, future_look, size, size, 1))
+    answers = np.zeros((total_number_questions, 2, size, size, 1))
 
     tracker = 0
     print("Loading in data...")
@@ -265,9 +265,9 @@ def generate_data(frames: int, size: int, timestep: int, future_look: int,
                 questions[tracker, frame, :, :, 0] = process_bmp(
                     simulation+"/data_{}.npy".format(step + frame * timestep), size
                 )[:, :, 1]
-            for future_frame in range(future_look):
+            for future_frame in range(2):
                 answers[tracker, future_frame, :, :, 0] = process_bmp(
-                    simulation + "/data_{}.npy".format(step + (frames + future_frame) * timestep), size
+                    simulation + "/data_{}.npy".format(step + (frames + future_frame*future_look) * timestep), size
                 )[:, :, 1]
             tracker += 1
     progress.close()

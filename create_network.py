@@ -338,7 +338,8 @@ def create_basic_network(activation, input_frames, image_size, channels=3, laten
             if frames == 1:
                 x = layers.Reshape((size, size, 32*2**(layer_depth-1)))(x)
                 frames = 0
-            x = layers.Conv2D(32*2**layer_depth, 5, strides=2, padding='same')(x)
+            x = layers.Conv2D(32*2**layer_depth, 5, strides=2, padding='same', use_bias=False)(x)
+            x = layers.BatchNormalization()(x)
             x = activation(x)
             size = size // 2
 
@@ -585,7 +586,8 @@ def create_u_network(activation, input_frames,
                      image_size=64, channels=3, encode_size=2, kernel_size=3, inception=False):
     input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
     saving_layers = []
-    x = layers.Conv3D(32, (input_frames, 1, 1))(input_layer)
+    x = layers.Conv3D(32, (input_frames, 1, 1), use_bias=False)(input_layer)
+    x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU()(x)
     x = layers.Reshape((image_size, image_size, 32))(x)
     current_axis = image_size
@@ -593,7 +595,7 @@ def create_u_network(activation, input_frames,
     while current_axis > encode_size:
         loops += 1
         x = layers.Conv2D(16*2**loops, kernel_size, strides=2, padding='same', use_bias=False)(x)
-        # x= layers.BatchNormalization()(x)
+        x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
         # x = layers.Conv2D(32, kernel_size, padding='same', activation=activation)(x)
         if inception:
@@ -601,7 +603,8 @@ def create_u_network(activation, input_frames,
         # x = layers.MaxPooling2D(2)(x)
         current_axis = int(np.floor(current_axis / 2))
         saving_layers.append(x)
-    x = layers.Conv2D(16*2**loops, 1)(x)
+    x = layers.Conv2D(16*2**loops, 1, padding='same', use_bias=False)(x)
+    x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU()(x)
 
     for loop in range(loops):
