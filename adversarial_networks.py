@@ -10,11 +10,12 @@ import dat_to_training
 
 
 def generate_images(model, epoch, input_images_index, name):
-    images = np.zeros((16, 4, 64, 64, 3))
+    images = np.zeros((16, 4, 64, 64, 1))
     for i in range(len(input_images_index)):
         for j in range(0, 4):
-            images[i, j, :, :, :] = dat_to_training.process_bmp(
-                "Simulation_data_extrapolated/Simulation_False_0_0.001_12/data_{}.npy".format(input_images_index[i] + j), 64)
+            images[i, j, :, :, 0] = dat_to_training.process_bmp(
+                "Simulation_data_extrapolated/Simulation_False_0_0.001_12/data_{}.npy".format(input_images_index[i] + j)
+                , 64)[:, :, 1]
     predictions = model(images, training=False)
 
     fig = plt.figure(figsize=(5, 5))
