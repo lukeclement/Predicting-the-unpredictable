@@ -39,18 +39,18 @@ def main():
     timestep = 5
     resolution = 0.001
 
-    network = create_network.create_basic_network(layers.LeakyReLU(), image_frames, image_size)
-    discriminator = create_network.create_special_discriminator(image_size)
-
-    print(network.summary())
-    print(type(network))
-    print(type(discriminator))
+    # network = create_network.create_basic_network(layers.LeakyReLU(), image_frames, image_size)
+    # discriminator = create_network.create_special_discriminator(image_size)
+    #
+    # print(network.summary())
+    # print(type(network))
+    # print(type(discriminator))
     training_data = dat_to_training.create_training_data(
         image_frames, timestep, image_size=image_size,
         excluded_sims=[12], variants=[0], resolution=resolution, flips_allowed=False, easy_mode=False)
-    print(discriminator.summary())
-    train_network(training_data[0], network, discriminator, network_optimizer, discriminator_optimizer, 500, 'basic')
-    network.save("models/basic_network")
+    # print(discriminator.summary())
+    # train_network(training_data[0], network, discriminator, network_optimizer, discriminator_optimizer, 500, 'basic')
+    # network.save("models/basic_network")
     lr_schedule = optimizers.schedules.ExponentialDecay(
         initial_learning_rate=1e-4,
         decay_steps=10000,
@@ -76,7 +76,7 @@ def train_step(input_images, expected_output, network, discriminator, net_op, di
         actual_output = discriminator(predictions, training=True)
         network_disc_loss = loss_functions.generator_loss(actual_output)
         network_mse = k.mean(losses.mean_squared_error(expected_output, predictions), axis=0)
-        network_loss = network_disc_loss
+        network_loss = network_disc_loss + network_mse
         disc_loss = loss_functions.discriminator_loss(real_output, actual_output)
 
     net_grad = net_tape.gradient(network_loss, network.trainable_variables)
