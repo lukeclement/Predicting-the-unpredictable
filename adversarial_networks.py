@@ -199,26 +199,27 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     plt.close()
 
     # Converting to a phase space
-    correct_frequency = []
-    predicted_frequency = []
-    for i in range(min(len(correct_y_com), len(prediction_y_com))-50):
-        prediction_phase = np.asarray(prediction_y_com)[i:i+50] - 0.5
-        correct_phase = np.asarray(correct_y_com)[i:i + 50] - 0.5
-
-        results = fit_sin(np.linspace(0, len(correct_phase)-1, len(correct_phase)), correct_phase)
-        # plt.scatter(np.linspace(0, len(correct_phase)-1, len(correct_phase)), correct_phase)
-        # x = np.linspace(0, len(correct_phase)-1, len(correct_phase)*10)
-        # plt.plot(x, results["fitfunc"](x), label="Simulated")
-        correct_frequency.append(results["omega"])
-        results = fit_sin(np.linspace(0, len(prediction_phase)-1, len(prediction_phase)), prediction_phase)
-        # plt.scatter(np.linspace(0, len(prediction_phase)-1, len(prediction_phase)), prediction_phase)
-        # x = np.linspace(0, len(prediction_phase)-1, len(prediction_phase)*10)
-        # plt.plot(x, results["fitfunc"](x), label="Predicted")
-        predicted_frequency.append(results["omega"])
-    plt.plot(correct_frequency, label="Simulated omega")
-    plt.plot(predicted_frequency, label="Predicted omega")
-    plt.legend()
-    plt.show()
+    # correct_frequency = []
+    # predicted_frequency = []
+    # for i in range(min(len(correct_y_com), len(prediction_y_com))-50):
+    #     prediction_phase = np.asarray(prediction_y_com)[i:i+50] - 0.5
+    #     correct_phase = np.asarray(correct_y_com)[i:i + 50] - 0.5
+    #
+    #     results = fit_sin(np.linspace(0, len(correct_phase)-1, len(correct_phase)), correct_phase)
+    #     # plt.scatter(np.linspace(0, len(correct_phase)-1, len(correct_phase)), correct_phase)
+    #     # x = np.linspace(0, len(correct_phase)-1, len(correct_phase)*10)
+    #     # plt.plot(x, results["fitfunc"](x), label="Simulated")
+    #     correct_frequency.append(results["omega"])
+    #     results = fit_sin(np.linspace(0, len(prediction_phase)-1, len(prediction_phase)), prediction_phase)
+    #     # plt.scatter(np.linspace(0, len(prediction_phase)-1, len(prediction_phase)), prediction_phase)
+    #     # x = np.linspace(0, len(prediction_phase)-1, len(prediction_phase)*10)
+    #     # plt.plot(x, results["fitfunc"](x), label="Predicted")
+    #     predicted_frequency.append(results["omega"])
+    # plt.plot(correct_frequency, label="Simulated omega")
+    # plt.plot(predicted_frequency, label="Predicted omega")
+    # plt.legend()
+    # plt.savefig("model_performance/{}_{}_angular frequency.png".format(network_name, simulation), dpi=250)
+    # plt.show()
     # Finding how it did across all simulations
     # max_sim_number = 16
     # bubble_sequences = []
@@ -258,14 +259,14 @@ def main():
     future_runs = 5
     resolution = 0.001
 
-    scenario = 2
+    scenario = 0
     if scenario < 2:
         training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
                                                       resolution, [12])
-
+        # This has not been run yet (31/03 @ 19:14)
         lr_schedule = optimizers.schedules.ExponentialDecay(
             initial_learning_rate=1e-4,
-            decay_steps=10000,
+            decay_steps=50,
             decay_rate=0.7
         )
         if scenario == 0:
