@@ -30,6 +30,16 @@ def generate_images(model, epoch, input_images_index, name):
     plt.close('all')
 
 
+def calculate_com(bubble):
+    image_size = np.shape(bubble)[0]
+    x = np.linspace(0, 1, image_size)
+    y = np.linspace(1, 0, image_size)
+    x, y = np.meshgrid(x, y, indexing='xy')
+    x_com = np.sum(x*bubble) / np.sum(bubble)
+    y_com = np.sum(y*bubble) / np.sum(bubble)
+    return x_com, y_com
+
+
 def evaluate_performance(network_name, frames, size, timestep, resolution,
                          test_range=300, simulation=12, start_point=5, variant=0, flipped=False):
     network = models.load_model("models/{}".format(network_name))
@@ -68,8 +78,9 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     num_correct_frames = len(correct_frames)
 
     # Making a composite of both
-    composite_frames = np.zeros((max(num_correct_frames, test_range), size, size, 3))
-    for composite_frame in range(max(num_correct_frames, test_range)):
+    composite_size = max(num_correct_frames, test_range)
+    composite_frames = np.zeros((composite_size, size, size, 3))
+    for composite_frame in range(composite_size):
         if composite_frame < num_correct_frames and composite_frame < test_range:
             composite_frames[composite_frame, :, :, 0] = correct_frames[composite_frame]
             composite_frames[composite_frame, :, :, 2] = final_frames[composite_frame]
@@ -86,11 +97,74 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     images = []
     for i in image_converts:
         images.append(i)
-    imageio.mimsave("model_performance/{}_composite.gif".format(network_name), images)
+    imageio.mimsave("model_performance/{}_{}_composite.gif".format(network_name, simulation), images)
+
+    # For future use
+    correct = composite_frames[:, :, :, 0]
+    prediction = composite_frames[:, :, :, 2]
+    # Getting a value on the distribution of points per frame
+    # plt.xlabel("Pixel values")
+    # plt.hist2d(correct[:][correct[:] > 0], np.linspace(0, 1, len(correct[:][correct[:] > 0])), bins=30)
+    # # plt.hist(prediction[prediction > 0.2], bins=30)
+    # plt.show()
+
+    frame_info = []
+    correct_info = []
+    prediction_info = []
+    for frame in range(composite_size):
+        corrected_data = np.reshape(correct[frame], (size*size))
+        predicted_data = np.reshape(prediction[frame], (size**2))
+        for index in range(size**2):
+            frame_info.append(frame)
+            correct_info.append(corrected_data[index])
+            prediction_info.append(predicted_data[index])
+    plt.xlabel("Pixel value")
+    plt.ylabel("Frame number")
+    plt.hist2d(prediction_info, frame_info,
+               bins=(20, min(composite_size, test_range)),
+               range=((0.1, 1), (0, min(composite_size, test_range))))
+    plt.savefig("model_performance/{}_{}_value_dist.png".format(network_name, simulation), dpi=250)
+    plt.close()
+    plt.xlabel("Pixel value")
+    plt.ylabel("Frame number")
+    plt.hist2d(correct_info, frame_info,
+               bins=(20, min(composite_size, num_correct_frames)),
+               range=((0.1, 1), (0, min(composite_size, num_correct_frames))))
+    plt.savefig("model_performance/{}_value_dist.png".format(simulation), dpi=250)
+    plt.close()
+    # Getting an estimate on 'noise'
+    noise_correct = np.zeros(composite_size)
+    noise_prediction = np.zeros(composite_size)
+    noise_frame = np.zeros(composite_size)
+    for frame in range(composite_size):
+        noise_correct[frame] = len((correct[frame])[correct[frame] > 0.1])
+        noise_prediction[frame] = len((prediction[frame])[prediction[frame] > 0.1])
+        noise_frame[frame] = frame
+    plt.figure(figsize=(7, 4))
+    plt.xlabel("Frame")
+    plt.ylabel("Number of non-zero points")
+    plt.scatter(noise_frame, noise_prediction, label="Prediction")
+    plt.scatter(noise_frame, noise_correct, label="Simulation")
+    plt.legend()
+    plt.savefig("model_performance/{}_{}_non-zero.png".format(network_name, simulation), dpi=250)
+    plt.close()
 
     # Performing y-position stuff
-
-
+    prediction_x_com = []
+    prediction_y_com = []
+    correct_x_com = []
+    correct_y_com = []
+    for frame in range(composite_size):
+        x, y = calculate_com(np.around(prediction[frame]))
+        prediction_x_com.append(x)
+        prediction_y_com.append(y)
+        x, y = calculate_com(correct[frame])
+        correct_x_com.append(x)
+        correct_y_com.append(y)
+    plt.figure(figsize=(7, 4))
+    plt.plot(prediction_y_com)
+    plt.plot(correct_y_com)
+    plt.show()
 
 
 def main():
