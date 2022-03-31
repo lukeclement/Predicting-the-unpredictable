@@ -3,6 +3,7 @@ import time
 
 import imageio
 import numpy as np
+import scipy.optimize
 import tensorflow as tf
 from tensorflow.keras import layers, optimizers, losses, models, backend as k
 import matplotlib.pyplot as plt
@@ -35,9 +36,32 @@ def calculate_com(bubble):
     x = np.linspace(0, 1, image_size)
     y = np.linspace(1, 0, image_size)
     x, y = np.meshgrid(x, y, indexing='xy')
-    x_com = np.sum(x*bubble) / np.sum(bubble)
-    y_com = np.sum(y*bubble) / np.sum(bubble)
+    x_com = np.sum(x * bubble) / np.sum(bubble)
+    y_com = np.sum(y * bubble) / np.sum(bubble)
     return x_com, y_com
+
+
+def sinfunc(t, A, w, p, c):
+    return A * np.sin(w * t + p) + c
+
+
+def fit_sin(tt, yy):
+    '''Fit sin to the input time sequence, and return fitting parameters "amp", "omega", "phase", "offset", "freq", "period" and "fitfunc"'''
+    tt = np.array(tt)
+    yy = np.array(yy)
+    ff = np.fft.fftfreq(len(tt), (tt[1] - tt[0]))  # assume uniform spacing
+    Fyy = abs(np.fft.fft(yy))
+    guess_freq = abs(ff[np.argmax(Fyy[1:]) + 1])  # excluding the zero frequency "peak", which is related to offset
+    guess_amp = np.std(yy) * 2. ** 0.5
+    guess_offset = np.mean(yy)
+    guess = np.array([guess_amp, 2. * np.pi * guess_freq, 0., guess_offset])
+
+    popt, pcov = scipy.optimize.curve_fit(sinfunc, tt, yy, p0=guess)
+    A, w, p, c = popt
+    f = w / (2. * np.pi)
+    fitfunc = lambda t: A * np.sin(w * t + p) + c
+    return {"amp": A, "omega": w, "phase": p, "offset": c, "freq": f, "period": 1. / f, "fitfunc": fitfunc,
+            "maxcov": np.max(pcov), "rawres": (guess, popt, pcov)}
 
 
 def evaluate_performance(network_name, frames, size, timestep, resolution,
@@ -60,7 +84,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
         next_frame = network(current_frames)
         for frame in range(frames - 1):
             current_frames[:, frame] = current_frames[:, frame + 1]
-        current_frames[:, frames-1] = next_frame
+        current_frames[:, frames - 1] = next_frame
         final_frames[loop] = next_frame[0, :, :, 0]
 
     # Getting the correct data
@@ -112,24 +136,26 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     correct_info = []
     prediction_info = []
     for frame in range(composite_size):
-        corrected_data = np.reshape(correct[frame], (size*size))
-        predicted_data = np.reshape(prediction[frame], (size**2))
-        for index in range(size**2):
+        corrected_data = np.reshape(correct[frame], (size * size))
+        predicted_data = np.reshape(prediction[frame], (size ** 2))
+        for index in range(size ** 2):
             frame_info.append(frame)
             correct_info.append(corrected_data[index])
             prediction_info.append(predicted_data[index])
     plt.xlabel("Pixel value")
     plt.ylabel("Frame number")
     plt.hist2d(prediction_info, frame_info,
-               bins=(20, min(composite_size, test_range)),
+               bins=(18, min(composite_size, test_range)),
                range=((0.1, 1), (0, min(composite_size, test_range))))
+    plt.colorbar()
     plt.savefig("model_performance/{}_{}_value_dist.png".format(network_name, simulation), dpi=250)
     plt.close()
     plt.xlabel("Pixel value")
     plt.ylabel("Frame number")
     plt.hist2d(correct_info, frame_info,
-               bins=(20, min(composite_size, num_correct_frames)),
+               bins=(18, min(composite_size, num_correct_frames)),
                range=((0.1, 1), (0, min(composite_size, num_correct_frames))))
+    plt.colorbar()
     plt.savefig("model_performance/{}_value_dist.png".format(simulation), dpi=250)
     plt.close()
     # Getting an estimate on 'noise'
@@ -155,16 +181,74 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     correct_x_com = []
     correct_y_com = []
     for frame in range(composite_size):
-        x, y = calculate_com(np.around(prediction[frame]))
-        prediction_x_com.append(x)
-        prediction_y_com.append(y)
+        x, y = calculate_com(prediction[frame])
+        if frame < test_range:
+            prediction_x_com.append(x)
+            prediction_y_com.append(y)
         x, y = calculate_com(correct[frame])
-        correct_x_com.append(x)
-        correct_y_com.append(y)
+        if frame < num_correct_frames:
+            correct_x_com.append(x)
+            correct_y_com.append(y)
     plt.figure(figsize=(7, 4))
-    plt.plot(prediction_y_com)
-    plt.plot(correct_y_com)
+    plt.xlabel("Frame step")
+    plt.ylabel("Position of bubble centre")
+    plt.plot(prediction_y_com, label="Prediction")
+    plt.plot(correct_y_com, label="Simulation")
+    plt.legend()
+    plt.savefig("model_performance/{}_{}_y_position.png".format(network_name, simulation), dpi=250)
+    plt.close()
+
+    # Converting to a phase space
+    correct_frequency = []
+    predicted_frequency = []
+    for i in range(min(len(correct_y_com), len(prediction_y_com))-50):
+        prediction_phase = np.asarray(prediction_y_com)[i:i+50] - 0.5
+        correct_phase = np.asarray(correct_y_com)[i:i + 50] - 0.5
+
+        results = fit_sin(np.linspace(0, len(correct_phase)-1, len(correct_phase)), correct_phase)
+        # plt.scatter(np.linspace(0, len(correct_phase)-1, len(correct_phase)), correct_phase)
+        # x = np.linspace(0, len(correct_phase)-1, len(correct_phase)*10)
+        # plt.plot(x, results["fitfunc"](x), label="Simulated")
+        correct_frequency.append(results["omega"])
+        results = fit_sin(np.linspace(0, len(prediction_phase)-1, len(prediction_phase)), prediction_phase)
+        # plt.scatter(np.linspace(0, len(prediction_phase)-1, len(prediction_phase)), prediction_phase)
+        # x = np.linspace(0, len(prediction_phase)-1, len(prediction_phase)*10)
+        # plt.plot(x, results["fitfunc"](x), label="Predicted")
+        predicted_frequency.append(results["omega"])
+    plt.plot(correct_frequency, label="Simulated omega")
+    plt.plot(predicted_frequency, label="Predicted omega")
+    plt.legend()
     plt.show()
+    # Finding how it did across all simulations
+    # max_sim_number = 16
+    # bubble_sequences = []
+    # for sim in range(max_sim_number):
+    #     # Setting up the network's input
+    #     starting_frames = np.zeros((1, frames, size, size, 1))
+    #     for frame in range(frames):
+    #         starting_frames[0, frame, :, :, 0] = dat_to_training.process_bmp(
+    #             "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
+    #                 str(flipped), variant, resolution, sim, start_point + frame * timestep
+    #             ), image_size=size
+    #         )[:, :, 1]
+    #
+    #     # Running the predictions
+    #     prediction_x_com = []
+    #     prediction_y_com = []
+    #     final_frames = np.zeros((test_range, size, size))
+    #     current_frames = starting_frames
+    #     for loop in range(test_range):
+    #         next_frame = network(current_frames)
+    #         for frame in range(frames - 1):
+    #             current_frames[:, frame] = current_frames[:, frame + 1]
+    #         current_frames[:, frames - 1] = next_frame
+    #         final_frames[loop] = next_frame[0, :, :, 0]
+    #         x, y = calculate_com(next_frame[0, :, :, 0])
+    #         prediction_x_com.append(x)
+    #         prediction_y_com.append(y)
+    #     plt.plot(prediction_y_com, label="Bubble_{}".format(sim))
+    # plt.legend()
+    # plt.show()
 
 
 def main():
@@ -176,7 +260,8 @@ def main():
 
     scenario = 2
     if scenario < 2:
-        training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False, resolution, [12])
+        training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
+                                                      resolution, [12])
 
         lr_schedule = optimizers.schedules.ExponentialDecay(
             initial_learning_rate=1e-4,
@@ -191,7 +276,8 @@ def main():
                                                       kernel_size=5, channels=1)
             discriminator = create_network.create_discriminator(2, image_size)
             print(network.summary())
-            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 50, "u-net",
+            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 50,
+                          "u-net",
                           future_runs, image_frames)
             network.save("models/u_network")
         elif scenario == 1:
@@ -200,11 +286,13 @@ def main():
             network = create_network.create_basic_network(layers.LeakyReLU(), image_frames, image_size, channels=1)
             discriminator = create_network.create_discriminator(2, image_size)
             print(network.summary())
-            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 50, "basic",
+            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 50,
+                          "basic",
                           future_runs, image_frames)
             network.save("models/basic_network")
 
-    evaluate_performance("u_network", image_frames, image_size, timestep, resolution)
+    for sim in range(12, 13):
+        evaluate_performance("u_network", image_frames, image_size, timestep, resolution, simulation=sim)
 
 
 @tf.function
@@ -215,10 +303,10 @@ def train_step(input_images, expected_output, network, discriminator, net_op, di
         predictions = network(input_images, training=True)
         current_output.append(predictions)
 
-        for future_step in range(1, future_runs):
+        for future_step in range(future_runs):
             next_input = []
-            for i in range(frames-1):
-                next_input.append(future_input[:, i+1])
+            for i in range(frames - 1):
+                next_input.append(future_input[:, i + 1])
             next_input.append(tf.cast(predictions, tf.float64))
             future_input = tf.stack(next_input, axis=1)
             predictions = network(future_input, training=True)
