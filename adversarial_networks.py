@@ -57,7 +57,7 @@ def main():
     lr_schedule = optimizers.schedules.ExponentialDecay(
         initial_learning_rate=1e-4,
         decay_steps=10000,
-        decay_rate=0.9
+        decay_rate=0.7
     )
     if scenario == 0:
         network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
@@ -67,7 +67,7 @@ def main():
                                                   kernel_size=5, channels=1)
         discriminator = create_network.create_discriminator(2, image_size)
         print(network.summary())
-        train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 200, "u-net",
+        train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 50, "u-net",
                       future_runs, image_frames)
         network.save("models/u_network")
     else:
@@ -76,7 +76,7 @@ def main():
         network = create_network.create_basic_network(layers.LeakyReLU(), image_frames, image_size, channels=1)
         discriminator = create_network.create_discriminator(2, image_size)
         print(network.summary())
-        train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 200, "basic",
+        train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 50, "basic",
                       future_runs, image_frames)
         network.save("models/basic_network")
 
