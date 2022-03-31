@@ -17,14 +17,14 @@ seed = tf.random.normal([16, 100])
 
 def long_term_prediction(
         model, start_sim, start_image, image_size, timestep, frames, number_to_simulate, resolution, dry_run=False):
-    input_images = np.zeros((1, frames, image_size, image_size, 3))
+    input_images = np.zeros((1, frames, image_size, image_size, 1))
     for frame in range(0, frames):
         try:
-            input_images[0, frame, :, :, :] = dat_to_training.process_bmp(
+            input_images[0, frame, :, :, 0] = dat_to_training.process_bmp(
                 "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
                     "False", 0, resolution, start_sim, start_image + frame * timestep
                 ), image_size
-            )
+            )[:, :, 1]
         except IOError as e:
             print("Error - either invalid simulation number or image out of range!")
             print(e)
@@ -44,10 +44,10 @@ def long_term_prediction(
     output_image = np.zeros((image_size, image_size, 3))
     for i in range(0, number_to_simulate):
         output_image[:, :, 1] = model(input_images)[0, :, :, 0]
-        dat_to_training.generate_rail(output_image)
+        # dat_to_training.generate_rail(output_image)
         for frame in range(0, frames-1):
-            input_images[0, frame, :, :, :] = input_images[0, frame+1, :, :, :]
-        input_images[0, frames-1, :, :, :] = output_image
+            input_images[0, frame, :, :, 0] = input_images[0, frame+1, :, :, 0]
+        input_images[0, frames-1, :, :, 0] = output_image[:, :, 1]
         positions.append((input_images[0, frames-1, :, :, :] * 255).astype(np.uint8))
     return positions
 
@@ -62,8 +62,8 @@ def make_gif(image, name):
 def calculate_com(image, both=False):
     image_size = np.shape(image)[0]
     x, y = np.meshgrid(np.arange(image_size), np.arange(image_size), indexing='ij')
-    x_com = np.sum(x*image[:, :, 1])/np.sum(image[:, :, 1])
-    y_com = np.sum(y*image[:, :, 1])/np.sum(image[:, :, 1])
+    x_com = np.sum(x*image[:, :])/np.sum(image[:, :])
+    y_com = np.sum(y*image[:, :])/np.sum(image[:, :])
     if both:
         return -x_com+(float(image_size)/2), y_com-(float(image_size)/2)
     return np.sqrt((x_com-(float(image_size)/2))**2 + (y_com-(float(image_size)/2))**2)

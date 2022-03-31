@@ -1,7 +1,10 @@
+import glob
 import time
+
+import imageio
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import layers, optimizers, losses, backend as k
+from tensorflow.keras import layers, optimizers, losses, models, backend as k
 import matplotlib.pyplot as plt
 import bubble_prediction
 import create_network
@@ -27,58 +30,107 @@ def generate_images(model, epoch, input_images_index, name):
     plt.close('all')
 
 
-def main():
-    lr_schedule = optimizers.schedules.ExponentialDecay(
-        initial_learning_rate=1e-4,
-        decay_steps=10000,
-        decay_rate=0.9
-    )
-    network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
-    discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
+def evaluate_performance(network_name, frames, size, timestep, resolution,
+                         test_range=300, simulation=12, start_point=5, variant=0, flipped=False):
+    network = models.load_model("models/{}".format(network_name))
 
+    # Setting up the network's input
+    starting_frames = np.zeros((1, frames, size, size, 1))
+    for frame in range(frames):
+        starting_frames[0, frame, :, :, 0] = dat_to_training.process_bmp(
+            "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
+                str(flipped), variant, resolution, simulation, start_point + frame * timestep
+            ), image_size=size
+        )[:, :, 1]
+
+    # Running the predictions
+    final_frames = np.zeros((test_range, size, size))
+    current_frames = starting_frames
+    for loop in range(test_range):
+        next_frame = network(current_frames)
+        for frame in range(frames - 1):
+            current_frames[:, frame] = current_frames[:, frame + 1]
+        current_frames[:, frames-1] = next_frame
+        final_frames[loop] = next_frame[0, :, :, 0]
+
+    # Getting the correct data
+    max_data = len(glob.glob("Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/*".format(
+        str(flipped), variant, resolution, simulation
+    )))
+
+    correct_frames = []
+    for i in range(start_point + frames * timestep, max_data, timestep):
+        correct_frames.append(dat_to_training.process_bmp(
+            "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
+                str(flipped), variant, resolution, simulation, i
+            ), image_size=size
+        )[:, :, 1])
+    num_correct_frames = len(correct_frames)
+
+    # Making a composite of both
+    composite_frames = np.zeros((max(num_correct_frames, test_range), size, size, 3))
+    for composite_frame in range(max(num_correct_frames, test_range)):
+        if composite_frame < num_correct_frames and composite_frame < test_range:
+            composite_frames[composite_frame, :, :, 0] = correct_frames[composite_frame]
+            composite_frames[composite_frame, :, :, 2] = final_frames[composite_frame]
+        elif composite_frame >= num_correct_frames:
+            composite_frames[composite_frame, :, :, 0] = correct_frames[-1]
+            composite_frames[composite_frame, :, :, 2] = final_frames[composite_frame]
+        elif composite_frame >= test_range:
+            composite_frames[composite_frame, :, :, 0] = correct_frames[composite_frame]
+            composite_frames[composite_frame, :, :, 2] = final_frames[-1]
+
+    # Saving as an image
+    image_converts = composite_frames * 255
+    image_converts = image_converts.astype(np.uint8)
+    images = []
+    for i in image_converts:
+        images.append(i)
+    imageio.mimsave("model_performance/{}_composite.gif".format(network_name), images)
+
+    # Performing y-position stuff
+
+
+
+
+def main():
     image_size = 64
     image_frames = 4
     timestep = 5
     future_runs = 5
     resolution = 0.001
 
-    # network = create_network.create_basic_network(layers.LeakyReLU(), image_frames, image_size)
-    # discriminator = create_network.create_special_discriminator(image_size)
-    #
-    # print(network.summary())
-    # print(type(network))
-    # print(type(discriminator))
-    training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False, 0.001, [12])
+    scenario = 2
+    if scenario < 2:
+        training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False, resolution, [12])
 
-    # print(discriminator.summary())
-    # train_network(training_data[0], network, discriminator, network_optimizer, discriminator_optimizer, 500, 'basic')
-    # network.save("models/basic_network")
-    scenario = 0
-    lr_schedule = optimizers.schedules.ExponentialDecay(
-        initial_learning_rate=1e-4,
-        decay_steps=10000,
-        decay_rate=0.7
-    )
-    if scenario == 0:
-        network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
-        discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
+        lr_schedule = optimizers.schedules.ExponentialDecay(
+            initial_learning_rate=1e-4,
+            decay_steps=10000,
+            decay_rate=0.7
+        )
+        if scenario == 0:
+            network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
+            discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
 
-        network = create_network.create_u_network(layers.LeakyReLU(), image_frames, image_size, encode_size=10,
-                                                  kernel_size=5, channels=1)
-        discriminator = create_network.create_discriminator(2, image_size)
-        print(network.summary())
-        train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 50, "u-net",
-                      future_runs, image_frames)
-        network.save("models/u_network")
-    else:
-        network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
-        discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
-        network = create_network.create_basic_network(layers.LeakyReLU(), image_frames, image_size, channels=1)
-        discriminator = create_network.create_discriminator(2, image_size)
-        print(network.summary())
-        train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 50, "basic",
-                      future_runs, image_frames)
-        network.save("models/basic_network")
+            network = create_network.create_u_network(layers.LeakyReLU(), image_frames, image_size, encode_size=10,
+                                                      kernel_size=5, channels=1)
+            discriminator = create_network.create_discriminator(2, image_size)
+            print(network.summary())
+            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 50, "u-net",
+                          future_runs, image_frames)
+            network.save("models/u_network")
+        elif scenario == 1:
+            network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
+            discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
+            network = create_network.create_basic_network(layers.LeakyReLU(), image_frames, image_size, channels=1)
+            discriminator = create_network.create_discriminator(2, image_size)
+            print(network.summary())
+            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 50, "basic",
+                          future_runs, image_frames)
+            network.save("models/basic_network")
+
+    evaluate_performance("u_network", image_frames, image_size, timestep, resolution)
 
 
 @tf.function

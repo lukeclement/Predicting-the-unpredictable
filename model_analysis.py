@@ -185,6 +185,9 @@ def read_parameters(model_name):
         [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Deceptive", 20, True, 3],
         [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Resnet", 20, True, 4],
         [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Parallel", 20, True, 5],
+
+
+        [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "u_network", 20, True, 5],
     ]
 
     # for i in range(len(parameter_options)):
@@ -211,8 +214,8 @@ def generate_predictions(model_name, initial_conditions, length=FUTURE_DISTANCE,
 
 def cross_check(model_name, initial_conditions):
     parameters = read_parameters(model_name)
-    guesses_raw = np.asarray(generate_predictions(model_name, initial_conditions))[:, :, :, 1]
-    guesses_2_raw = np.asarray(generate_predictions(model_name, [15, 20]))[:, :, :, 1]
+    guesses_raw = np.asarray(generate_predictions(model_name, initial_conditions))[:, :, :, 0]
+    guesses_2_raw = np.asarray(generate_predictions(model_name, [15, 20]))[:, :, :, 0]
     actual_raw = np.asarray(generate_predictions(model_name, initial_conditions, dry_run=True))[:, :, :, 1]
     actual_2_raw = np.asarray(generate_predictions(model_name, [15, 20], dry_run=True))[:, :, :, 1]
     length_actual = min(np.shape(actual_raw)[0], np.shape(actual_2_raw)[0])
@@ -273,7 +276,7 @@ def cross_check(model_name, initial_conditions):
     actual_angles = []
     actual_y = []
     actual_x = []
-    for data in raw_data_actual[0, :, 0, :, :, :]:
+    for data in raw_data_actual[0, :, 0, :, :, 0]:
         zz = np.zeros((parameters[2], parameters[2], 2))
         zz[:, :, 1] = data[:, :, 0]
         actual_com.append(bubble_prediction.calculate_com(zz))
@@ -282,7 +285,7 @@ def cross_check(model_name, initial_conditions):
         actual_x.append(point_y)
         actual_y.append(point_x)
     actual_2_y = []
-    for data in raw_data_actual_2[0, :, 0, :, :, :]:
+    for data in raw_data_actual_2[0, :, 0, :, :, 0]:
         zz = np.zeros((parameters[2], parameters[2], 2))
         zz[:, :, 1] = data[:, :, 0]
         actual_com.append(bubble_prediction.calculate_com(zz))
@@ -292,7 +295,7 @@ def cross_check(model_name, initial_conditions):
     guess_angles = []
     guess_y = []
     guess_x = []
-    for data in raw_data_guess[0, :, 0, :, :, :]:
+    for data in raw_data_guess[0, :, 0, :, :, 0]:
         zz = np.zeros((parameters[2], parameters[2], 2))
         zz[:, :, 1] = data[:, :, 0]
         guess_com.append(bubble_prediction.calculate_com(zz))
@@ -301,7 +304,7 @@ def cross_check(model_name, initial_conditions):
         guess_y.append(point_x)
         guess_x.append(point_y)
     guess_2_y = []
-    for data in raw_data_guess_2[0, :, 0, :, :, :]:
+    for data in raw_data_guess_2[0, :, 0, :, :, 0]:
         zz = np.zeros((parameters[2], parameters[2], 2))
         zz[:, :, 1] = data[:, :, 0]
         point_x, point_y = bubble_prediction.calculate_com(zz, True)
@@ -498,25 +501,26 @@ def main():
         # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Transformer", 20, True, 2],
         # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Deceptive", 20, True, 3],
         # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Resnet", 20, True, 4],
-        [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Parallel", 20, True, 5],
+        # [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "Parallel", 20, True, 5],
+        [loss_functions.UBERLOSS, 4, 64, 5, True, True, 5, 3, 0.001, [0], True, [0], 5, "u_network", 20, True, 5],
     ]
     print(len(to_analyse))
     for model in to_analyse:
         print(model[13])
         cross_check(model[13], [12, 10])
 
-    # print(len(to_analyse))
+    print(len(to_analyse))
     # for model in to_analyse:
     #     print(model[13])
     #     cross_check(model[13], [13, 10])
-    decoder = models.load_model("models/Andover_decoder")
-    while True:
-        sample = (np.random.random((1, 6)) - 0.5) * 2
-        result = decoder.predict(sample)[0]
-        plt.title("{}".format(sample))
-        plt.imshow(result[0])
-        plt.show()
-        plt.clf()
+    # decoder = models.load_model("models/Andover_decoder")
+    # while True:
+    #     sample = (np.random.random((1, 6)) - 0.5) * 2
+    #     result = decoder.predict(sample)[0]
+    #     plt.title("{}".format(sample))
+    #     plt.imshow(result[0])
+    #     plt.show()
+    #     plt.clf()
 
 if __name__ == "__main__":
     main()
