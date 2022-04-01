@@ -64,6 +64,35 @@ def fit_sin(tt, yy):
             "maxcov": np.max(pcov), "rawres": (guess, popt, pcov)}
 
 
+def evaluate_weather(network_name, frames, size):
+    network = models.load_model("models/{}".format(network_name))
+
+    data = np.load("Meterology_data/data8.npz")
+    data_useful = np.zeros((np.shape(data["data"])[1], size, size, 1))
+    data_useful[:, :, :, 0] = data["data"][0, :, 69:69+size, 420:420+size]
+    data_useful = np.tanh(data_useful/500)
+    initial_frames = np.zeros((1, frames, size, size, 1))
+    initial_frames[0] = data_useful[:frames]
+    rest_of_data = data_useful[frames:]
+    given_frames = initial_frames
+    final_data = np.zeros((np.shape(rest_of_data)[0], size, size, 3))
+    print(np.shape(rest_of_data))
+    final_data[:, :, :, 0] = rest_of_data[:, :, :, 0]
+    for clouds in range(np.shape(rest_of_data)[0]):
+        next_frame = network(given_frames)
+        for frame in range(frames-1):
+            given_frames[0, frame] = given_frames[0, frame + 1]
+        given_frames[0, frames-1] = next_frame
+        final_data[clouds, :, :, 2] = next_frame[0, :, :, 0]
+
+    image_converts = final_data * 255
+    image_converts = image_converts.astype(np.uint8)
+    images = []
+    for i in image_converts:
+        images.append(i)
+    imageio.mimsave("model_performance/{}_weather_composite.gif".format(network_name), images)
+
+
 def evaluate_performance(network_name, frames, size, timestep, resolution,
                          test_range=300, simulation=12, start_point=5, variant=0, flipped=False):
     network = models.load_model("models/{}".format(network_name))
@@ -259,14 +288,13 @@ def main():
     future_runs = 5
     resolution = 0.001
 
-    scenario = 0
+    scenario = 2
     if scenario < 2:
         training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
                                                       resolution, [12])
-        # This has not been run yet (31/03 @ 19:14)
         lr_schedule = optimizers.schedules.ExponentialDecay(
             initial_learning_rate=1e-4,
-            decay_steps=50,
+            decay_steps=10000,
             decay_rate=0.7
         )
         if scenario == 0:
@@ -294,6 +322,7 @@ def main():
 
     for sim in range(12, 13):
         evaluate_performance("u_network", image_frames, image_size, timestep, resolution, simulation=sim)
+        evaluate_weather("u_network", image_frames, image_size)
 
 
 @tf.function
