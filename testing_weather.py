@@ -19,7 +19,7 @@ def main():
     del dataset
     image_size = 64
     image_frames = 4
-    future_look = 5
+    future_look = 20
 
     crop_range = [0, np.shape(normalised_data)[1]-image_size]
     crop_range = [140, 150]
