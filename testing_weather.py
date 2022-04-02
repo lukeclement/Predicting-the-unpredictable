@@ -2,6 +2,7 @@ import imageio
 import numpy as np
 import matplotlib.pyplot as plt
 import tqdm
+import tensorflow as tf
 
 
 def main():
@@ -21,7 +22,7 @@ def main():
     future_look = 5
 
     crop_range = [0, np.shape(normalised_data)[1]-image_size]
-    crop_range = [0, 10]
+    crop_range = [140, 150]
     maximum_crops = (crop_range[1] - crop_range[0])**2
     maximum_times = np.shape(normalised_data)[0] - future_look - image_frames
 
@@ -35,13 +36,13 @@ def main():
                 bar.update(1)
                 for frame in range(image_frames):
                     questions[
-                        (x*(crop_range[1] - crop_range[0]) + y)*maximum_times + f,
+                        ((x - crop_range[0])*(crop_range[1] - crop_range[0]) + (y - crop_range[0]))*maximum_times + f,
                         frame,
                         :, :, 0
                     ] = normalised_data[f + frame, x:x + image_size, y:y + image_size]
                 for i in range(2):
                     answers[
-                        (x*(crop_range[1] - crop_range[0]) + y)*maximum_times + f,
+                        ((x - crop_range[0])*(crop_range[1] - crop_range[0]) + (y - crop_range[0]))*maximum_times + f,
                         i,
                         :, :, 0
                     ] = normalised_data[f + image_frames + i*future_look, x:x + image_size, y:y + image_size]
@@ -53,6 +54,12 @@ def main():
     for i in image_converts:
         images.append(i)
     imageio.mimsave("Met_test.gif", images)
+    batch_size = 8
+    print(np.shape(questions))
+    print(np.shape(answers))
+    testing_data = tf.data.Dataset.from_tensor_slices((questions, answers))
+    testing_data = testing_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    return testing_data
 
 
 if __name__ == "__main__":

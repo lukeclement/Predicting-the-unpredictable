@@ -11,6 +11,7 @@ import bubble_prediction
 import create_network
 import loss_functions
 import dat_to_training
+import testing_weather
 
 
 def generate_images(model, epoch, input_images_index, name):
@@ -18,7 +19,7 @@ def generate_images(model, epoch, input_images_index, name):
     for i in range(len(input_images_index)):
         for j in range(0, 4):
             images[i, j, :, :, 0] = dat_to_training.process_bmp(
-                "Simulation_data_extrapolated/Simulation_False_0_0.001_12/data_{}.npy".format(input_images_index[i] + j)
+                "Simulation_data_extrapolated/Simulation_False_0_0.001_12/data_{}.npy".format(input_images_index[i] + j * 5)
                 , 64)[:, :, 1]
     predictions = model(images, training=False)
 
@@ -295,7 +296,7 @@ def main():
         lr_schedule = optimizers.schedules.ExponentialDecay(
             initial_learning_rate=1e-4,
             decay_steps=10000,
-            decay_rate=0.7
+            decay_rate=0.9
         )
         if scenario == 0:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
@@ -315,7 +316,7 @@ def main():
             network = create_network.create_basic_network(layers.LeakyReLU(), image_frames, image_size, channels=1)
             discriminator = create_network.create_discriminator(2, image_size)
             print(network.summary())
-            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 50,
+            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 200,
                           "basic",
                           future_runs, image_frames)
             network.save("models/basic_network")
