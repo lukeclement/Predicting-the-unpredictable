@@ -28,7 +28,8 @@ def generate_images(model, epoch, input_images_index, name):
     for i in range(len(input_images_index)):
         for j in range(0, 4):
             images[i, j, :, :, 0] = dat_to_training.process_bmp(
-                "Simulation_data_extrapolated/Simulation_False_0_0.001_12/data_{}.npy".format(input_images_index[i] + j * 5)
+                "Simulation_data_extrapolated/Simulation_False_0_0.001_12/data_{}.npy".format(
+                    input_images_index[i] + j * 5)
                 , 64)[:, :, 1]
     predictions = model(images, training=False)
 
@@ -79,8 +80,8 @@ def evaluate_weather(network_name, frames, size):
 
     data = np.load("Meterology_data/data8.npz")
     data_useful = np.zeros((np.shape(data["data"])[1], size, size, 1))
-    data_useful[:, :, :, 0] = data["data"][0, :, 69:69+size, 420:420+size]
-    data_useful = np.tanh(data_useful/500)
+    data_useful[:, :, :, 0] = data["data"][0, :, 69:69 + size, 420:420 + size]
+    data_useful = np.tanh(data_useful / 500)
     initial_frames = np.zeros((1, frames, size, size, 1))
     initial_frames[0] = data_useful[:frames]
     rest_of_data = data_useful[frames:]
@@ -90,9 +91,9 @@ def evaluate_weather(network_name, frames, size):
     final_data[:, :, :, 0] = rest_of_data[:, :, :, 0]
     for clouds in range(np.shape(rest_of_data)[0]):
         next_frame = network(given_frames)
-        for frame in range(frames-1):
+        for frame in range(frames - 1):
             given_frames[0, frame] = given_frames[0, frame + 1]
-        given_frames[0, frames-1] = next_frame
+        given_frames[0, frames - 1] = next_frame
         final_data[clouds, :, :, 2] = next_frame[0, :, :, 0]
 
     image_converts = final_data * 255
@@ -301,18 +302,18 @@ def main():
     image_size = 64
     image_frames = 4
     timestep = 5
-    future_runs = 20
+    future_runs = 7
     resolution = 0.001
 
-    scenario = 0
+    scenario = 2
     if scenario < 2:
-        # training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
-        #                                               resolution, [12])
-        training_data = testing_weather.main()
+        training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
+                                                      resolution, [12])
+        # training_data = testing_weather.main()
         lr_schedule = optimizers.schedules.ExponentialDecay(
             initial_learning_rate=1e-4,
             decay_steps=10000,
-            decay_rate=0.9
+            decay_rate=0.5
         )
         if scenario == 0:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
@@ -325,7 +326,7 @@ def main():
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 50,
                           "u-net",
                           future_runs, image_frames)
-            network.save("models/u_network_weather")
+            network.save("models/u_network")
         elif scenario == 1:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
@@ -338,8 +339,8 @@ def main():
             network.save("models/basic_network")
 
     for sim in range(12, 13):
-        # evaluate_performance("u_network", image_frames, image_size, timestep, resolution, simulation=sim)
-        evaluate_weather("u_network_weather", image_frames, image_size)
+        evaluate_performance("u_network", image_frames, image_size, timestep, resolution, simulation=sim)
+        # evaluate_weather("u_network_weather", image_frames, image_size)
 
 
 @tf.function
@@ -365,24 +366,24 @@ def train_step(input_images, expected_output, network, discriminator, net_op, di
         network_disc_loss = loss_functions.generator_loss(actual_output)
         network_mse = k.mean(losses.mean_squared_error(expected_output, overall_predictions), axis=0)
         disc_loss = loss_functions.discriminator_loss(real_output, actual_output)
-        network_loss = network_disc_loss + network_mse
+        network_loss = network_disc_loss + network_mse * 100
 
     net_grad = net_tape.gradient(network_loss, network.trainable_variables)
     disc_grad = disc_tape.gradient(disc_loss, discriminator.trainable_variables)
     net_op.apply_gradients(zip(net_grad, network.trainable_variables))
     disc_op.apply_gradients(zip(disc_grad, discriminator.trainable_variables))
 
-    return network_loss, disc_loss
+    return network_loss, disc_loss, network_mse
 
 
 def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name, future_runs, frames):
     size = 64
-    data = np.load("Meterology_data/data8.npz")
-    data_useful = np.zeros((np.shape(data["data"])[1], size, size, 1))
-    data_useful[:, :, :, 0] = data["data"][0, :, 69:69 + size, 420:420 + size]
-    data_useful = np.tanh(data_useful / 500)
-    images = np.zeros((1, frames, size, size, 1))
-    images[0] = data_useful[:frames]
+    # data = np.load("Meterology_data/data8.npz")
+    # data_useful = np.zeros((np.shape(data["data"])[1], size, size, 1))
+    # data_useful[:, :, :, 0] = data["data"][0, :, 69:69 + size, 420:420 + size]
+    # data_useful = np.tanh(data_useful / 500)
+    # images = np.zeros((1, frames, size, size, 1))
+    # images[0] = data_useful[:frames]
     times_so_far = []
     ref_index = [4, 42, 69, 72, 104, 254, 298, 339, 347, 420, 481, 482, 555, 663, 681, 701]
     ref_index_float = np.linspace(3, 800, 16, endpoint=True)
@@ -390,24 +391,27 @@ def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name
         ref_index[i] = int(r)
     overall_loss_gen = []
     overall_loss_disc = []
+    overall_loss_mse = []
     for epoch in range(epochs):
         start = time.time()
         gen_losses = []
         disc_losses = []
+        mse_losses = []
         print("Running epoch {}...".format(epoch + 1))
         for questions, answers in dataset:
-            gen_loss, disc_loss = train_step(questions, answers,
-                                             network, discriminator,
-                                             net_op, disc_op,
-                                             future_runs, frames)
+            gen_loss, disc_loss, mse = train_step(questions, answers,
+                                                  network, discriminator,
+                                                  net_op, disc_op,
+                                                  future_runs, frames)
             gen_losses.append(k.mean(gen_loss))
             disc_losses.append(k.mean(disc_loss))
-        # generate_images(network, epoch + 1, ref_index, name)
-        generate_weather(network, epoch, name, images)
+            mse_losses.append(k.mean(mse))
+        generate_images(network, epoch + 1, ref_index, name)
+        # generate_weather(network, epoch, name, images)
         times_so_far.append(time.time() - start)
         print("Time for epoch {} was {:.0f}s".format(epoch + 1, times_so_far[epoch]))
-        print("Losses were {:.4f} for generator and {:.4f} for discriminator".format(
-            np.mean(gen_losses), np.mean(disc_losses))
+        print("Losses were {:.4f} for generator and {:.4f} for discriminator, with MSE {:.4f}".format(
+            np.mean(gen_losses), np.mean(disc_losses), np.mean(mse_losses))
         )
         if np.mean(gen_losses) > np.mean(disc_losses):
             print("Discriminator winning!")
@@ -417,12 +421,15 @@ def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name
             np.mean(times_so_far) * (epochs - epoch - 1) / 60))
         overall_loss_disc.append(np.mean(disc_losses))
         overall_loss_gen.append(np.mean(gen_losses))
-    # generate_images(network, epochs, ref_index, name)
-    generate_weather(network, epochs, name, images)
+        overall_loss_mse.append(np.mean(mse_losses))
+    generate_images(network, epochs, ref_index, name)
+    # generate_weather(network, epochs, name, images)
     plt.close("all")
     plt.grid()
     plt.plot(overall_loss_gen, label="Generator loss")
     plt.plot(overall_loss_disc, label="Discriminator loss")
+    plt.plot(overall_loss_mse, label="Mean squared error")
+    plt.yscale('log')
     plt.legend()
     plt.savefig("{}_losses.png".format(name), dpi=500)
     plt.clf()
