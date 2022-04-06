@@ -24,9 +24,9 @@ def generate_weather(model, epoch, name, input_frames):
 
 
 def generate_images(model, epoch, input_images_index, name):
-    images = np.zeros((16, 4, 64, 64, 1))
+    images = np.zeros((16, 2, 64, 64, 1))
     for i in range(len(input_images_index)):
-        for j in range(0, 4):
+        for j in range(0, 2):
             images[i, j, :, :, 0] = dat_to_training.process_bmp(
                 "Simulation_data_extrapolated/Simulation_False_0_0.001_12/data_{}.npy".format(
                     input_images_index[i] + j * 5)
@@ -300,12 +300,12 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
 
 def main():
     image_size = 64
-    image_frames = 4
+    image_frames = 2
     timestep = 5
-    future_runs = 7
+    future_runs = 15
     resolution = 0.001
 
-    scenario = 2
+    scenario = 0
     if scenario < 2:
         training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
                                                       resolution, [12])
@@ -324,23 +324,23 @@ def main():
             discriminator = create_network.create_discriminator(2, image_size)
             print(network.summary())
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 50,
-                          "u-net",
+                          "u-net_extended",
                           future_runs, image_frames)
-            network.save("models/u_network")
+            network.save("models/u_network_extended")
         elif scenario == 1:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             network = create_network.create_basic_network(layers.LeakyReLU(), image_frames, image_size, channels=1)
             discriminator = create_network.create_discriminator(2, image_size)
             print(network.summary())
-            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 200,
+            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 50,
                           "basic",
                           future_runs, image_frames)
-            network.save("models/basic_network")
+            network.save("models/basic_network_weather")
 
     for sim in range(12, 13):
-        evaluate_performance("u_network", image_frames, image_size, timestep, resolution, simulation=sim)
-        # evaluate_weather("u_network_weather", image_frames, image_size)
+        evaluate_performance("u_network_extended", image_frames, image_size, timestep, resolution, simulation=sim)
+        # evaluate_weather("basic_network_weather", image_frames, image_size)
 
 
 @tf.function
@@ -409,7 +409,14 @@ def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name
         generate_images(network, epoch + 1, ref_index, name)
         # generate_weather(network, epoch, name, images)
         times_so_far.append(time.time() - start)
-        print("Time for epoch {} was {:.0f}s".format(epoch + 1, times_so_far[epoch]))
+        seconds_per_epoch = times_so_far[epoch]
+        if seconds_per_epoch / 60 > 1:
+            print("Time for epoch {} was {:.0f}min, {:.0f}s".format(
+                epoch + 1, seconds_per_epoch//60, seconds_per_epoch - (seconds_per_epoch//60)*60)
+            )
+        else:
+            print("Time for epoch {} was {:.0f}s".format(epoch + 1, seconds_per_epoch))
+
         print("Losses were {:.4f} for generator and {:.4f} for discriminator, with MSE {:.4f}".format(
             np.mean(gen_losses), np.mean(disc_losses), np.mean(mse_losses))
         )
@@ -417,8 +424,11 @@ def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name
             print("Discriminator winning!")
         else:
             print("Generator winning!")
-        print("ETA currently stands at {:.1f}min from now".format(
-            np.mean(times_so_far) * (epochs - epoch - 1) / 60))
+
+        time_left = np.mean(times_so_far) * (epochs - epoch - 1) / 60
+        print("ETA currently stands at {:.0f} hours, {:.0f}min from now".format(
+            time_left//60, time_left - (time_left//60)*60)
+        )
         overall_loss_disc.append(np.mean(disc_losses))
         overall_loss_gen.append(np.mean(gen_losses))
         overall_loss_mse.append(np.mean(mse_losses))
