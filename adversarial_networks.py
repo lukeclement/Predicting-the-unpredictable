@@ -302,7 +302,7 @@ def main():
     image_size = 64
     image_frames = 2
     timestep = 5
-    future_runs = 15
+    future_runs = 7
     resolution = 0.001
 
     scenario = 0
@@ -324,9 +324,9 @@ def main():
             discriminator = create_network.create_discriminator(2, image_size)
             print(network.summary())
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 50,
-                          "u-net_extended",
+                          "u-net_frame_limit",
                           future_runs, image_frames)
-            network.save("models/u_network_extended")
+            network.save("models/u_network_frame_limit")
         elif scenario == 1:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
@@ -339,7 +339,7 @@ def main():
             network.save("models/basic_network_weather")
 
     for sim in range(12, 13):
-        evaluate_performance("u_network_extended", image_frames, image_size, timestep, resolution, simulation=sim)
+        evaluate_performance("u_network_frame_limit", image_frames, image_size, timestep, resolution, simulation=sim)
         # evaluate_weather("basic_network_weather", image_frames, image_size)
 
 
