@@ -24,9 +24,9 @@ def generate_weather(model, epoch, name, input_frames):
 
 
 def generate_images(model, epoch, input_images_index, name):
-    images = np.zeros((16, 2, 64, 64, 1))
+    images = np.zeros((16, 4, 64, 64, 1))
     for i in range(len(input_images_index)):
-        for j in range(0, 2):
+        for j in range(0, 4):
             images[i, j, :, :, 0] = dat_to_training.process_bmp(
                 "Simulation_data_extrapolated/Simulation_False_0_0.001_12/data_{}.npy".format(
                     input_images_index[i] + j * 5)
@@ -300,7 +300,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
 
 def main():
     image_size = 64
-    image_frames = 2
+    image_frames = 4
     timestep = 5
     future_runs = 7
     resolution = 0.001
@@ -323,10 +323,10 @@ def main():
                                                       kernel_size=5, channels=1)
             discriminator = create_network.create_discriminator(2, image_size)
             print(network.summary())
-            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 50,
-                          "u-net_frame_limit",
+            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 200,
+                          "u-net",
                           future_runs, image_frames)
-            network.save("models/u_network_frame_limit")
+            network.save("models/u_network")
         elif scenario == 1:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
@@ -339,7 +339,7 @@ def main():
             network.save("models/basic_network_weather")
 
     for sim in range(12, 13):
-        evaluate_performance("u_network_frame_limit", image_frames, image_size, timestep, resolution, simulation=sim)
+        evaluate_performance("u_network", image_frames, image_size, timestep, resolution, simulation=sim)
         # evaluate_weather("basic_network_weather", image_frames, image_size)
 
 
