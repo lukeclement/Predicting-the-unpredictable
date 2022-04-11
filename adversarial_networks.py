@@ -24,9 +24,9 @@ def generate_weather(model, epoch, name, input_frames):
 
 
 def generate_images(model, epoch, input_images_index, name):
-    images = np.zeros((16, 4, 64, 64, 1))
+    images = np.zeros((16, 2, 64, 64, 1))
     for i in range(len(input_images_index)):
-        for j in range(0, 4):
+        for j in range(0, 2):
             images[i, j, :, :, 0] = dat_to_training.process_bmp(
                 "Simulation_data_extrapolated/Simulation_False_0_0.001_12/data_{}.npy".format(
                     input_images_index[i] + j * 5)
@@ -300,15 +300,16 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
 
 def main():
     image_size = 64
-    image_frames = 4
+    image_frames = 2
     timestep = 5
-    future_runs = 7
+    future_runs = 10
+    num_after_points = 3
     resolution = 0.001
 
     scenario = 0
     if scenario < 2:
         training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
-                                                      resolution, [12])
+                                                      resolution, [12], num_after_points)
         # training_data = testing_weather.main()
         lr_schedule = optimizers.schedules.ExponentialDecay(
             initial_learning_rate=1e-4,
@@ -321,21 +322,23 @@ def main():
 
             network = create_network.create_u_network(layers.LeakyReLU(), image_frames, image_size, encode_size=10,
                                                       kernel_size=5, channels=1)
-            discriminator = create_network.create_discriminator(2, image_size)
+            discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
             print(network.summary())
-            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 200,
+            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
+                          50,
                           "u-net",
-                          future_runs, image_frames)
+                          future_runs, image_frames, num_after_points)
             network.save("models/u_network")
         elif scenario == 1:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             network = create_network.create_basic_network(layers.LeakyReLU(), image_frames, image_size, channels=1)
-            discriminator = create_network.create_discriminator(2, image_size)
+            discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
             print(network.summary())
-            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer, 50,
+            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
+                          50,
                           "basic",
-                          future_runs, image_frames)
+                          future_runs, image_frames, num_after_points)
             network.save("models/basic_network_weather")
 
     for sim in range(12, 13):
@@ -344,20 +347,22 @@ def main():
 
 
 @tf.function
-def train_step(input_images, expected_output, network, discriminator, net_op, disc_op, future_runs, frames):
+def train_step(input_images, expected_output, network, discriminator, net_op, disc_op, future_runs, frames, num_points):
     with tf.GradientTape() as net_tape, tf.GradientTape() as disc_tape:
         current_output = []
         future_input = input_images
         predictions = network(input_images, training=True)
-        current_output.append(predictions)
 
-        for future_step in range(future_runs):
+        for future_step in range((future_runs//num_points) * num_points):
+            if future_step % (future_runs//num_points) == 0:
+                current_output.append(predictions)
             next_input = []
             for i in range(frames - 1):
                 next_input.append(future_input[:, i + 1])
             next_input.append(tf.cast(predictions, tf.float64))
             future_input = tf.stack(next_input, axis=1)
             predictions = network(future_input, training=True)
+
         current_output.append(predictions)
 
         overall_predictions = tf.stack(current_output, axis=1)
@@ -376,7 +381,7 @@ def train_step(input_images, expected_output, network, discriminator, net_op, di
     return network_loss, disc_loss, network_mse
 
 
-def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name, future_runs, frames):
+def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name, future_runs, frames, num_points):
     size = 64
     # data = np.load("Meterology_data/data8.npz")
     # data_useful = np.zeros((np.shape(data["data"])[1], size, size, 1))
@@ -402,7 +407,7 @@ def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name
             gen_loss, disc_loss, mse = train_step(questions, answers,
                                                   network, discriminator,
                                                   net_op, disc_op,
-                                                  future_runs, frames)
+                                                  future_runs, frames, num_points)
             gen_losses.append(k.mean(gen_loss))
             disc_losses.append(k.mean(disc_loss))
             mse_losses.append(k.mean(mse))

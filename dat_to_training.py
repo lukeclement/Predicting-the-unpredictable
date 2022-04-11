@@ -220,7 +220,7 @@ def get_sim_result(source):
 
 
 def generate_data(frames: int, size: int, timestep: int, future_look: int,
-                variants=None, flips_allowed=True, resolution=0.001, excluded_sims=None):
+                  variants=None, flips_allowed=True, resolution=0.001, excluded_sims=None, num_after_points=1):
     if excluded_sims is None:
         excluded_sims = []
     if variants is None:
@@ -249,7 +249,7 @@ def generate_data(frames: int, size: int, timestep: int, future_look: int,
         total_number_questions += maximum_question_start
 
     questions = np.zeros((total_number_questions, frames, size, size, 1))
-    answers = np.zeros((total_number_questions, 2, size, size, 1))
+    answers = np.zeros((total_number_questions, num_after_points + 1, size, size, 1))
 
     tracker = 0
     print("Loading in data...")
@@ -265,9 +265,10 @@ def generate_data(frames: int, size: int, timestep: int, future_look: int,
                 questions[tracker, frame, :, :, 0] = process_bmp(
                     simulation+"/data_{}.npy".format(step + frame * timestep), size
                 )[:, :, 1]
-            for future_frame in range(2):
+            for future_frame in range(num_after_points + 1):
                 answers[tracker, future_frame, :, :, 0] = process_bmp(
-                    simulation + "/data_{}.npy".format(step + (frames + future_frame*future_look) * timestep), size
+                    simulation + "/data_{}.npy".format(
+                        step + (frames + future_frame*(future_look//num_after_points)) * timestep), size
                 )[:, :, 1]
             tracker += 1
     progress.close()
