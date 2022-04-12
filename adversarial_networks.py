@@ -302,14 +302,14 @@ def main():
     image_size = 64
     image_frames = 2
     timestep = 5
-    future_runs = 10
+    future_runs = 3
     num_after_points = 3
     resolution = 0.001
 
-    scenario = 0
-    if scenario < 2:
+    scenario = 3
+    if scenario < 10:
         training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
-                                                      resolution, [12], num_after_points)
+                                                      resolution, [12, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], num_after_points)
         # training_data = testing_weather.main()
         lr_schedule = optimizers.schedules.ExponentialDecay(
             initial_learning_rate=1e-4,
@@ -340,6 +340,41 @@ def main():
                           "basic",
                           future_runs, image_frames, num_after_points)
             network.save("models/basic_network_weather")
+        elif scenario == 2:
+            network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
+            discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
+            network = create_network.create_parallel_network(layers.LeakyReLU(), image_frames, image_size, channels=1)
+            discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
+            print(network.summary())
+            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
+                          50,
+                          "parallel",
+                          future_runs, image_frames, num_after_points)
+            network.save("models/parallel_network")
+        elif scenario == 3:
+            network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
+            discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
+            network = create_network.create_resnet(layers.LeakyReLU(), image_frames, image_size, channels=1)
+            discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
+            print(network.summary())
+            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
+                          50,
+                          "resnet",
+                          future_runs, image_frames, num_after_points)
+            network.save("models/resnet")
+        elif scenario == 4:
+            network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
+            discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
+            network = create_network.create_transformer_network(
+                layers.LeakyReLU(), image_frames, image_size, channels=1, layering=10
+            )
+            discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
+            print(network.summary())
+            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
+                          50,
+                          "transformer",
+                          future_runs, image_frames, num_after_points)
+            network.save("models/transformer_network")
 
     for sim in range(12, 13):
         evaluate_performance("u_network", image_frames, image_size, timestep, resolution, simulation=sim)
@@ -391,7 +426,7 @@ def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name
     # images[0] = data_useful[:frames]
     times_so_far = []
     ref_index = [4, 42, 69, 72, 104, 254, 298, 339, 347, 420, 481, 482, 555, 663, 681, 701]
-    ref_index_float = np.linspace(3, 800, 16, endpoint=True)
+    ref_index_float = np.linspace(3, 700, 16, endpoint=True)
     for i, r in enumerate(ref_index_float):
         ref_index[i] = int(r)
     overall_loss_gen = []

@@ -280,7 +280,7 @@ def make_transformer_decoder(inputs, encodes, head_size, head_number, full_forwa
     return layers.LayerNormalization(epsilon=1e-6)(x + total)
 
 
-def create_basic_transformer_network(activation, optimizer, loss, input_frames, data_points, layering=3):
+def create_basic_transformer_network(activation, input_frames, data_points, layering=3):
     input_layer = layers.Input(shape=(input_frames, data_points))
     inputs = input_layer
     x = inputs
@@ -290,13 +290,13 @@ def create_basic_transformer_network(activation, optimizer, loss, input_frames, 
         y = make_transformer_decoder(y, x, 64, 8, 10)
 
     model = Model(input_layer, y)
-    model.compile(optimizer=optimizer, loss=loss, metrics=[
-        losses.binary_crossentropy, losses.mean_squared_logarithmic_error
-    ])
+    # model.compile(optimizer=optimizer, loss=loss, metrics=[
+    #     losses.binary_crossentropy, losses.mean_squared_logarithmic_error
+    # ])
     return model
 
 
-def create_transformer_network(activation, optimizer, loss, input_frames, image_size, channels=3, layering=1):
+def create_transformer_network(activation, input_frames, image_size, channels=3, layering=1):
     input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
     # x = layers.Reshape((input_frames*image_size*image_size*channels, 1))(input_layer)
     # y = layers.Reshape((input_frames*image_size*image_size*channels, 1))(input_layer)
@@ -315,9 +315,9 @@ def create_transformer_network(activation, optimizer, loss, input_frames, image_
         # inputs = layers.Reshape((image_size, image_size, 1))(inputs)
     y = layers.Reshape((image_size, image_size, 1))(y)
     model = Model(input_layer, y)
-    model.compile(optimizer=optimizer, loss=loss, metrics=[
-        losses.binary_crossentropy, losses.mean_squared_logarithmic_error
-    ])
+    # model.compile(optimizer=optimizer, loss=loss, metrics=[
+    #     losses.binary_crossentropy, losses.mean_squared_logarithmic_error
+    # ])
     return model
 
 
@@ -360,8 +360,9 @@ def create_basic_network(activation, input_frames, image_size, channels=3, laten
     model = Model(input_layer, x)
     return model
 
-#DEFULT IS RESNET 50
-def create_resnet(activation, optimizer, loss, input_frames,
+
+# DEFAULT IS RESNET 50
+def create_resnet(activation, input_frames,
                   image_size=64, channels=3, inception=True, structure=None, names=None):
     if names is None:
         names = ["alpha", "beta", "delta", "gamma"]
@@ -460,9 +461,9 @@ def create_resnet(activation, optimizer, loss, input_frames,
     # x = layers.Conv2D(1, 1)(x)
     # x = layers.Activation(activations.sigmoid)(x)
     model = Model(input_layer, x)
-    model.compile(optimizer=optimizer, loss=loss, metrics=[
-        losses.binary_crossentropy, losses.mean_squared_logarithmic_error
-    ])
+    # model.compile(optimizer=optimizer, loss=loss, metrics=[
+    #     losses.binary_crossentropy, losses.mean_squared_logarithmic_error
+    # ])
     return model
 
 
@@ -549,7 +550,7 @@ def create_inception_network(activation, optimizer, loss, input_frames, image_si
     return model
 
 
-def create_parallel_network(activation, optimizer, loss, input_frames, image_size, channels=3, encode_size=2,
+def create_parallel_network(activation, input_frames, image_size, channels=3, encode_size=2,
                              allow_upsampling=True, allow_pooling=True, kernel_size=3, max_transpose_layers=3,
                              dropout_rate=0.2, inception=True):
     input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
@@ -576,9 +577,9 @@ def create_parallel_network(activation, optimizer, loss, input_frames, image_siz
         final_axis *= 2
     x = layers.Conv2D(1, 1, padding='same', activation='sigmoid')(x)
     model = Model(input_layer, x)
-    model.compile(optimizer=optimizer, loss=loss, metrics=[
-        losses.binary_crossentropy, losses.mean_squared_logarithmic_error
-    ])
+    # model.compile(optimizer=optimizer, loss=loss, metrics=[
+    #     losses.binary_crossentropy, losses.mean_squared_logarithmic_error
+    # ])
     return model
 
 
