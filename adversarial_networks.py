@@ -15,6 +15,12 @@ import testing_weather
 
 
 def generate_weather(model, epoch, name, input_frames):
+    """Produces an image for how well the network predicts cloud data during training.
+    @param model: the network to be tested.
+    @param epoch: the current epoch number of the network.
+    @param name: the name of the network.
+    @param input_frames: the number of frames to be input to the network.
+    """
     initial_frames = input_frames
     prediction = model(initial_frames)
     plt.imshow(prediction[0], cmap='Blues')
@@ -23,10 +29,10 @@ def generate_weather(model, epoch, name, input_frames):
     plt.close('all')
 
 
-def generate_images(model, epoch, input_images_index, name):
-    images = np.zeros((16, 2, 64, 64, 1))
+def generate_images(model, epoch, input_images_index, name, input_frames, input_size):
+    images = np.zeros((16, input_frames, input_size, input_size, 1))
     for i in range(len(input_images_index)):
-        for j in range(0, 2):
+        for j in range(0, input_frames):
             images[i, j, :, :, 0] = dat_to_training.process_bmp(
                 "Simulation_data_extrapolated/Simulation_False_0_0.001_12/data_{}.npy".format(
                     input_images_index[i] + j * 5)
@@ -446,7 +452,7 @@ def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name
             gen_losses.append(k.mean(gen_loss))
             disc_losses.append(k.mean(disc_loss))
             mse_losses.append(k.mean(mse))
-        generate_images(network, epoch + 1, ref_index, name)
+        generate_images(network, epoch + 1, ref_index, name, frames, 64)
         # generate_weather(network, epoch, name, images)
         times_so_far.append(time.time() - start)
         seconds_per_epoch = times_so_far[epoch]
@@ -472,7 +478,7 @@ def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name
         overall_loss_disc.append(np.mean(disc_losses))
         overall_loss_gen.append(np.mean(gen_losses))
         overall_loss_mse.append(np.mean(mse_losses))
-    generate_images(network, epochs, ref_index, name)
+    generate_images(network, epochs, ref_index, name, frames, 64)
     # generate_weather(network, epochs, name, images)
     plt.close("all")
     plt.grid()
