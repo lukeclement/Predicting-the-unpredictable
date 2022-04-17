@@ -36,7 +36,7 @@ def generate_images(model, epoch, input_images_index, name, input_frames, input_
             images[i, j, :, :, 0] = dat_to_training.process_bmp(
                 "Simulation_data_extrapolated/Simulation_False_0_0.001_12/data_{}.npy".format(
                     input_images_index[i] + j * 5)
-                , 64)[:, :, 1]
+                , input_size)[:, :, 1]
     predictions = model(images, training=False)
 
     fig = plt.figure(figsize=(5, 5))
@@ -305,17 +305,17 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
 
 
 def main():
-    image_size = 64
+    image_size = 32
     image_frames = 2
     timestep = 5
-    future_runs = 3
-    num_after_points = 3
+    future_runs = 50
+    num_after_points = 5
     resolution = 0.001
 
-    scenario = 3
+    scenario = 0
     if scenario < 10:
         training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
-                                                      resolution, [12, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], num_after_points)
+                                                      resolution, [12], num_after_points)
         # training_data = testing_weather.main()
         lr_schedule = optimizers.schedules.ExponentialDecay(
             initial_learning_rate=1e-4,
@@ -333,7 +333,7 @@ def main():
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
                           50,
                           "u-net",
-                          future_runs, image_frames, num_after_points)
+                          future_runs, image_frames, num_after_points, image_size)
             network.save("models/u_network")
         elif scenario == 1:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
@@ -344,8 +344,8 @@ def main():
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
                           50,
                           "basic",
-                          future_runs, image_frames, num_after_points)
-            network.save("models/basic_network_weather")
+                          future_runs, image_frames, num_after_points, image_size)
+            network.save("models/basic_network")
         elif scenario == 2:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
@@ -355,7 +355,7 @@ def main():
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
                           50,
                           "parallel",
-                          future_runs, image_frames, num_after_points)
+                          future_runs, image_frames, num_after_points, image_size)
             network.save("models/parallel_network")
         elif scenario == 3:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
@@ -366,20 +366,20 @@ def main():
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
                           50,
                           "resnet",
-                          future_runs, image_frames, num_after_points)
+                          future_runs, image_frames, num_after_points, image_size)
             network.save("models/resnet")
         elif scenario == 4:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             network = create_network.create_transformer_network(
-                layers.LeakyReLU(), image_frames, image_size, channels=1, layering=10
+                layers.LeakyReLU(), image_frames, image_size, channels=1, layering=2
             )
             discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
             print(network.summary())
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
                           50,
                           "transformer",
-                          future_runs, image_frames, num_after_points)
+                          future_runs, image_frames, num_after_points, image_size)
             network.save("models/transformer_network")
 
     for sim in range(12, 13):
@@ -422,8 +422,8 @@ def train_step(input_images, expected_output, network, discriminator, net_op, di
     return network_loss, disc_loss, network_mse
 
 
-def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name, future_runs, frames, num_points):
-    size = 64
+def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name, future_runs, frames, num_points, size):
+    # size = 64
     # data = np.load("Meterology_data/data8.npz")
     # data_useful = np.zeros((np.shape(data["data"])[1], size, size, 1))
     # data_useful[:, :, :, 0] = data["data"][0, :, 69:69 + size, 420:420 + size]
@@ -452,7 +452,7 @@ def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name
             gen_losses.append(k.mean(gen_loss))
             disc_losses.append(k.mean(disc_loss))
             mse_losses.append(k.mean(mse))
-        generate_images(network, epoch + 1, ref_index, name, frames, 64)
+        generate_images(network, epoch + 1, ref_index, name, frames, size)
         # generate_weather(network, epoch, name, images)
         times_so_far.append(time.time() - start)
         seconds_per_epoch = times_so_far[epoch]
@@ -478,7 +478,7 @@ def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name
         overall_loss_disc.append(np.mean(disc_losses))
         overall_loss_gen.append(np.mean(gen_losses))
         overall_loss_mse.append(np.mean(mse_losses))
-    generate_images(network, epochs, ref_index, name, frames, 64)
+    generate_images(network, epochs, ref_index, name, frames, size)
     # generate_weather(network, epochs, name, images)
     plt.close("all")
     plt.grid()

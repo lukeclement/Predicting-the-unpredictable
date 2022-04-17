@@ -22,7 +22,7 @@ def main():
     future_look = 20
 
     crop_range = [0, np.shape(normalised_data)[1]-image_size]
-    crop_range = [140, 150]
+    # crop_range = [140, 150]
     maximum_crops = (crop_range[1] - crop_range[0])**2
     maximum_times = np.shape(normalised_data)[0] - future_look - image_frames
 
@@ -30,8 +30,8 @@ def main():
     answers = np.zeros((maximum_crops*maximum_times, 2, image_size, image_size, 1))
 
     bar = tqdm.tqdm(total=maximum_crops*maximum_times)
-    for x in range(crop_range[0], crop_range[1]):
-        for y in range(crop_range[0], crop_range[1]):
+    for x in range(crop_range[0], crop_range[1], image_size):
+        for y in range(crop_range[0], crop_range[1], image_size):
             for f in range(maximum_times):
                 bar.update(1)
                 for frame in range(image_frames):
