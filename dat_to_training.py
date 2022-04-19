@@ -447,14 +447,14 @@ def create_training_data(
     # return questions_array, answers_array
 
 
-def process_bmp(filename, image_size):
+def process_bmp(filename, image_size, modifier=100):
     x, y = np.load(filename)
     h, x_edge, y_edge = np.histogram2d(
         x, y,
         range=[[-1, 1], [-1, 1]], bins=(image_size, image_size)
     )
     output_array = np.zeros((image_size, image_size, 3))
-    h = np.tanh(h/10)
+    h = np.tanh(h/modifier)
     output_array[:, :, 1] = h
     output_array = generate_rail(output_array)
     return output_array

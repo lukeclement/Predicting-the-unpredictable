@@ -250,6 +250,26 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     plt.savefig("model_performance/{}_{}_y_position.png".format(network_name, simulation), dpi=250)
     plt.close()
 
+    # Velocity calculations
+    prediction_y_com = np.asarray(prediction_y_com)
+    correct_y_com = np.asarray(correct_y_com)
+
+    prediction_y_velocity = np.gradient(prediction_y_com, 5)
+    correct_y_velocity = np.gradient(correct_y_com, 5)
+    colours_c = np.linspace(0, 1, len(correct_y_velocity))
+    colours_p = np.linspace(0, 1, len(prediction_y_velocity))
+
+    plt.xlim([0.30, 0.7])
+    plt.ylim([-0.004, 0.004])
+    plt.plot(prediction_y_com, prediction_y_velocity, label="Prediction")
+    # plt.scatter(prediction_y_com, prediction_y_velocity, c=colours_p, label="Modifier 10000")
+    plt.plot(correct_y_com, correct_y_velocity, label="Simulation")
+    # plt.scatter(correct_y_com, correct_y_velocity, c=colours_c, label="Modifier 10")
+    plt.legend()
+    plt.grid()
+    plt.savefig("model_performance/{}_{}_phase_space.png".format(network_name, simulation), dpi=250)
+    plt.close()
+
     # Converting to a phase space
     # correct_frequency = []
     # predicted_frequency = []
@@ -305,11 +325,11 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
 
 
 def main():
-    image_size = 32
+    image_size = 64
     image_frames = 2
     timestep = 5
-    future_runs = 50
-    num_after_points = 5
+    future_runs = 10
+    num_after_points = 2
     resolution = 0.001
 
     scenario = 0
@@ -382,7 +402,7 @@ def main():
                           future_runs, image_frames, num_after_points, image_size)
             network.save("models/transformer_network")
 
-    for sim in range(12, 13):
+    for sim in range(0, 16):
         evaluate_performance("u_network", image_frames, image_size, timestep, resolution, simulation=sim)
         # evaluate_weather("basic_network_weather", image_frames, image_size)
 
