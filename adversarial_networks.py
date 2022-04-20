@@ -326,10 +326,10 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
 
 def main():
     image_size = 64
-    image_frames = 2
-    timestep = 5
+    image_frames = 3
+    timestep = 1
     future_runs = 10
-    num_after_points = 2
+    num_after_points = 1
     resolution = 0.001
 
     scenario = 0
@@ -403,7 +403,7 @@ def main():
             network.save("models/transformer_network")
 
     for sim in range(0, 16):
-        evaluate_performance("u_network", image_frames, image_size, timestep, resolution, simulation=sim)
+        evaluate_performance("u_network", image_frames, image_size, timestep, resolution, simulation=sim, test_range=1000)
         # evaluate_weather("basic_network_weather", image_frames, image_size)
 
 
