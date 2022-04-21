@@ -259,12 +259,13 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     colours_c = np.linspace(0, 1, len(correct_y_velocity))
     colours_p = np.linspace(0, 1, len(prediction_y_velocity))
 
-    plt.xlim([0.30, 0.7])
-    plt.ylim([-0.004, 0.004])
-    plt.plot(prediction_y_com, prediction_y_velocity, label="Prediction")
-    # plt.scatter(prediction_y_com, prediction_y_velocity, c=colours_p, label="Modifier 10000")
-    plt.plot(correct_y_com, correct_y_velocity, label="Simulation")
-    # plt.scatter(correct_y_com, correct_y_velocity, c=colours_c, label="Modifier 10")
+    plt.figure(figsize=(14, 8))
+    plt.xlim([0.4, 0.6])
+    plt.ylim([-0.002, 0.002])
+    # plt.plot(correct_y_com, correct_y_velocity, label="Simulation")
+    plt.scatter(correct_y_com, correct_y_velocity, label="Simulation")
+    # plt.plot(prediction_y_com, prediction_y_velocity, label="Prediction")
+    plt.scatter(prediction_y_com, prediction_y_velocity, c=colours_p, label="Prediction")
     plt.legend()
     plt.grid()
     plt.savefig("model_performance/{}_{}_phase_space.png".format(network_name, simulation), dpi=250)
@@ -325,7 +326,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
 
 
 def main():
-    image_size = 64
+    image_size = 256
     image_frames = 3
     timestep = 1
     future_runs = 10
@@ -334,9 +335,9 @@ def main():
 
     scenario = 0
     if scenario < 10:
-        training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
-                                                      resolution, [12], num_after_points)
-        # training_data = testing_weather.main()
+        # training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
+        #                                               resolution, [12], num_after_points)
+        training_data = testing_weather.main(image_size, image_frames, future_runs)
         lr_schedule = optimizers.schedules.ExponentialDecay(
             initial_learning_rate=1e-4,
             decay_steps=10000,
@@ -347,14 +348,14 @@ def main():
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
 
             network = create_network.create_u_network(layers.LeakyReLU(), image_frames, image_size, encode_size=10,
-                                                      kernel_size=5, channels=1)
+                                                      kernel_size=5, channels=1, first_channels=2)
             discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
             print(network.summary())
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
                           50,
                           "u-net",
                           future_runs, image_frames, num_after_points, image_size)
-            network.save("models/u_network")
+            network.save("models/u_network_weather")
         elif scenario == 1:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
@@ -402,9 +403,9 @@ def main():
                           future_runs, image_frames, num_after_points, image_size)
             network.save("models/transformer_network")
 
-    for sim in range(0, 16):
-        evaluate_performance("u_network", image_frames, image_size, timestep, resolution, simulation=sim, test_range=1000)
-        # evaluate_weather("basic_network_weather", image_frames, image_size)
+    for sim in range(12, 13):
+        # evaluate_performance("u_network_weather", image_frames, image_size, timestep, resolution, simulation=sim, test_range=1000)
+        evaluate_weather("u_network_weather", image_frames, image_size)
 
 
 @tf.function

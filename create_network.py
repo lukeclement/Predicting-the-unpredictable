@@ -584,18 +584,18 @@ def create_parallel_network(activation, input_frames, image_size, channels=3, en
 
 
 def create_u_network(activation, input_frames,
-                     image_size=64, channels=3, encode_size=2, kernel_size=3, inception=False):
+                     image_size=64, channels=3, encode_size=2, kernel_size=3, inception=False, first_channels=16):
     input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
     saving_layers = []
-    x = layers.Conv3D(32, (input_frames, 1, 1), use_bias=False)(input_layer)
+    x = layers.Conv3D(first_channels*2, (input_frames, 1, 1), use_bias=False)(input_layer)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU()(x)
-    x = layers.Reshape((image_size, image_size, 32))(x)
+    x = layers.Reshape((image_size, image_size, first_channels*2))(x)
     current_axis = image_size
     loops = 0
     while current_axis > encode_size:
         loops += 1
-        x = layers.Conv2D(16*2**loops, kernel_size, strides=2, padding='same', use_bias=False)(x)
+        x = layers.Conv2D(first_channels*2**loops, kernel_size, strides=2, padding='same', use_bias=False)(x)
         x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
         # x = layers.Conv2D(32, kernel_size, padding='same', activation=activation)(x)
@@ -604,14 +604,14 @@ def create_u_network(activation, input_frames,
         # x = layers.MaxPooling2D(2)(x)
         current_axis = int(np.floor(current_axis / 2))
         saving_layers.append(x)
-    x = layers.Conv2D(16*2**loops, 1, padding='same', use_bias=False)(x)
+    x = layers.Conv2D(first_channels*2**loops, 1, padding='same', use_bias=False)(x)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU()(x)
 
     for loop in range(loops):
         x = layers.concatenate([saving_layers[loops - loop - 1], x], axis=3)
         # x = layers.UpSampling2D(2)(x)
-        x = layers.Conv2DTranspose(16*2**(loops - loop), kernel_size, strides=2, padding='same', use_bias=False)(x)
+        x = layers.Conv2DTranspose(first_channels*2**(loops - loop), kernel_size, strides=2, padding='same', use_bias=False)(x)
         x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
     x = layers.Conv2D(1, 1, padding='same', activation='sigmoid')(x)

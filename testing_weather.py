@@ -5,7 +5,7 @@ import tqdm
 import tensorflow as tf
 
 
-def main():
+def main(size, frames, future):
     print("Yo")
     dataset = np.load("Meterology_data/data8.npz")
     print(dataset.files)
@@ -17,32 +17,40 @@ def main():
 
     del data
     del dataset
-    image_size = 64
-    image_frames = 4
-    future_look = 20
+    image_size = size
+    image_frames = frames
+    future_look = future
 
-    crop_range = [0, np.shape(normalised_data)[1]-image_size]
+    crop_range = [0, np.shape(normalised_data)[1]]
     # crop_range = [140, 150]
-    maximum_crops = (crop_range[1] - crop_range[0])**2
+    maximum_crops = ((crop_range[1] - crop_range[0])//image_size)**2
     maximum_times = np.shape(normalised_data)[0] - future_look - image_frames
+
+    x = crop_range[1]-image_size
+    y = crop_range[1]-image_size
+    yo = (x - crop_range[0])*(crop_range[1] - crop_range[0])//(image_size**2) + (y - crop_range[0])//image_size
+    actual_max = yo * maximum_times + maximum_times-1
+    print(yo * maximum_times + maximum_times-1)
 
     questions = np.zeros((maximum_crops*maximum_times, image_frames, image_size, image_size, 1))
     answers = np.zeros((maximum_crops*maximum_times, 2, image_size, image_size, 1))
-
     bar = tqdm.tqdm(total=maximum_crops*maximum_times)
-    for x in range(crop_range[0], crop_range[1], image_size):
-        for y in range(crop_range[0], crop_range[1], image_size):
+    for x in range(crop_range[0], crop_range[1]-image_size, image_size):
+        for y in range(crop_range[0], crop_range[1]-image_size, image_size):
             for f in range(maximum_times):
                 bar.update(1)
+                x_index = (x - crop_range[0])*(crop_range[1] - crop_range[0])//(image_size**2)
+                y_index = (y - crop_range[0])//image_size
                 for frame in range(image_frames):
+                    # print((x_index + y_index)*maximum_times + f)
                     questions[
-                        ((x - crop_range[0])*(crop_range[1] - crop_range[0]) + (y - crop_range[0]))*maximum_times + f,
+                        (x_index + y_index)*maximum_times + f,
                         frame,
                         :, :, 0
                     ] = normalised_data[f + frame, x:x + image_size, y:y + image_size]
                 for i in range(2):
                     answers[
-                        ((x - crop_range[0])*(crop_range[1] - crop_range[0]) + (y - crop_range[0]))*maximum_times + f,
+                        (x_index + y_index)*maximum_times + f,
                         i,
                         :, :, 0
                     ] = normalised_data[f + image_frames + i*future_look, x:x + image_size, y:y + image_size]
