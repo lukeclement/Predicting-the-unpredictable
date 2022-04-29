@@ -168,7 +168,8 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
             composite_frames[composite_frame, :, :, 2] = final_frames[-1]
 
     # Saving as an image
-    image_converts = composite_frames * 255
+
+    image_converts = np.tanh(composite_frames/100) * 255
     image_converts = image_converts.astype(np.uint8)
     images = []
     for i in image_converts:
@@ -326,18 +327,18 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
 
 
 def main():
-    image_size = 256
-    image_frames = 3
-    timestep = 1
-    future_runs = 10
+    image_size = 128
+    image_frames = 2
+    timestep = 5
+    future_runs = 5
     num_after_points = 1
     resolution = 0.001
 
     scenario = 0
     if scenario < 10:
-        # training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
-        #                                               resolution, [12], num_after_points)
-        training_data = testing_weather.main(image_size, image_frames, future_runs)
+        training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
+                                                      resolution, [12], num_after_points)
+        # training_data = testing_weather.main(image_size, image_frames, future_runs)
         lr_schedule = optimizers.schedules.ExponentialDecay(
             initial_learning_rate=1e-4,
             decay_steps=10000,
@@ -348,14 +349,14 @@ def main():
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
 
             network = create_network.create_u_network(layers.LeakyReLU(), image_frames, image_size, encode_size=10,
-                                                      kernel_size=5, channels=1, first_channels=2)
+                                                      kernel_size=5, channels=1, first_channels=4)
             discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
             print(network.summary())
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
-                          50,
+                          5,
                           "u-net",
                           future_runs, image_frames, num_after_points, image_size)
-            network.save("models/u_network_weather")
+            network.save("models/u_network_without_normal")
         elif scenario == 1:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
@@ -404,8 +405,8 @@ def main():
             network.save("models/transformer_network")
 
     for sim in range(12, 13):
-        # evaluate_performance("u_network_weather", image_frames, image_size, timestep, resolution, simulation=sim, test_range=1000)
-        evaluate_weather("u_network_weather", image_frames, image_size)
+        evaluate_performance("u_network_without_normal", image_frames, image_size, timestep, resolution, simulation=sim, test_range=1000)
+        # evaluate_weather("u_network_weather", image_frames, image_size)
 
 
 @tf.function

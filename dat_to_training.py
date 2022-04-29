@@ -272,6 +272,8 @@ def generate_data(frames: int, size: int, timestep: int, future_look: int,
                 )[:, :, 1]
             tracker += 1
     progress.close()
+
+    print(np.max(questions))
     testing_data = tf.data.Dataset.from_tensor_slices((questions, answers))
     testing_data = testing_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
     return testing_data
@@ -454,7 +456,7 @@ def process_bmp(filename, image_size, modifier=20):
         range=[[-1, 1], [-1, 1]], bins=(image_size, image_size)
     )
     output_array = np.zeros((image_size, image_size, 3))
-    h = np.tanh(h/modifier)
+    # h = np.tanh(h/modifier)
     output_array[:, :, 1] = h
     output_array = generate_rail(output_array)
     return output_array

@@ -584,7 +584,7 @@ def create_parallel_network(activation, input_frames, image_size, channels=3, en
 
 
 def create_u_network(activation, input_frames,
-                     image_size=64, channels=3, encode_size=2, kernel_size=3, inception=False, first_channels=16):
+                     image_size=64, channels=3, encode_size=2, kernel_size=3, inception=False, first_channels=32):
     input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
     saving_layers = []
     x = layers.Conv3D(first_channels*2, (input_frames, 1, 1), use_bias=False)(input_layer)
@@ -614,7 +614,8 @@ def create_u_network(activation, input_frames,
         x = layers.Conv2DTranspose(first_channels*2**(loops - loop), kernel_size, strides=2, padding='same', use_bias=False)(x)
         x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
-    x = layers.Conv2D(1, 1, padding='same', activation='sigmoid')(x)
+    # x = layers.Conv2D(1, 1, padding='same', activation='sigmoid')(x)
+    x = layers.Conv2D(1, 1, padding='same', activation='relu')(x)
     model = Model(input_layer, x, name='u-net')
     # model.compile(optimizer=optimizer, loss=loss, metrics=[
     #     losses.binary_crossentropy, losses.mean_squared_logarithmic_error

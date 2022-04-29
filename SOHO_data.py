@@ -102,10 +102,12 @@ from sunpy.net import attrs as a
 def find_data_refs():
     # Looking month by month
     running_total = 0
+    frames = 4
+    future_look = 20
     gap_positions = []
     downloads = []
-    for year in range(2000, 2001):
-        for month in range(1, 2):
+    for year in range(1999, 2000):
+        for month in range(1, 13):
             if month != 12:
                 time_range = a.Time('{}/{:02d}/01 00:00:00'.format(year, month),
                                     '{}/{:02d}/01 00:00:00'.format(year, month+1))
@@ -116,40 +118,48 @@ def find_data_refs():
             wavelength = a.Wavelength(195 * u.Angstrom)
             print("Searching month {}/{:02d}".format(year, month))
             search_results = Fido.search(time_range, instrument, wavelength)
-            times = np.asarray(search_results.show("Start Time"))[0]
+            times = np.asarray(search_results.show("Start Time", "Size"))[0]
             to_use = np.zeros(len(times))
             previous = times[0][0]
             to_use[0] = 1
             added_files = 1
+            running = 1
+            running_start = 0
             for index, recording in enumerate(times[1:]):
                 # See if gap is 12 minutes
                 if 10 * 60 <= (recording[0] - previous).to_value('sec') <= 14 * 60:
-                    # print("Fits pattern with {}".format(recording[0]))
                     to_use[index + 1] = 1
-                    added_files += 1
+                    running += 1
                 else:
-                    # print("Against pattern with {}".format(recording[0]))
                     to_use[index + 1] = 0
+                    if running < frames + future_look:
+                        to_use[running_start:running_start+running] = 0
+                    running = 0
+                    running_start = index + 2
                     if np.sum(to_use) + running_total not in gap_positions:
                         gap_positions.append(np.sum(to_use) + running_total)
                 previous = recording[0]
-            running_total += added_files
-            print("{}/{} new files added, currently {} files".format(
-                added_files, len(times), running_total))
-            print(to_use[:] == 1)
-            print(search_results[0][to_use[:] == 1])
-            print(gap_positions)
-            downloads += Fido.fetch(search_results[0][to_use[:] == 1])
+            running_total += np.sum(to_use)
+            print("{}/{} new files added, currently {} files ({:.2f} Gb)".format(
+                int(np.sum(to_use)), len(times), running_total, running_total*2.1/1024))
+            # print(to_use[:] == 1)
+            # print(search_results[0][to_use[:] == 1])
+            # print(gap_positions)
+            # downloads += Fido.fetch(search_results[0][to_use[:] == 1], path='./sun_data')
 
     return gap_positions, downloads
 
 
 def files_to_numpy(downloads, gaps):
     frames = 4
-    future_look = 20
+    future_look = 10
+    total = 0
     for index, gap in enumerate(gaps[1:]):
         if gap - gaps[index] > frames + future_look:
-            print("Good!")
+            total += gap - gaps[index] - (frames + future_look)
+            print(gap - gaps[index] - (frames + future_look))
+    print("--")
+    print(total)
     return 0
 
 
