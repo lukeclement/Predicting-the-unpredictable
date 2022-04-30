@@ -5,8 +5,11 @@ import imageio
 import numpy as np
 import scipy.optimize
 import tensorflow as tf
-from tensorflow.keras import layers, optimizers, losses, models, backend as k
+from tensorflow.keras import layers, optimizers, losses, models, backend as k, initializers
 import matplotlib.pyplot as plt
+from tqdm import tqdm
+from tensorflow.keras import mixed_precision
+
 import bubble_prediction
 import create_network
 import loss_functions
@@ -199,7 +202,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     plt.ylabel("Frame number")
     plt.hist2d(prediction_info, frame_info,
                bins=(18, min(composite_size, test_range)),
-               range=((0.1, 1), (0, min(composite_size, test_range))))
+               range=((0.1, np.maximum(prediction_info)), (0, min(composite_size, test_range))))
     plt.colorbar()
     plt.savefig("model_performance/{}_{}_value_dist.png".format(network_name, simulation), dpi=250)
     plt.close()
@@ -207,7 +210,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     plt.ylabel("Frame number")
     plt.hist2d(correct_info, frame_info,
                bins=(18, min(composite_size, num_correct_frames)),
-               range=((0.1, 1), (0, min(composite_size, num_correct_frames))))
+               range=((0.1, np.max(correct_info)), (0, min(composite_size, num_correct_frames))))
     plt.colorbar()
     plt.savefig("model_performance/{}_value_dist.png".format(simulation), dpi=250)
     plt.close()
@@ -326,37 +329,109 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     # plt.show()
 
 
-def main():
-    image_size = 128
-    image_frames = 2
-    timestep = 5
-    future_runs = 5
-    num_after_points = 1
-    resolution = 0.001
+def read_custom_data(frames, size, num_after_points, future_look, timestep, batch_size=8):
+    # all_simulations = glob.glob("sams_training_data/*")
+    # All the simulations that will be transformed into data
+    looking_for = []
+    for sim in range(0, 16):
+        if sim != 12:
+            looking_for.append("sams_training_data/new_xmin_Simulation_{}_points_100".format(sim))
+    # Look through simulations and get metadata
+    total_number_questions = 0
+    for simulation in looking_for:
+        # if simulation not in all_simulations:
+        #     convert_dat_files([min(variants), max(variants)], resolution)
+        # all_simulations = glob.glob("sams_training_data/*")
 
+        steps = glob.glob(simulation+"/*")
+        num_steps = len(steps) - 3
+        maximum_question_start = num_steps - timestep*(frames + future_look)
+        total_number_questions += maximum_question_start
+
+    questions = np.zeros((total_number_questions, frames, 100, 2))
+    answers = np.zeros((total_number_questions, num_after_points + 1, 100, 2))
+    tracker = 0
+    print("Loading in data...")
+    progress = tqdm(total=total_number_questions)
+    for simulation in looking_for:
+        steps = glob.glob(simulation + "/*")
+
+        num_steps = len(steps)
+        maximum_question_start = num_steps - timestep*(frames + future_look)
+        for step in range(3, maximum_question_start):
+            progress.update(1)
+            for frame in range(frames):
+                questions[tracker, frame, :, :] = np.transpose(np.load(
+                    simulation+"/data_{}.npy".format(step + frame * timestep)
+                ), (1, 0))
+            for future_frame in range(num_after_points + 1):
+                answers[tracker, future_frame, :, :] = np.transpose(np.load(
+                    simulation + "/data_{}.npy".format(
+                        step + (frames + future_frame*(future_look//num_after_points)) * timestep)
+                ), (1, 0))
+            tracker += 1
+    progress.close()
+
+    print(np.max(questions))
+    testing_data = tf.data.Dataset.from_tensor_slices((questions, answers))
+    testing_data = testing_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    return testing_data
+
+
+def main():
+    # policy = mixed_precision.Policy('mixed_float16')
+    policy = mixed_precision.Policy('float32')
+    mixed_precision.set_global_policy(policy)
+    print('Compute dtype: %s' % policy.compute_dtype)
+    print('Variable dtype: %s' % policy.variable_dtype)
+    image_size = 64
+    image_frames = 4
+    timestep = 5
+    future_runs = 10
+    num_after_points = 2
+    resolution = 0.001
+    # read_custom_data(image_frames, image_size, num_after_points, future_runs, timestep)
+    # exit()
     scenario = 0
     if scenario < 10:
         training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
                                                       resolution, [12], num_after_points)
         # training_data = testing_weather.main(image_size, image_frames, future_runs)
+        # training_data = read_custom_data(image_frames, image_size, num_after_points, future_runs, timestep)
         lr_schedule = optimizers.schedules.ExponentialDecay(
             initial_learning_rate=1e-4,
             decay_steps=10000,
             decay_rate=0.5
         )
+        if scenario == -1:
+            network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
+            discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
+
+            initializer_w = initializers.VarianceScaling(scale=2.9)
+            initializer_b = initializers.RandomNormal(stddev=0.04)
+            network = create_network.dense_network(
+                100, image_frames, 2, layers.LeakyReLU(), None, None, 200, 2, 12, initializer_w, initializer_b, None)
+            discriminator = create_network.create_sam_discriminator(num_after_points + 1)
+            print(network.summary())
+            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
+                          5,
+                          "sam-net",
+                          future_runs, image_frames, num_after_points, image_size)
+            network.save("models/sam_network")
+
         if scenario == 0:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
 
             network = create_network.create_u_network(layers.LeakyReLU(), image_frames, image_size, encode_size=10,
-                                                      kernel_size=5, channels=1, first_channels=4)
+                                                      kernel_size=5, channels=1, first_channels=16)
             discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
             print(network.summary())
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
                           5,
                           "u-net",
                           future_runs, image_frames, num_after_points, image_size)
-            network.save("models/u_network_without_normal")
+            network.save("models/u_network")
         elif scenario == 1:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
@@ -405,7 +480,7 @@ def main():
             network.save("models/transformer_network")
 
     for sim in range(12, 13):
-        evaluate_performance("u_network_without_normal", image_frames, image_size, timestep, resolution, simulation=sim, test_range=1000)
+        evaluate_performance("u_network", image_frames, image_size, timestep, resolution, simulation=sim, test_range=1000)
         # evaluate_weather("u_network_weather", image_frames, image_size)
 
 
@@ -418,14 +493,17 @@ def train_step(input_images, expected_output, network, discriminator, net_op, di
 
         for future_step in range((future_runs//num_points) * num_points):
             if future_step % (future_runs//num_points) == 0:
+                # current_output.append(tf.cast(predictions, tf.float64) + future_input[:, -1]) # SAMS NETWORK ONLY
                 current_output.append(predictions)
             next_input = []
             for i in range(frames - 1):
                 next_input.append(future_input[:, i + 1])
+            # next_input.append(tf.cast(predictions, tf.float64) + future_input[:, -1]) # SAMS NETWORK ONLY
             next_input.append(tf.cast(predictions, tf.float64))
             future_input = tf.stack(next_input, axis=1)
             predictions = network(future_input, training=True)
 
+        # current_output.append(tf.cast(predictions, tf.float64) + future_input[:, -1]) # SAMS NETWORK ONLY
         current_output.append(predictions)
 
         overall_predictions = tf.stack(current_output, axis=1)
@@ -434,7 +512,7 @@ def train_step(input_images, expected_output, network, discriminator, net_op, di
         network_disc_loss = loss_functions.generator_loss(actual_output)
         network_mse = k.mean(losses.mean_squared_error(expected_output, overall_predictions), axis=0)
         disc_loss = loss_functions.discriminator_loss(real_output, actual_output)
-        network_loss = network_disc_loss + network_mse * 100
+        network_loss = network_disc_loss + network_mse
 
     net_grad = net_tape.gradient(network_loss, network.trainable_variables)
     disc_grad = disc_tape.gradient(disc_loss, discriminator.trainable_variables)
@@ -474,7 +552,7 @@ def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name
             gen_losses.append(k.mean(gen_loss))
             disc_losses.append(k.mean(disc_loss))
             mse_losses.append(k.mean(mse))
-        generate_images(network, epoch + 1, ref_index, name, frames, size)
+        # generate_images(network, epoch + 1, ref_index, name, frames, size)
         # generate_weather(network, epoch, name, images)
         times_so_far.append(time.time() - start)
         seconds_per_epoch = times_so_far[epoch]
@@ -500,7 +578,7 @@ def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name
         overall_loss_disc.append(np.mean(disc_losses))
         overall_loss_gen.append(np.mean(gen_losses))
         overall_loss_mse.append(np.mean(mse_losses))
-    generate_images(network, epochs, ref_index, name, frames, size)
+    # generate_images(network, epochs, ref_index, name, frames, size)
     # generate_weather(network, epochs, name, images)
     plt.close("all")
     plt.grid()

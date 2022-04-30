@@ -150,6 +150,12 @@ def find_data_refs():
     return gap_positions, downloads
 
 
+def get_data(item):
+
+    # Should return NxN image
+    return 0
+
+
 def files_to_numpy(downloads, gaps):
     frames = 4
     future_look = 10
@@ -160,6 +166,18 @@ def files_to_numpy(downloads, gaps):
             print(gap - gaps[index] - (frames + future_look))
     print("--")
     print(total)
+    questions = np.zeros((total, frames, 1024, 1024, 1))
+    answers = np.zeros((total, 2, 1024, 1024, 1))
+    accessed_index = 0
+    for index, gap in enumerate(gaps[1:]):
+        if gap - gaps[index] > frames + future_look:
+            for i in range(gap - gaps[index] - (frames + future_look)):
+                current_index = gaps[index] + i
+                for frame in range(frames):
+                    questions[accessed_index, frame, :, :, 0] = get_data(downloads[current_index + frame])
+                answers[accessed_index, 0, :, :, 0] = get_data(downloads[current_index + frames])
+                answers[accessed_index, 1, :, :, 0] = get_data(downloads[current_index + frames + future_look])
+                accessed_index += 1
     return 0
 
 

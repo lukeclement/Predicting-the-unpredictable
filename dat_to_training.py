@@ -456,7 +456,7 @@ def process_bmp(filename, image_size, modifier=20):
         range=[[-1, 1], [-1, 1]], bins=(image_size, image_size)
     )
     output_array = np.zeros((image_size, image_size, 3))
-    # h = np.tanh(h/modifier)
+    h = np.tanh(h/modifier)
     output_array[:, :, 1] = h
     output_array = generate_rail(output_array)
     return output_array

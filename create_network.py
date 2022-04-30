@@ -583,6 +583,75 @@ def create_parallel_network(activation, input_frames, image_size, channels=3, en
     return model
 
 
+"""
+SAMS CODE
+"""
+
+
+def residual_cell(x, activation, initialiser_w, initialiser_b, layer_size=2, size=10):
+    x_skip = x
+    for i in range(layer_size):
+        #x = layers.Dense(size, activation=activation)(x)
+        x = layers.Dense(size, activation=activation, kernel_initializer=initialiser_w, bias_initializer=initialiser_b)(x)
+    input_size = x_skip.get_shape()
+    #x = layers.Dense(input_size, activation=activation)(x)
+    #x = ScaleLayer()(x)
+    x = layers.Add()([x, x_skip])
+    x = layers.Activation(activation=activation)(x)
+    return x
+
+
+def dense_network(input_number, frames, points, activation, optimiser, input_nodes, nodes, layer_num, cell_count, initialiser_w, initialiser_b, loss_func):
+    # tf.compat.v1.keras.backend.clear_session()
+    x_input = layers.Input(shape=(frames, input_number, points), name="message_input")
+    x = layers.Flatten()(x_input)
+    # x = layers.Dense(nodes, activation=activation)(x)
+
+    residual_cells = [layer_num, nodes]
+    x = layers.Dense(nodes, activation=activations.linear, kernel_initializer=initialiser_w, bias_initializer=initialiser_b)(x)
+    #x = layers.Dense(nodes, activation=activations.linear)(x)
+    for i in range(cell_count):
+        # x = layers.Dropout(0.05)(x)
+        x = residual_cell(x, activation, initialiser_w, initialiser_b, layer_size=residual_cells[0], size=residual_cells[1])
+
+    #x = layers.Dense(200, activation=activations.linear)(x)
+    x = layers.Dense(200, activation=activations.linear, kernel_initializer=initialiser_w, bias_initializer=initialiser_b)(x)
+    x = layers.Reshape((100, 2))(x)
+    model = Model(x_input, x)
+    # model.compile(optimizer=optimiser)
+    # print(model.summary())
+    # model = CustomModel(model)
+    # model.compile(optimizer=optimiser, loss=loss_func , run_eagerly=False)
+    return model
+
+
+"""
+/SAMS CODE
+"""
+
+
+def create_sam_discriminator(input_frames):
+    input_layer = Input(shape=(input_frames, 100, 2))
+    # x = layers.Conv2D(32, 3, strides=2, padding='same')(input_layer)
+    # x = layers.LeakyReLU()(x)
+    # x = layers.Dropout(0.3)(x)
+    #
+    # x = layers.Conv2D(64, 3, strides=2, padding='same')(x)
+    # x = layers.LeakyReLU()(x)
+    # x = layers.Dropout(0.3)(x)
+    #
+    # x = layers.Conv2D(128, 3, strides=2, padding='same')(x)
+    # x = layers.LeakyReLU()(x)
+    # x = layers.Dropout(0.3)(x)
+
+    x = layers.Flatten()(input_layer)
+    x = layers.Dense(1000, activation='sigmoid')(x)
+    x = layers.Dense(1, activation='sigmoid')(x)
+
+    model = Model(input_layer, x, name='discriminator')
+    return model
+
+
 def create_u_network(activation, input_frames,
                      image_size=64, channels=3, encode_size=2, kernel_size=3, inception=False, first_channels=32):
     input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
@@ -614,8 +683,9 @@ def create_u_network(activation, input_frames,
         x = layers.Conv2DTranspose(first_channels*2**(loops - loop), kernel_size, strides=2, padding='same', use_bias=False)(x)
         x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
-    # x = layers.Conv2D(1, 1, padding='same', activation='sigmoid')(x)
-    x = layers.Conv2D(1, 1, padding='same', activation='relu')(x)
+    x = layers.Conv2D(1, 1, padding='same', activation='sigmoid')(x)
+    x = layers.Activation('sigmoid', dtype='float32')(x)
+    # x = layers.Conv2D(1, 1, padding='same', activation='relu')(x)
     model = Model(input_layer, x, name='u-net')
     # model.compile(optimizer=optimizer, loss=loss, metrics=[
     #     losses.binary_crossentropy, losses.mean_squared_logarithmic_error
@@ -713,6 +783,7 @@ def create_discriminator(input_frames, input_size):
 
     x = layers.Flatten()(x)
     x = layers.Dense(1, activation='sigmoid')(x)
+    x = layers.Activation('sigmoid', dtype='float32')(x)
 
     model = Model(input_layer, x, name='discriminator')
     return model
