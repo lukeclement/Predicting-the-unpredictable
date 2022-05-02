@@ -103,17 +103,20 @@ def find_data_refs():
     # Looking month by month
     running_total = 0
     frames = 4
-    future_look = 20
+    future_look = 10
     gap_positions = []
     downloads = []
-    for year in range(1999, 2000):
-        for month in range(1, 13):
+    for year in range(2001, 2002):
+        for month in range(6, 8):
             if month != 12:
                 time_range = a.Time('{}/{:02d}/01 00:00:00'.format(year, month),
                                     '{}/{:02d}/01 00:00:00'.format(year, month+1))
+                # time_range = a.Time('{}/{:02d}/01 00:00:00'.format(2001, 1),
+                #                     '{}/{:02d}/01 00:00:00'.format(2002, 1))
             else:
                 time_range = a.Time('{}/{:02d}/01 00:00:00'.format(year, month),
                                     '{}/{:02d}/01 00:00:00'.format(year+1, 1))
+
             instrument = a.Instrument.eit
             wavelength = a.Wavelength(195 * u.Angstrom)
             print("Searching month {}/{:02d}".format(year, month))
@@ -125,35 +128,49 @@ def find_data_refs():
             added_files = 1
             running = 1
             running_start = 0
+            great_runs = []
             for index, recording in enumerate(times[1:]):
                 # See if gap is 12 minutes
-                if 10 * 60 <= (recording[0] - previous).to_value('sec') <= 14 * 60:
+                # print((recording[0] - previous).to_value('sec')/60)
+                if 9 * 60 <= (recording[0] - previous).to_value('sec') <= 15 * 60:
                     to_use[index + 1] = 1
                     running += 1
                 else:
                     to_use[index + 1] = 0
                     if running < frames + future_look:
+                        great_runs.append(running)
                         to_use[running_start:running_start+running] = 0
                     running = 0
                     running_start = index + 2
                     if np.sum(to_use) + running_total not in gap_positions:
                         gap_positions.append(np.sum(to_use) + running_total)
                 previous = recording[0]
+            print(max(great_runs))
             running_total += np.sum(to_use)
+            gap_positions.append(running_total)
             print("{}/{} new files added, currently {} files ({:.2f} Gb)".format(
                 int(np.sum(to_use)), len(times), running_total, running_total*2.1/1024))
             # print(to_use[:] == 1)
             # print(search_results[0][to_use[:] == 1])
             # print(gap_positions)
-            # downloads += Fido.fetch(search_results[0][to_use[:] == 1], path='./sun_data')
-
+            print("Downloading...")
+            downloads += Fido.fetch(search_results[0][to_use[:] == 1], path='./sun_data', progress=False)
+    np.save("gap_positions.npy", gap_positions)
+    np.save("download_refs.npy", np.asarray(downloads))
     return gap_positions, downloads
 
 
 def get_data(item):
-
+    mapped_item = sunpy.map.Map(item)
     # Should return NxN image
-    return 0
+    output_maybe = np.asarray(mapped_item.data)
+    size = np.shape(output_maybe)[0]
+    if size > 512:
+        return np.tanh(output_maybe[::2, ::2]/2500)
+        # return output_maybe[::2, ::2]
+    else:
+        return np.tanh(output_maybe/2500)
+        # return output_maybe
 
 
 def files_to_numpy(downloads, gaps):
@@ -162,27 +179,50 @@ def files_to_numpy(downloads, gaps):
     total = 0
     for index, gap in enumerate(gaps[1:]):
         if gap - gaps[index] > frames + future_look:
-            total += gap - gaps[index] - (frames + future_look)
+            total += int(gap - gaps[index] - (frames + future_look))
             print(gap - gaps[index] - (frames + future_look))
     print("--")
     print(total)
-    questions = np.zeros((total, frames, 1024, 1024, 1))
-    answers = np.zeros((total, 2, 1024, 1024, 1))
+    questions = np.zeros((total, frames, 512, 512, 1))
+    answers = np.zeros((total, 2, 512, 512, 1))
+    stretch = []
     accessed_index = 0
+    print(gaps)
+    print(downloads[0:28])
     for index, gap in enumerate(gaps[1:]):
         if gap - gaps[index] > frames + future_look:
-            for i in range(gap - gaps[index] - (frames + future_look)):
-                current_index = gaps[index] + i
+            for i in range(int(gap - gaps[index] - (frames + future_look))):
+                current_index = int(gaps[index]) + i
                 for frame in range(frames):
                     questions[accessed_index, frame, :, :, 0] = get_data(downloads[current_index + frame])
+                if len(stretch) == 0:
+                    for j in range(int(gap - gaps[index])):
+                        stretch.append(get_data(downloads[current_index + j]))
                 answers[accessed_index, 0, :, :, 0] = get_data(downloads[current_index + frames])
                 answers[accessed_index, 1, :, :, 0] = get_data(downloads[current_index + frames + future_look])
                 accessed_index += 1
+
+    print(np.max(questions))
+    print(np.std(questions))
+    total_data = np.asarray(stretch)
+    print(np.shape(total_data))
+    print("Number of data stretches: {}".format(len(gaps)-1))
+    # plt.hist(np.reshape(total_data, 84*512*512), bins=50)
+    # plt.show()
+    # exit()
+    image_converts = total_data * 255
+    image_converts = image_converts.astype(np.uint8)
+    images = []
+    for i in image_converts:
+        images.append(i)
+    imageio.mimsave("SOHO_test.gif", images)
     return 0
 
 
 def main():
     gap, down = find_data_refs()
+    gap = np.load("gap_positions.npy")
+    down = np.sort(np.load("download_refs.npy"))
     files_to_numpy(down, gap)
     exit()
     # time_range = a.Time('2004/06/15 08:00:00', '2004/06/15 09:00:00')
