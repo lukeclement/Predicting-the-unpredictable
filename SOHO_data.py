@@ -2,6 +2,7 @@ import imageio
 import requests
 import numpy as np
 import matplotlib.pyplot as plt
+import tqdm
 from astropy.io import fits
 from datetime import datetime
 from datetime import timedelta
@@ -11,6 +12,8 @@ import astropy.units as u
 import astropy.table as t
 from sunpy.net import Fido
 from sunpy.net import attrs as a
+import skimage.measure
+import tensorflow as tf
 
 # def main():
 #     # print("Howdy!")
@@ -160,48 +163,49 @@ def find_data_refs():
     return gap_positions, downloads
 
 
-def get_data(item):
+def get_data(item, image_size):
     mapped_item = sunpy.map.Map(item)
     # Should return NxN image
     output_maybe = np.asarray(mapped_item.data)
     size = np.shape(output_maybe)[0]
-    if size > 512:
-        return np.tanh(output_maybe[::2, ::2]/2500)
-        # return output_maybe[::2, ::2]
-    else:
-        return np.tanh(output_maybe/2500)
-        # return output_maybe
+    output = skimage.measure.block_reduce(output_maybe, (size//image_size, size//image_size), np.mean)
+    output = np.tanh(output/2500)
+    del mapped_item
+    del output_maybe
+    return output
 
 
-def files_to_numpy(downloads, gaps):
-    frames = 4
-    future_look = 10
+def files_to_numpy(downloads, gaps, size, frames, future_runs):
+    future_look = future_runs
     total = 0
     for index, gap in enumerate(gaps[1:]):
         if gap - gaps[index] > frames + future_look:
             total += int(gap - gaps[index] - (frames + future_look))
-            print(gap - gaps[index] - (frames + future_look))
+            # print(gap - gaps[index] - (frames + future_look))
     print("--")
     print(total)
-    questions = np.zeros((total, frames, 512, 512, 1))
-    answers = np.zeros((total, 2, 512, 512, 1))
+    questions = np.zeros((total, frames, size, size, 1))
+    answers = np.zeros((total, 2, size, size, 1))
     stretch = []
     accessed_index = 0
-    print(gaps)
-    print(downloads[0:28])
+    # print(gaps)
+    # print(downloads[0:28])
+    progress = tqdm.tqdm(total=len(gaps[1:]))
     for index, gap in enumerate(gaps[1:]):
+        progress.update(1)
         if gap - gaps[index] > frames + future_look:
             for i in range(int(gap - gaps[index] - (frames + future_look))):
                 current_index = int(gaps[index]) + i
                 for frame in range(frames):
-                    questions[accessed_index, frame, :, :, 0] = get_data(downloads[current_index + frame])
+                    questions[accessed_index, frame, :, :, 0] = get_data(downloads[current_index + frame], size)
                 if len(stretch) == 0:
                     for j in range(int(gap - gaps[index])):
-                        stretch.append(get_data(downloads[current_index + j]))
-                answers[accessed_index, 0, :, :, 0] = get_data(downloads[current_index + frames])
-                answers[accessed_index, 1, :, :, 0] = get_data(downloads[current_index + frames + future_look])
+                        stretch.append(get_data(downloads[current_index + j], size))
+                answers[accessed_index, 0, :, :, 0] = get_data(downloads[current_index + frames], size)
+                answers[accessed_index, 1, :, :, 0] = get_data(downloads[current_index + frames + future_look], size)
                 accessed_index += 1
-
+    progress.close()
+    print(np.shape(questions))
     print(np.max(questions))
     print(np.std(questions))
     total_data = np.asarray(stretch)
@@ -216,11 +220,14 @@ def files_to_numpy(downloads, gaps):
     for i in image_converts:
         images.append(i)
     imageio.mimsave("SOHO_test.gif", images)
-    return 0
+    batch_size = 8
+    testing_data = tf.data.Dataset.from_tensor_slices((questions, answers))
+    testing_data = testing_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    return testing_data
 
 
 def main():
-    gap, down = find_data_refs()
+    # gap, down = find_data_refs()
     gap = np.load("gap_positions.npy")
     down = np.sort(np.load("download_refs.npy"))
     files_to_numpy(down, gap)

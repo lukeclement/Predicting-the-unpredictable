@@ -146,7 +146,7 @@ def transform_to_numpy_array(x, y, variant, invert):
     return output_array
 
 
-def convert_dat_files(variant_range, resolution=0.0001):
+def convert_dat_files(variant_range, resolution=0.001):
     """Converts all .dat files to numpy arrays, and saves them as .bmp files.
     These .bmp files are stored in Simulation_data_extrapolated/Simulation_X,
     where X is the reference number for the simulation.
@@ -155,7 +155,7 @@ def convert_dat_files(variant_range, resolution=0.0001):
     Input:
         variant_range:  An array of two floats, defining the [minimum, maximum]
                             amount to shift the original images in the x-axis. This range is inclusive.
-        resolution: (default 0.0001) A float defining the distance between points when the raw data is interpolated.
+        resolution: (default 0.001) A float defining the distance between points when the raw data is interpolated.
     Output:
         Nothing
     """
@@ -261,15 +261,19 @@ def generate_data(frames: int, size: int, timestep: int, future_look: int,
         maximum_question_start = num_steps - timestep*(frames + future_look)
         for step in range(3, maximum_question_start):
             progress.update(1)
-            for frame in range(frames):
-                questions[tracker, frame, :, :, 0] = process_bmp(
-                    simulation+"/data_{}.npy".format(step + frame * timestep), size
-                )[:, :, 1]
-            for future_frame in range(num_after_points + 1):
-                answers[tracker, future_frame, :, :, 0] = process_bmp(
-                    simulation + "/data_{}.npy".format(
-                        step + (frames + future_frame*(future_look//num_after_points)) * timestep), size
-                )[:, :, 1]
+            try:
+                for frame in range(frames):
+                    questions[tracker, frame, :, :, 0] = process_bmp(
+                        simulation+"/data_{}.npy".format(step + frame * timestep), size
+                    )[:, :, 1]
+                for future_frame in range(num_after_points + 1):
+                    answers[tracker, future_frame, :, :, 0] = process_bmp(
+                        simulation + "/data_{}.npy".format(
+                            step + (frames + future_frame*(future_look//num_after_points)) * timestep), size
+                    )[:, :, 1]
+                tracker += 1
+            except Exception as e:
+                print("Somewhere, a file was missed. {}".format(step))
             tracker += 1
     progress.close()
 

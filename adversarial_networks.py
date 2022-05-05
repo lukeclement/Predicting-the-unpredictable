@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from tensorflow.keras import mixed_precision
 
+import SOHO_data
 import bubble_prediction
 import create_network
 import loss_functions
@@ -329,6 +330,57 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     # plt.show()
 
 
+def compare_sun(network_name, frames, size):
+    input_frames = np.zeros((1, frames, size, size, 1))
+    sun_images = np.sort(glob.glob("sun_data/*"))
+    times = []
+    for file_ref in sun_images:
+        time_pos = file_ref.find(".")
+        times.append(float(file_ref[time_pos+1:])/100)
+    valid_found = False
+    start_time = times[0]
+    track_index = [0]
+    print(len(sun_images))
+    start = 1
+    for index, sun_time in enumerate(times[start:]):
+        if not valid_found:
+            current_time = sun_time
+            if len(track_index) == 0:
+                start_time = current_time
+                track_index.append(index - start)
+            elif len(track_index) == frames:
+                valid_found = True
+            else:
+                if 10 < current_time - start_time < 14:
+                    track_index.append(index - start)
+                    start_time = current_time
+                else:
+                    track_index = []
+
+    print(track_index)
+
+    for ii, i in enumerate(track_index):
+        print(sun_images[i])
+        input_frames[0, ii, :, :, 0] = SOHO_data.get_data(sun_images[i], size)
+
+    network = models.load_model("models/{}".format(network_name))
+    next_frames = np.zeros((200, size, size, 1))
+    for i in range(200):
+        next_frames[i, :, :, :] = network(input_frames)
+        for j in range(frames-1):
+            input_frames[0, j, :, :, :] = input_frames[0, j+1, :, :, :]
+        input_frames[0, frames-1, :, :, :] = next_frames[i, :, :, :]
+        # print(input_frames[0, :, 22, 22, :])
+    image_converts = next_frames * 255
+    image_converts = image_converts.astype(np.uint8)
+    images = []
+    for i in image_converts:
+        images.append(i)
+    imageio.mimsave("SOHO_predictions.gif", images)
+
+
+
+
 def read_custom_data(frames, size, num_after_points, future_look, timestep, batch_size=8):
     # all_simulations = glob.glob("sams_training_data/*")
     # All the simulations that will be transformed into data
@@ -384,23 +436,27 @@ def main():
     mixed_precision.set_global_policy(policy)
     print('Compute dtype: %s' % policy.compute_dtype)
     print('Variable dtype: %s' % policy.variable_dtype)
-    image_size = 64
+    image_size = 128
     image_frames = 4
     timestep = 5
     future_runs = 10
-    num_after_points = 2
+    num_after_points = 1
     resolution = 0.001
     # read_custom_data(image_frames, image_size, num_after_points, future_runs, timestep)
     # exit()
     scenario = 0
     if scenario < 10:
-        training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
-                                                      resolution, [12], num_after_points)
+        # training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
+        #                                               resolution, [12], num_after_points)
+        gap = np.load("gap_positions.npy")
+        down = np.sort(np.load("download_refs.npy"))
+
+        training_data = SOHO_data.files_to_numpy(down, gap, image_size, image_frames, future_runs)
         # training_data = testing_weather.main(image_size, image_frames, future_runs)
         # training_data = read_custom_data(image_frames, image_size, num_after_points, future_runs, timestep)
         lr_schedule = optimizers.schedules.ExponentialDecay(
-            initial_learning_rate=1e-4,
-            decay_steps=10000,
+            initial_learning_rate=1e-3,
+            decay_steps=1000,
             decay_rate=0.5
         )
         if scenario == -1:
@@ -428,7 +484,7 @@ def main():
             discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
             print(network.summary())
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
-                          5,
+                          10,
                           "u-net",
                           future_runs, image_frames, num_after_points, image_size)
             network.save("models/u_network")
@@ -480,7 +536,8 @@ def main():
             network.save("models/transformer_network")
 
     for sim in range(12, 13):
-        evaluate_performance("u_network", image_frames, image_size, timestep, resolution, simulation=sim, test_range=1000)
+        compare_sun("u_network", image_frames, image_size)
+        # evaluate_performance("u_network", image_frames, image_size, timestep, resolution, simulation=sim, test_range=1000)
         # evaluate_weather("u_network_weather", image_frames, image_size)
 
 
