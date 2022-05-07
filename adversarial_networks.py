@@ -1,15 +1,27 @@
+print('Importing basics...')
 import glob
 import time
 
 import imageio
 import numpy as np
 import scipy.optimize
-import tensorflow as tf
-from tensorflow.keras import layers, optimizers, losses, models, backend as k, initializers
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+print("Importing Tensorflow...")
+import tensorflow as tf
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        logical_gpus = tf.config.list_logical_devices('GPU')
+        print("{} Physical GPUs, {} Logical GPUs".format(len(gpus), len(logical_gpus)))
+    except RuntimeError as e:
+        print(e)
+print("Keras...")
+from tensorflow.keras import layers, optimizers, losses, models, backend as k, initializers
 from tensorflow.keras import mixed_precision
-
+print("Python files...")
 import SOHO_data
 import bubble_prediction
 import create_network
@@ -173,7 +185,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
 
     # Saving as an image
 
-    image_converts = np.tanh(composite_frames/100) * 255
+    image_converts = composite_frames * 255
     image_converts = image_converts.astype(np.uint8)
     images = []
     for i in image_converts:
@@ -203,7 +215,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     plt.ylabel("Frame number")
     plt.hist2d(prediction_info, frame_info,
                bins=(18, min(composite_size, test_range)),
-               range=((0.1, np.maximum(prediction_info)), (0, min(composite_size, test_range))))
+               range=((0.1, np.max(prediction_info)), (0, min(composite_size, test_range))))
     plt.colorbar()
     plt.savefig("model_performance/{}_{}_value_dist.png".format(network_name, simulation), dpi=250)
     plt.close()
@@ -432,12 +444,12 @@ def read_custom_data(frames, size, num_after_points, future_look, timestep, batc
 
 def main():
     # policy = mixed_precision.Policy('mixed_float16')
-    policy = mixed_precision.Policy('float32')
-    mixed_precision.set_global_policy(policy)
-    print('Compute dtype: %s' % policy.compute_dtype)
-    print('Variable dtype: %s' % policy.variable_dtype)
+    # policy = mixed_precision.Policy('float32')
+    # mixed_precision.set_global_policy(policy)
+    # print('Compute dtype: %s' % policy.compute_dtype)
+    # print('Variable dtype: %s' % policy.variable_dtype)
     image_size = 128
-    image_frames = 4
+    image_frames = 2
     timestep = 5
     future_runs = 10
     num_after_points = 1
@@ -556,7 +568,7 @@ def train_step(input_images, expected_output, network, discriminator, net_op, di
             for i in range(frames - 1):
                 next_input.append(future_input[:, i + 1])
             # next_input.append(tf.cast(predictions, tf.float64) + future_input[:, -1]) # SAMS NETWORK ONLY
-            next_input.append(tf.cast(predictions, tf.float64))
+            next_input.append(predictions)
             future_input = tf.stack(next_input, axis=1)
             predictions = network(future_input, training=True)
 
@@ -609,7 +621,7 @@ def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name
             gen_losses.append(k.mean(gen_loss))
             disc_losses.append(k.mean(disc_loss))
             mse_losses.append(k.mean(mse))
-        # generate_images(network, epoch + 1, ref_index, name, frames, size)
+        generate_images(network, epoch + 1, ref_index, name, frames, size)
         # generate_weather(network, epoch, name, images)
         times_so_far.append(time.time() - start)
         seconds_per_epoch = times_so_far[epoch]
@@ -635,7 +647,7 @@ def train_network(dataset, network, discriminator, net_op, disc_op, epochs, name
         overall_loss_disc.append(np.mean(disc_losses))
         overall_loss_gen.append(np.mean(gen_losses))
         overall_loss_mse.append(np.mean(mse_losses))
-    # generate_images(network, epochs, ref_index, name, frames, size)
+    generate_images(network, epochs, ref_index, name, frames, size)
     # generate_weather(network, epochs, name, images)
     plt.close("all")
     plt.grid()

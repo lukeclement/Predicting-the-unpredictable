@@ -227,7 +227,7 @@ def files_to_numpy(downloads, gaps, size, frames, future_runs):
 
 
 def main():
-    # gap, down = find_data_refs()
+    gap, down = find_data_refs()
     gap = np.load("gap_positions.npy")
     down = np.sort(np.load("download_refs.npy"))
     files_to_numpy(down, gap)

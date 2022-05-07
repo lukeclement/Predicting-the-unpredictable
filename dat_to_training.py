@@ -1,5 +1,7 @@
 import glob
 import os
+from sys import getsizeof
+
 import numpy as np
 import tensorflow as tf
 from tqdm import tqdm
@@ -248,8 +250,8 @@ def generate_data(frames: int, size: int, timestep: int, future_look: int,
         maximum_question_start = num_steps - timestep*(frames + future_look)
         total_number_questions += maximum_question_start
 
-    questions = np.zeros((total_number_questions, frames, size, size, 1))
-    answers = np.zeros((total_number_questions, num_after_points + 1, size, size, 1))
+    questions = np.zeros((total_number_questions, frames, size, size, 1), dtype=np.float32)
+    answers = np.zeros((total_number_questions, num_after_points + 1, size, size, 1), dtype=np.float32)
 
     tracker = 0
     print("Loading in data...")
@@ -278,8 +280,16 @@ def generate_data(frames: int, size: int, timestep: int, future_look: int,
     progress.close()
 
     print(np.max(questions))
+    print(getsizeof(questions)/(1024**3))
+    print(getsizeof(answers)/(1024**3))
+    print(np.shape(questions))
+    print(np.shape(answers))
+    print("Turning into dataset...")
     testing_data = tf.data.Dataset.from_tensor_slices((questions, answers))
+    print("Batching...")
     testing_data = testing_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    print("Sending off...")
+    print(testing_data)
     return testing_data
 
 
