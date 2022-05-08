@@ -319,8 +319,8 @@ def files_to_numpy(downloads, gaps, size, frames, future_runs):
             # print(gap - gaps[index] - (frames + future_look))
     print("--")
     print(total)
-    questions = np.zeros((total, frames, size, size, 1))
-    answers = np.zeros((total, 2, size, size, 1))
+    questions = np.zeros((total, frames, size, size, 1), dtype=np.float32)
+    answers = np.zeros((total, 2, size, size, 1), dtype=np.float32)
     stretch = []
     accessed_index = 0
     # print(gaps)

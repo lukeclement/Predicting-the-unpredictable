@@ -466,16 +466,16 @@ def main():
         training_data = testing_weather.extract_chain_info(data, image_frames, future_runs)
 
         # Bubble
-        training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
-                                                      resolution, [12], num_after_points)
+        # training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
+        #                                               resolution, [12], num_after_points)
 
         # Sun
-        obs, size, ref = SOHO_data.get_metadata([1999], [6], a.Instrument.eit, 195)
-        mask, time_chains = SOHO_data.get_valid_data(4, 10, obs)
-        print("Total data use {:.2f}Gb ({} files), {} training data items".format(
-            np.sum(size[mask[:] == 1]) / 1024, np.sum(mask), len(time_chains)))
-        SOHO_data.download_data(ref, mask)
-        training_data = SOHO_data.generate_training_data(time_chains, 4, 128)
+        # obs, size, ref = SOHO_data.get_metadata([1999], [6], a.Instrument.eit, 195)
+        # mask, time_chains = SOHO_data.get_valid_data(4, 10, obs)
+        # print("Total data use {:.2f}Gb ({} files), {} training data items".format(
+        #     np.sum(size[mask[:] == 1]) / 1024, np.sum(mask), len(time_chains)))
+        # SOHO_data.download_data(ref, mask)
+        # training_data = SOHO_data.generate_training_data(time_chains, 4, 128)
 
         lr_schedule = optimizers.schedules.ExponentialDecay(
             initial_learning_rate=1e-3,
@@ -503,7 +503,7 @@ def main():
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
 
             network = create_network.create_u_network(layers.LeakyReLU(), image_frames, image_size, encode_size=10,
-                                                      kernel_size=5, channels=1, first_channels=16)
+                                                      kernel_size=5, channels=1, first_channels=8)
             discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
             print(network.summary())
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
@@ -559,9 +559,9 @@ def main():
             network.save("models/transformer_network")
 
     for sim in range(12, 13):
-        compare_sun("u_network", image_frames, image_size)
+        # compare_sun("u_network", image_frames, image_size)
         # evaluate_performance("u_network", image_frames, image_size, timestep, resolution, simulation=sim, test_range=1000)
-        # evaluate_weather("u_network_weather", image_frames, image_size)
+        evaluate_weather("u_network", image_frames, image_size)
 
 
 @tf.function
