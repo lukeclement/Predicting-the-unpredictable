@@ -684,7 +684,7 @@ def create_u_network(activation, input_frames,
         x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU()(x)
     x = layers.Conv2D(1, 1, padding='same', activation='sigmoid')(x)
-    x = layers.Activation('sigmoid', dtype='float32')(x)
+    # x = layers.Activation('sigmoid', dtype='float32')(x)
     # x = layers.Conv2D(1, 1, padding='same', activation='relu')(x)
     model = Model(input_layer, x, name='u-net')
     # model.compile(optimizer=optimizer, loss=loss, metrics=[

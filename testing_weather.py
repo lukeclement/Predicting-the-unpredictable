@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tqdm
 import tensorflow as tf
+import skimage.measure
 
 
 def main(size, frames, future):
@@ -13,8 +14,8 @@ def main(size, frames, future):
     print(np.shape(dataset["y_osgb"]))
     data = dataset["data"][0, :, :, :]
     print(np.shape(data))
-    normalised_data = np.tanh(data/500)
-
+    # normalised_data = np.tanh(data/500)
+    output = skimage.measure.block_reduce(output_maybe, (size // image_size, size // image_size), np.mean)
     del data
     del dataset
     image_size = size
@@ -42,7 +43,8 @@ def main(size, frames, future):
                 x_index = (x - crop_range[0])*(crop_range[1] - crop_range[0])//(image_size**2)
                 y_index = (y - crop_range[0])//image_size
                 for frame in range(image_frames):
-                    # print((x_index + y_index)*maximum_times + f)
+                    print((x_index + y_index)*maximum_times + f)
+                    print(maximum_crops*maximum_times)
                     questions[
                         (x_index + y_index)*maximum_times + f,
                         frame,
