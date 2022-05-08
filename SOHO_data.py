@@ -13,7 +13,10 @@ import astropy.table as t
 from sunpy.net import Fido
 from sunpy.net import attrs as a
 import skimage.measure
-import tensorflow as tf
+from tqdm import tqdm
+from multiprocessing import Pool
+from itertools import repeat
+# import tensorflow as tf
 
 # def main():
 #     # print("Howdy!")
@@ -100,6 +103,133 @@ import tensorflow as tf
 #     print(np.shape(solar_data))
 #     # plt.imshow(solar_data)
 #     # plt.show()
+
+
+def get_metadata(years, months, instrument, wavelength: int):
+    observation_times = []
+    reference_codes = []
+    sizes = []
+    search_wavelength = a.Wavelength(wavelength * u.Angstrom)
+    for year in years:
+        for month in months:
+            if month == 12:
+                time_range = a.Time('{:04d}/{:02d}/01 00:00:00'.format(year, month),
+                                    '{:04d}/{:02d}/01 00:00:00'.format(year+1, 1))
+            else:
+                time_range = a.Time('{:04d}/{:02d}/01 00:00:00'.format(year, month),
+                                    '{:04d}/{:02d}/01 00:00:00'.format(year, month+1))
+            print('Requesting data for {:02d}/{:04d} on wavelength {}'.format(month, year, wavelength))
+            search_results = Fido.search(time_range, instrument, search_wavelength)
+            for result in search_results[0]:
+                reference_codes.append(result)
+            print('Found {} results, total metadata spans {} entries'.format(len(search_results[0]), len(reference_codes)))
+            metadata = np.asarray(search_results.show('Start Time', 'Size'))[0]
+            bar = tqdm(total=len(search_results[0]))
+            for data in metadata:
+                observation_times.append(data[0].to_value('unix'))
+                sizes.append(data[1])
+                bar.update(1)
+            bar.close()
+    observation_times = np.asarray(observation_times)
+    sizes = np.asarray(sizes)
+    # reference_codes = np.asarray(reference_codes)
+    return observation_times, sizes, reference_codes
+
+
+def get_valid_data(frames, future_look, observation_times,
+                   time_separation=720, separation_window=60, start_window=920000000, window_range=10000000):
+    validation_mask = np.zeros(len(observation_times))
+    chains = []
+    time_chains = []
+    for index, time in enumerate(observation_times):
+        chain_building = True
+        current_frames = 0
+        current_chain = [index]
+        time_chain = [time]
+        ref_point = 0
+        while chain_building:
+            try:
+                future_point = len(current_chain) - frames
+                if current_frames < frames:
+                    start_chain_length = len(current_chain)
+                    ref_point += 1
+                    while observation_times[index + ref_point] - time < time_separation*(current_frames + 1) + separation_window/2:
+                        if observation_times[index + ref_point] - time > time_separation*(current_frames + 1) - separation_window/2:
+                            current_chain.append(index + ref_point)
+                            time_chain.append(observation_times[index+ref_point])
+                            break
+                        ref_point += 1
+                    if start_chain_length == len(current_chain):
+                        chain_building = False
+                    else:
+                        current_frames += 1
+                elif future_point < 2:
+                    start_chain_length = len(current_chain)
+                    ref_point = 1
+                    while observation_times[index + ref_point] - time < time_separation*(future_look + frames) + separation_window/2:
+                        if observation_times[index + ref_point] - time > time_separation*(future_look + frames) - separation_window/2:
+                            current_chain.append(index + ref_point)
+                            time_chain.append(observation_times[index+ref_point])
+                            break
+                        ref_point += 1
+                    if start_chain_length == len(current_chain):
+                        chain_building = False
+                else:
+                    chain_building = False
+            except IndexError:
+                chain_building = False
+        if len(current_chain) == 6:
+            chains.append(current_chain)
+            time_chains.append(time_chain)
+            # print(current_chain)
+            # print(time_chain)
+
+    for chain in chains:
+        for index in chain:
+            validation_mask[index] = 1
+    return validation_mask, time_chains
+
+
+def starmap_with_kwargs(pool, fn, args_iter, kwargs_iter):
+    args_for_starmap = zip(repeat(fn), args_iter, kwargs_iter)
+    return pool.starmap(apply_args_and_kwargs, args_for_starmap)
+
+
+def apply_args_and_kwargs(fn, args, kwargs):
+    return fn(*args, **kwargs)
+
+
+def download_data(references, validation_mask):
+    print("Downloading {} files...".format(np.sum(validation_mask)))
+    bar = tqdm(total=np.sum(validation_mask))
+    pool = Pool(4)
+    valid_refs = []
+    for i, data in enumerate(references):
+        if validation_mask[i] == 1:
+            Fido.fetch(data, path='./sun_data', progress=False, max_conn=1)
+            valid_refs.append(data)
+            bar.update(1)
+    bar.close()
+    # starmap_with_kwargs(pool, Fido.fetch, valid_refs, repeat(dict(path='./sun_data', progess=False, max_conn=0)))
+    return None
+
+
+def generate_training_data(time_chains, frames, image_size):
+    questions = np.zeros((len(time_chains), frames, image_size, image_size, 1))
+    answers = np.zeros((len(time_chains), 2, image_size, image_size, 1))
+    for index, chain in enumerate(time_chains):
+        for frame, time in enumerate(chain):
+            time_of_obs = datetime.fromtimestamp(time)
+            data_string = "sun_data/efz{:04d}{:02d}{:02d}.{:02d}{:02d}{:02d}".format(
+                time_of_obs.year, time_of_obs.month, time_of_obs.day, time_of_obs.hour, time_of_obs.minute, time_of_obs.second)
+            print(data_string)
+            if frame < frames:
+                questions[index, frame, :, :, 0] = get_data(data_string, image_size)
+            else:
+                answers[index, frame-frames, :, :, 0] = get_data(data_string, image_size)
+    print(questions)
+    print(answers)
+    return 0
 
 
 def find_data_refs():
@@ -228,6 +358,14 @@ def files_to_numpy(downloads, gaps, size, frames, future_runs):
 
 def main():
     # gap, down = find_data_refs()
+
+    obs, size, ref = get_metadata([1999], [6], a.Instrument.eit, 195)
+    mask, time_chains = get_valid_data(4, 10, obs)
+    print("Total data use {:.2f}Gb ({} files), {} training data items".format(
+        np.sum(size[mask[:] == 1])/1024, np.sum(mask), len(time_chains)))
+    download_data(ref, mask)
+    generate_training_data(time_chains, 4, 128)
+    exit()
     gap = np.load("gap_positions.npy")
     down = np.sort(np.load("download_refs.npy"))
     files_to_numpy(down, gap)
