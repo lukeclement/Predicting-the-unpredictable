@@ -14,8 +14,8 @@ def extract_chain_info(data, frames, future_look):
     windows = np.shape(data)[2]
     image_size = np.shape(data)[3]
 
-    questions = np.zeros((days*(minutes-frames-future_look)*windows, frames, image_size, image_size, 1))
-    answers = np.zeros((days*(minutes-frames-future_look)*windows, 2, image_size, image_size, 1))
+    questions = np.zeros((days*(minutes-frames-future_look)*windows, frames, image_size, image_size, 1), dtype=np.float32)
+    answers = np.zeros((days*(minutes-frames-future_look)*windows, 2, image_size, image_size, 1), dtype=np.float32)
     for window in range(windows):
         for day in range(days):
             for minute in range(minutes-frames-future_look):
