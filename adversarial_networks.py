@@ -476,13 +476,6 @@ def main():
         SOHO_data.download_data(ref, mask)
         training_data = SOHO_data.generate_training_data(time_chains, 4, 128)
 
-
-        gap = np.load("gap_positions.npy")
-        down = np.sort(np.load("download_refs.npy"))
-
-        training_data = SOHO_data.files_to_numpy(down, gap, image_size, image_frames, future_runs)
-        # training_data = testing_weather.main(image_size, image_frames, future_runs)
-        # training_data = read_custom_data(image_frames, image_size, num_after_points, future_runs, timestep)
         lr_schedule = optimizers.schedules.ExponentialDecay(
             initial_learning_rate=1e-3,
             decay_steps=1000,
