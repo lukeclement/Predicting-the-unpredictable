@@ -16,7 +16,7 @@ import skimage.measure
 from tqdm import tqdm
 from multiprocessing import Pool
 from itertools import repeat
-# import tensorflow as tf
+import tensorflow as tf
 
 # def main():
 #     # print("Howdy!")
@@ -227,9 +227,14 @@ def generate_training_data(time_chains, frames, image_size):
                 questions[index, frame, :, :, 0] = get_data(data_string, image_size)
             else:
                 answers[index, frame-frames, :, :, 0] = get_data(data_string, image_size)
-    print(questions)
-    print(answers)
-    return 0
+
+    batch_size = 8
+    print("Turning into dataset...")
+    testing_data = tf.data.Dataset.from_tensor_slices((questions, answers))
+    print("Batching...")
+    testing_data = testing_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    print("Sending off...")
+    return testing_data
 
 
 def find_data_refs():

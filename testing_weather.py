@@ -6,21 +6,79 @@ import tensorflow as tf
 import skimage.measure
 
 
-def main(size, frames, future):
+def extract_chain_info(data, frames, future_look):
+    # Extracting from data file that should looks like [days, minutes, window_number, size, size]
+
+    days = np.shape(data)[0]
+    minutes = np.shape(data)[1]
+    windows = np.shape(data)[2]
+    image_size = np.shape(data)[3]
+
+    questions = np.zeros((days*(minutes-frames-future_look)*windows, frames, image_size, image_size, 1))
+    answers = np.zeros((days*(minutes-frames-future_look)*windows, 2, image_size, image_size, 1))
+    for window in range(windows):
+        for day in range(days):
+            for minute in range(minutes-frames-future_look):
+                key_index = (window*days + day)*(minutes-frames-future_look) + minute
+                for frame in range(frames):
+                    questions[key_index, frame, :, :, 0] = data[day, minute + frame, window, :, :]
+                answers[key_index, 0, :, :, 0] = data[day, minute + frames, window, :, :]
+                answers[key_index, 1, :, :, 0] = data[day, minute + frames + future_look, window, :, :]
+
+    print(np.shape(questions))
+    batch_size = 8
+    print("Turning into dataset...")
+    testing_data = tf.data.Dataset.from_tensor_slices((questions, answers))
+    print("Batching...")
+    testing_data = testing_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    print("Sending off...")
+    return testing_data
+
+
+def simplify_data(original_data, window_sizes, window_downscaling=1, mod=1500):
+
+    data = np.tanh(skimage.measure.block_reduce(original_data, (1, 1, window_downscaling, window_downscaling), np.mean)/mod)
+    del original_data
+    print(np.shape(data))
+    maximum_windows_per_axis = np.shape(data)[2] // window_sizes
+    windows = np.zeros((np.shape(data)[0], np.shape(data)[1], maximum_windows_per_axis**2, window_sizes, window_sizes))
+    for window_x in range(0, maximum_windows_per_axis):
+        for window_y in range(0, maximum_windows_per_axis):
+            start_x = window_x * window_sizes
+            start_y = window_y * window_sizes
+            end_x = start_x + window_sizes
+            end_y = start_y + window_sizes
+            window_number = window_x * maximum_windows_per_axis + window_y
+            windows[:, :, window_number, :, :] = data[:, :, start_x:end_x, start_y:end_y]
+    return windows
+
+
+def main():
     print("Yo")
     dataset = np.load("Meterology_data/data8.npz")
     print(dataset.files)
     print(np.shape(dataset["x_osgb"]))
     print(np.shape(dataset["y_osgb"]))
-    data = dataset["data"][0, :, :, :]
-    print(np.shape(data))
-    # normalised_data = np.tanh(data/500)
-    output = skimage.measure.block_reduce(output_maybe, (size // image_size, size // image_size), np.mean)
-    del data
+    data = dataset["data"][:1, :, :, :]
     del dataset
-    image_size = size
-    image_frames = frames
-    future_look = future
+    print(np.shape(data))
+    data = simplify_data(data, 64, window_downscaling=1)
+    print(data)
+    # plt.imshow(data[0, 0, 0, :, :])
+    # plt.show()
+    extract_chain_info(data, 4, 10)
+    # normalised_data = np.tanh(data/500)
+
+    # output =
+    # Crop and format
+    print()
+    del data
+    # image_size = size
+    # image_frames = frames
+    # future_look = future
+
+    exit()
+
 
     crop_range = [0, np.shape(normalised_data)[1]]
     # crop_range = [140, 150]

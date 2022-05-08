@@ -1,12 +1,12 @@
 print('Importing basics...')
 import glob
 import time
-
 import imageio
 import numpy as np
 import scipy.optimize
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from sunpy.net import attrs as a
 print("Importing Tensorflow...")
 import tensorflow as tf
 gpus = tf.config.list_physical_devices('GPU')
@@ -391,8 +391,6 @@ def compare_sun(network_name, frames, size):
     imageio.mimsave("SOHO_predictions.gif", images)
 
 
-
-
 def read_custom_data(frames, size, num_after_points, future_look, timestep, batch_size=8):
     # all_simulations = glob.glob("sams_training_data/*")
     # All the simulations that will be transformed into data
@@ -457,9 +455,28 @@ def main():
     # read_custom_data(image_frames, image_size, num_after_points, future_runs, timestep)
     # exit()
     scenario = 0
+
     if scenario < 10:
-        # training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
-        #                                               resolution, [12], num_after_points)
+        # Weather
+        dataset = np.load("Meterology_data/data8.npz")
+        data = dataset["data"][:1, :, :, :]
+        del dataset
+        data = testing_weather.simplify_data(data, image_size, window_downscaling=1)
+        training_data = testing_weather.extract_chain_info(data, image_frames, future_runs)
+
+        # Bubble
+        training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
+                                                      resolution, [12], num_after_points)
+
+        # Sun
+        obs, size, ref = SOHO_data.get_metadata([1999], [6], a.Instrument.eit, 195)
+        mask, time_chains = SOHO_data.get_valid_data(4, 10, obs)
+        print("Total data use {:.2f}Gb ({} files), {} training data items".format(
+            np.sum(size[mask[:] == 1]) / 1024, np.sum(mask), len(time_chains)))
+        SOHO_data.download_data(ref, mask)
+        training_data = SOHO_data.generate_training_data(time_chains, 4, 128)
+
+
         gap = np.load("gap_positions.npy")
         down = np.sort(np.load("download_refs.npy"))
 
