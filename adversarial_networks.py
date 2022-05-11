@@ -153,7 +153,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
         for frame in range(frames - 1):
             current_frames[:, frame] = current_frames[:, frame + 1]
         current_frames[:, frames - 1] = next_frame
-        final_frames[loop] = next_frame[0, :, :, 0]
+        final_frames[loop] = np.arctanh(next_frame[0, :, :, 0]) * 20
 
     # Getting the correct data
     max_data = len(glob.glob("Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/*".format(
@@ -162,11 +162,12 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
 
     correct_frames = []
     for i in range(start_point + frames * timestep, max_data, timestep):
-        correct_frames.append(dat_to_training.process_bmp(
-            "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
-                str(flipped), variant, resolution, simulation, i
-            ), image_size=size
-        )[:, :, 1])
+        correct_frames.append(np.arctanh(
+            dat_to_training.process_bmp(
+                "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
+                    str(flipped), variant, resolution, simulation, i
+                ), image_size=size
+        )[:, :, 1]) * 20)
     num_correct_frames = len(correct_frames)
 
     # Making a composite of both
@@ -185,7 +186,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
 
     # Saving as an image
 
-    image_converts = composite_frames * 255
+    image_converts = np.tanh(composite_frames/20) * 255
     image_converts = image_converts.astype(np.uint8)
     images = []
     for i in image_converts:
