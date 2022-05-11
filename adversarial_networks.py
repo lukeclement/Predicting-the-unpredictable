@@ -389,6 +389,10 @@ def compare_sun(network_name, frames, size):
     for i in image_converts:
         images.append(i)
     imageio.mimsave("SOHO_predictions.gif", images)
+    # images = []
+    # for i in image_converts[:, :, 2]:
+    #     images.append(i)
+    # imageio.mimsave("SOHO_predictions_solo.gif", images)
 
 
 def read_custom_data(frames, size, num_after_points, future_look, timestep, batch_size=8):
@@ -446,7 +450,7 @@ def main():
     # mixed_precision.set_global_policy(policy)
     # print('Compute dtype: %s' % policy.compute_dtype)
     # print('Variable dtype: %s' % policy.variable_dtype)
-    image_size = 128
+    image_size = 64
     image_frames = 2
     timestep = 5
     future_runs = 10
@@ -458,22 +462,22 @@ def main():
 
     if scenario < 10:
         # Weather
-        dataset = np.load("Meterology_data/data8.npz")
-        data = dataset["data"][:1, :, :, :]
-        del dataset
-        data = testing_weather.simplify_data(data, image_size, window_downscaling=1)
-        training_data = testing_weather.extract_chain_info(data, image_frames, future_runs)
+        # dataset = np.load("Meterology_data/data8.npz")
+        # data = dataset["data"][:2, :, :, :]
+        # del dataset
+        # data = testing_weather.simplify_data(data, image_size, window_downscaling=1)
+        # training_data = testing_weather.extract_chain_info(data, image_frames, future_runs)
 
         # Bubble
-        # training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
-        #                                               resolution, [12], num_after_points)
+        training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
+                                                      resolution, [12], num_after_points)
 
         # Sun
-        # obs, size, ref = SOHO_data.get_metadata([1999], [6], a.Instrument.eit, 195)
+        # obs, size, ref = SOHO_data.get_metadata([2001], [7], a.Instrument.eit, 195)
         # mask, time_chains = SOHO_data.get_valid_data(4, 10, obs)
         # print("Total data use {:.2f}Gb ({} files), {} training data items".format(
         #     np.sum(size[mask[:] == 1]) / 1024, np.sum(mask), len(time_chains)))
-        # SOHO_data.download_data(ref, mask)
+        # # SOHO_data.download_data(ref, mask)
         # training_data = SOHO_data.generate_training_data(time_chains, 4, 128)
 
         lr_schedule = optimizers.schedules.ExponentialDecay(
@@ -506,10 +510,10 @@ def main():
             discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
             print(network.summary())
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
-                          10,
+                          100,
                           "u-net",
                           future_runs, image_frames, num_after_points, image_size)
-            network.save("models/u_network")
+            network.save("models/u_network_bubble")
         elif scenario == 1:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
@@ -558,9 +562,9 @@ def main():
             network.save("models/transformer_network")
 
     for sim in range(12, 13):
-        # compare_sun("u_network", image_frames, image_size)
-        # evaluate_performance("u_network", image_frames, image_size, timestep, resolution, simulation=sim, test_range=1000)
-        evaluate_weather("u_network", image_frames, image_size)
+        # compare_sun("u_network_sun", image_frames, image_size)
+        evaluate_performance("u_network_bubble", image_frames, image_size, timestep, resolution, simulation=sim, test_range=1000)
+        # evaluate_weather("u_network", image_frames, image_size)
 
 
 @tf.function
