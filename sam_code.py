@@ -830,9 +830,11 @@ def main():
                     break
                 if np.mean(final_array[0]) > 0.3:
                     final_states.append(1)
+                    bubble_positions.append(final_array)
                     break
                 if np.mean(final_array[0]) < -0.3:
                     final_states.append(2)
+                    bubble_positions.append(final_array)
                     break
                 bubble_positions.append(final_array)
                 prediction[0, :, :-1] = prediction[0, :, 1:]
@@ -844,6 +846,7 @@ def main():
             bubble_variants.append(bubble_positions)
             bar.update(1)
         bar.close()
+
         colours = cm.winter(np.linspace(0, 1, len(bubble_variants)))
         index = 0
         for bubble_series in bubble_variants:
@@ -859,13 +862,11 @@ def main():
                     now_y = bubble[0][i]
                     circumference += np.sqrt((first_x - now_x)**2 + (first_y - now_y)**2)
                 cir.append(circumference)
-            # plt.plot(avg_y, color=colours[index])
             plt.plot(cir, color=colours[index])
             index += 1
         avg_y_correct = []
 
         for bubble in initial_bubble[5::5]:
-            # avg_y_correct.append(np.mean(bubble[:, 0, 0]))
             circumference = 0
             for i in range(1, points):
                 first_x = bubble[i-1][0][1]
@@ -874,11 +875,13 @@ def main():
                 now_y = bubble[i][0][0]
                 circumference += np.sqrt((first_x - now_x)**2 + (first_y - now_y)**2)
             avg_y_correct.append(circumference)
-        # plt.ylim([-0.4, 0.4])
-        # plt.scatter(np.asarray(bubble_positions[0])[0, :], np.asarray(bubble_positions[0])[1, :])
-        # plt.scatter(initial_bubble[5, :, 0, 0], initial_bubble[5, :, 0, 1])
-        plt.plot(avg_y_correct, color='red')
-        plt.savefig("{}_circumference.png".format(initial_bubble_base))
+
+        plt.plot(avg_y_correct, color='red', label="Actual simulation")
+        plt.xlabel("Steps in prediction")
+        plt.ylabel("Bubble circumference")
+        plt.plot([0, max_runs], [4.2, 4.2], label="Prediction cutoff", ls='--', color='black')
+        plt.legend()
+        plt.savefig("{}_circumference.png".format(initial_bubble_base), dpi=200)
         plt.clf()
         colours = cm.winter(np.linspace(0, 1, len(bubble_variants)))
         index = 0
@@ -893,19 +896,25 @@ def main():
 
         for bubble in initial_bubble[5::5]:
             avg_y_correct.append(np.mean(bubble[:, 0, 0]))
-        plt.ylim([-0.4, 0.4])
-        plt.plot(avg_y_correct, color='red')
-        plt.savefig("{}_y_position.png".format(initial_bubble_base))
+        # plt.ylim([-0.4, 0.4])
+        plt.plot(avg_y_correct, color='red', label="Actual simulation")
+        plt.xlabel("Steps in prediction")
+        plt.ylabel("Average y position")
+        plt.plot([0, max_runs], [0.3, 0.3], label="Prediction cutoff", ls='--', color='black')
+        plt.plot([0, max_runs], [-0.3, -0.3], ls='--', color='black')
+        plt.legend()
+        plt.savefig("{}_y_position.png".format(initial_bubble_base), dpi=200)
         plt.clf()
+        plt.ylim([-1, 1])
+        plt.xlim([-1, 1])
         ii = 0
         for index, bubble_series in enumerate(bubble_variants):
             if final_states[index] == 4:
                 plt.scatter(bubble_series[-1][0], bubble_series[-1][1], color=colours[ii])
             ii += 1
         plt.scatter(initial_bubble[-1, :, 0, 0], initial_bubble[-1, :, 0, 1], color='red')
-        plt.savefig("{}_final_position.png".format(initial_bubble_base))
+        plt.savefig("{}_final_position.png".format(initial_bubble_base), dpi=200)
         plt.clf()
-
 
 
 if __name__ == "__main__":
