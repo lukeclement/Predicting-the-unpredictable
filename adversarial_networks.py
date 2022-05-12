@@ -66,8 +66,8 @@ def generate_images(model, epoch, input_images_index, name, input_frames, input_
 
 def calculate_com(bubble):
     image_size = np.shape(bubble)[0]
-    x = np.linspace(0, 1, image_size)
-    y = np.linspace(1, 0, image_size)
+    x = np.linspace(-1, 1, image_size)
+    y = np.linspace(1, -1, image_size)
     x, y = np.meshgrid(x, y, indexing='xy')
     x_com = np.sum(x * bubble) / np.sum(bubble)
     y_com = np.sum(y * bubble) / np.sum(bubble)

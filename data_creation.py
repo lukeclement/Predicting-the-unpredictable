@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import imageio
+import dat_to_training
+
 
 BASE_SIZE = 540
 
@@ -118,7 +120,7 @@ def convert_dat_files(variant_range, resolution=0.0001, inversions=[False]):
     Output:
         Nothing
     """
-    simulation_names = glob.glob("New_Simulation_data/*")
+    simulation_names = glob.glob("Simulation_data/*")
     simulation_index = 0
     for simulation in simulation_names:
         dat_files = glob.glob("{}/b*.dat".format(simulation))
@@ -149,7 +151,7 @@ def convert_dat_files(variant_range, resolution=0.0001, inversions=[False]):
                     ))
                 # Making a directory for the images
                 try:
-                    os.mkdir("New_Simulation_data_extrapolated/Simulation_{}_{}_{}_{}".format(
+                    os.mkdir("Simulation_data_extrapolated/Simulation_{}_{}_{}_{}".format(
                         inversion, variant, resolution, simulation_index
                     ))
                 except OSError:
@@ -161,7 +163,7 @@ def convert_dat_files(variant_range, resolution=0.0001, inversions=[False]):
                     # Saving to memory
                     data = np.array(
                         [((-1) ** (not inversion)) * x, y + (variant / BASE_SIZE)])  # numpy switch the x and y here!
-                    np.save("New_Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}".format(
+                    np.save("Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}".format(
                         inversion, variant, resolution, simulation_index, step_number
                     ), data)
                 # Now the heavy lifting
@@ -204,7 +206,7 @@ def positive_values(x_array, y_array):
 
 def plot_for_offset(file_num):
     # Data for plotting
-    file = np.load("New_Simulation_data_extrapolated/Simulation_False_0_0.0002_0/data_" + str(file_num) + ".npy")
+    file = np.load("Simulation_data_extrapolated/Simulation_False_0_0.0002_0/data_" + str(file_num) + ".npy")
 
     idx = find_zero_2(file[1], file[0])
     print(file_num, idx)
@@ -267,8 +269,9 @@ def circ_array(arrays):
 
 def border_data(point_num, simulation_num, file_num):
     # data_names = glob.glob("Simulation_data_extrapolated/Simulation_False_0_0.0001_0/*")
-    file = np.load("New_Simulation_data_extrapolated/Simulation_False_0_0.0002_" + str(simulation_num) + "/data_" + str(
-        file_num) + ".npy")
+    file = np.load("Simulation_data_extrapolated/Simulation_False_0_0.0001_{}/data_{}.npy".format(
+        simulation_num, file_num
+    ))
     final_array = [np.zeros(point_num), np.zeros(point_num)]
     idx = find_zero_2(file[1], file[0])
     circ = circumfrance(file)
@@ -290,7 +293,7 @@ def border_data(point_num, simulation_num, file_num):
 
 
 def save_border_data(point_num, simulation):
-    data_names = glob.glob("New_Simulation_data_extrapolated/Simulation_False_0_0.0002_{}/*".format(str(simulation)))
+    data_names = glob.glob("Simulation_data_extrapolated/Simulation_False_0_0.0001_{}/*".format(str(simulation)))
     folder_length = len(data_names)
     try:
         os.mkdir("training_data/new_new2_xmin_Simulation_{}_points_{}/".format(simulation, point_num))
@@ -313,10 +316,11 @@ def main():
     # convert_dat_files([0], 0.0002)
     # for i in range(1, 11):
     #     save_border_data(1000, i)
+    dat_to_training.convert_dat_files([0, 0], resolution=0.0001)
     points = 100
-    for simulation in range(2, 6):
+    for simulation in range(0, 16):
         save_border_data(points, simulation)
-        plot_gif(points, simulation)
+        # plot_gif(points, simulation)
 
     # kwargs_write = {'fps': 0.2 , 'quantizer': 'nq'}
     # imageio.mimsave('./powers.gif', [plot_for_offset(i) for i in range(900, 970)], fps=0.2)
@@ -355,7 +359,7 @@ def plot_gif(points, simulation):
 def plot_circ_graphs():
     for i in range(700, 960, 20):
         final_data = border_data(100, 0, i)
-        file = np.load("New_Simulation_data_extrapolated/Simulation_False_0_0.0001_0/data_" + str(i) + ".npy")
+        file = np.load("Simulation_data_extrapolated/Simulation_False_0_0.0001_0/data_" + str(i) + ".npy")
         plt.figure(figsize=[5, 5])
         plt.axvline(0, color="r")
         plt.plot(file[1], file[0])
