@@ -773,9 +773,9 @@ def main():
     # plot_data()
     max_runs = 300
     # initial_bubble_base = 11
-    num_interval = 200
+    num_interval = 5
     offsets = np.linspace(-0.01, 0.01, num_interval)
-    for b in range(0, 1):
+    for b in range(0, 16):
         initial_bubble_base = b
         initial_bubble = creating_data_graph(frames, points, [initial_bubble_base], 3, -1)
         initial_bubble = initial_bubble[0]
@@ -828,11 +828,11 @@ def main():
                 if circumference >= 4.2:
                     final_states.append(4)
                     break
-                if np.mean(final_array[0]) > 0.3:
+                if np.mean(final_array[0]) > 0.31:
                     final_states.append(1)
                     bubble_positions.append(final_array)
                     break
-                if np.mean(final_array[0]) < -0.3:
+                if np.mean(final_array[0]) < -0.31:
                     final_states.append(2)
                     bubble_positions.append(final_array)
                     break
@@ -846,8 +846,8 @@ def main():
             bubble_variants.append(bubble_positions)
             bar.update(1)
         bar.close()
-
-        colours = cm.winter(np.linspace(0, 1, len(bubble_variants)))
+        plt.figure(figsize=(10, 7))
+        colours = cm.cool(np.linspace(0, 1, len(bubble_variants)))
         index = 0
         for bubble_series in bubble_variants:
             avg_y = []
@@ -877,32 +877,50 @@ def main():
             avg_y_correct.append(circumference)
 
         plt.plot(avg_y_correct, color='red', label="Actual simulation")
+        plt.grid()
         plt.xlabel("Steps in prediction")
         plt.ylabel("Bubble circumference")
         plt.plot([0, max_runs], [4.2, 4.2], label="Prediction cutoff", ls='--', color='black')
         plt.legend()
         plt.savefig("{}_circumference.png".format(initial_bubble_base), dpi=200)
         plt.clf()
-        colours = cm.winter(np.linspace(0, 1, len(bubble_variants)))
+        colours = cm.cool(np.linspace(0, 1, len(bubble_variants)))
         index = 0
+        avg_ys = []
         for bubble_series in bubble_variants:
             avg_y = []
             cir = []
             for bubble in bubble_series:
                 avg_y.append(np.mean(bubble[0]))
             plt.plot(avg_y, color=colours[index])
+            avg_ys.append(avg_y)
             index += 1
         avg_y_correct = []
 
         for bubble in initial_bubble[5::5]:
             avg_y_correct.append(np.mean(bubble[:, 0, 0]))
         # plt.ylim([-0.4, 0.4])
+        r = 0.031415
+        x = np.linspace(0, max_runs, 500)
+        # omega = np.pi / 15
+        position_alpha = 51.9
+        position_beta = 289.5
+        omega = np.pi * 2 / ((position_beta - position_alpha)/8)
+        correction = -omega * position_alpha
+        y = r * np.cos((x + 0.2) * omega + correction)
         plt.plot(avg_y_correct, color='red', label="Actual simulation")
+        plt.plot(x, y, ls="--", color="black", label="Unstable periodic orbit")
+        plt.plot(x, np.zeros(500) + 0.31415, ls=':', color="black", label="Fixed points")
+        plt.plot(x, np.zeros(500), ls=':', color="black")
+        plt.plot(x, np.zeros(500) - 0.31415, ls=':', color="black")
         plt.xlabel("Steps in prediction")
         plt.ylabel("Average y position")
-        plt.plot([0, max_runs], [0.3, 0.3], label="Prediction cutoff", ls='--', color='black')
-        plt.plot([0, max_runs], [-0.3, -0.3], ls='--', color='black')
+        plt.grid()
+        # plt.plot([0, max_runs], [0.3, 0.3], label="Prediction cutoff", ls='--', color='black')
+        # plt.plot([0, max_runs], [-0.3, -0.3], ls='--', color='black')
         plt.legend()
+        plt.xlim([0, max_runs])
+        # plt.show()
         plt.savefig("{}_y_position.png".format(initial_bubble_base), dpi=200)
         plt.clf()
         plt.ylim([-1, 1])
@@ -916,6 +934,92 @@ def main():
         plt.savefig("{}_final_position.png".format(initial_bubble_base), dpi=200)
         plt.clf()
 
+        y_vels = []
+        for i, avg in enumerate(avg_ys):
+            p = np.asarray(avg)
+            v = np.gradient(p, 2)
+            y_vels.append(v)
+            plt.plot(p, v, color=colours[i])
+        p_correct = np.asarray(avg_y_correct)
+        v_correct = np.gradient(p_correct, 2)
+        r = 0.031
+        theta = np.linspace(0, np.pi * 2, 500)
+        x = r * np.cos(theta)
+        y = r * np.sin(theta) / 10
+        plt.plot(p_correct, v_correct, color='red', label="Actual simulation")
+        plt.plot(x, y, color="black", ls="--", label="Unstable periodic orbit")
+        plt.scatter([-0.31415, 0, 0.31415], [0, 0, 0], label="Fixed points", marker="o", color="black")
+        close = 47
+        start = 0
+        end = 100
+        # plt.scatter([avg_ys[10][close]], [y_vels[10][close]], label="Close", marker="x", color="red", zorder=1000)
+        # plt.scatter([avg_ys[20][close]], [y_vels[20][close]], marker="x", color="red", zorder=1000)
+        # plt.scatter([avg_ys[30][close]], [y_vels[30][close]], marker="x", color="red", zorder=1000)
+        # plt.scatter([avg_ys[40][close]], [y_vels[40][close]], marker="x", color="red", zorder=1000)
+        #
+        # plt.scatter([avg_ys[10][start]], [y_vels[10][start]], label="Start", marker="x", color="blue", zorder=1000)
+        # plt.scatter([avg_ys[20][start]], [y_vels[20][start]], marker="x", color="blue", zorder=1000)
+        # plt.scatter([avg_ys[30][start]], [y_vels[30][start]], marker="x", color="blue", zorder=1000)
+        # plt.scatter([avg_ys[40][start]], [y_vels[40][start]], marker="x", color="blue", zorder=1000)
+        #
+        # plt.scatter([avg_ys[10][end]], [y_vels[10][end]], label="End", marker="x", color="black", zorder=1000)
+        # plt.scatter([avg_ys[20][end]], [y_vels[20][end]], marker="x", color="black", zorder=1000)
+        # plt.scatter([avg_ys[30][end]], [y_vels[30][end]], marker="x", color="black", zorder=1000)
+        # plt.scatter([avg_ys[40][end]], [y_vels[40][end]], marker="x", color="black", zorder=1000)
+        # print(avg_ys[10][47])
+        plt.ylabel("Average y velocity")
+        plt.xlabel("Average y position")
+        plt.grid()
+        plt.legend()
+        plt.savefig("{}_phase_space.png".format(initial_bubble_base), dpi=200)
+        # plt.show()
+        plt.clf()
+
+        top_y = []
+        top_v = []
+        bottom_y = []
+        bottom_v = []
+        break_y = []
+        break_v = []
+        for i, value in enumerate(final_states):
+            average_y_positions = avg_ys[i]
+            average_y_velocities = y_vels[i]
+            termination_reason = value
+            if termination_reason == 1:
+                top_y += list(average_y_positions)
+                top_v += list(average_y_velocities)
+            elif termination_reason == 2:
+                bottom_y += list(average_y_positions)
+                bottom_v += list(average_y_velocities)
+            elif termination_reason == 4:
+                break_y += list(average_y_positions)
+                break_v += list(average_y_velocities)
+        top_y = np.asarray(top_y)
+        bottom_y = np.asarray(bottom_y)
+        break_y = np.asarray(break_y)
+        top_v = np.asarray(top_v)
+        bottom_v = np.asarray(bottom_v)
+        break_v = np.asarray(break_v)
+        final_top, _, _ = np.histogram2d(top_v, top_y, range=((-0.02, 0.015), (-0.35, 0.35)), bins=(500, 500))
+        final_bottom, _, _ = np.histogram2d(bottom_v, bottom_y, range=((-0.02, 0.015), (-0.35, 0.35)), bins=(500, 500))
+        final_break, _, _ = np.histogram2d(break_v, break_y, range=((-0.02, 0.015), (-0.35, 0.35)), bins=(500, 500))
+        final_array = np.zeros((500, 500, 3))
+        final_array[:, :, 2] = np.minimum(final_break, np.zeros((500, 500))+1)
+        final_array[:, :, 1] = np.minimum(final_top, np.zeros((500, 500))+1)
+        final_array[:, :, 0] = np.minimum(final_bottom, np.zeros((500, 500))+1)
+        plt.yticks(np.linspace(0, 499, 8), np.round(np.linspace(0, 1, 8)*0.035 - 0.02, 3))
+        plt.xticks(np.linspace(0, 499, 11), np.round(np.linspace(0, 1, 11)*0.7 - 0.35, 3))
+        plt.imshow(final_array)
+        plt.ylim([0, 500])
+        plt.xlim([0, 500])
+        plt.scatter([999], [0], color="green", label="Terminates above rail")
+        plt.scatter([999], [0], color="red", label="Terminates below rail")
+        plt.scatter([999], [0], color="blue", label="Breaks up")
+        plt.legend()
+        plt.ylabel("Average y velocity")
+        plt.xlabel("Average y position")
+        plt.savefig("{}_phase_domain.png".format(initial_bubble_base), dpi=200)
+        plt.clf()
 
 if __name__ == "__main__":
     main()
