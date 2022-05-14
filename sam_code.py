@@ -773,7 +773,7 @@ def main():
     # plot_data()
     max_runs = 300
     # initial_bubble_base = 11
-    num_interval = 5
+    num_interval = 11
     offsets = np.linspace(-0.01, 0.01, num_interval)
     for b in range(0, 16):
         initial_bubble_base = b
@@ -782,6 +782,7 @@ def main():
         bubble_variants = []
         final_states = []
         bar = tqdm(total=num_interval)
+        plt.figure(figsize=(10, 7))
         for offset in offsets:
             prediction = np.zeros((1, points, 1, 2))
             prediction[:, :, :, :] = initial_bubble[:1]
@@ -844,9 +845,28 @@ def main():
             if len(bubble_positions) == max_runs:
                 final_states.append(3)
             bubble_variants.append(bubble_positions)
+            if offset == 0:
+                actual = initial_bubble[5::5]
+                predicted = np.asarray(bubble_positions)
+                print(np.shape(actual))
+                print(np.shape(predicted))
+                final_point_actual = np.shape(actual)[0] - 1
+                final_point_predicted = np.shape(predicted)[0] - 1
+                final_point = np.minimum(final_point_actual, final_point_predicted)
+                plt.xlim([-1, 1])
+                plt.ylim([-1, 1])
+                plt.fill_between([-1, 1], 0.33, -0.33, color="gray", alpha=0.2, label="Rail")
+                plt.scatter(actual[final_point, :, 0, 1], actual[final_point, :, 0, 0], label="Simulation")
+                plt.scatter(predicted[final_point, 1, :], predicted[final_point, 0, :], label="Prediction")
+                plt.legend()
+                plt.xlabel("x position")
+                plt.ylabel("y position")
+                plt.savefig("{}_final_diff.png".format(initial_bubble_base), dpi=200)
+                plt.clf()
+                print("Ping")
+
             bar.update(1)
         bar.close()
-        plt.figure(figsize=(10, 7))
         colours = cm.cool(np.linspace(0, 1, len(bubble_variants)))
         index = 0
         for bubble_series in bubble_variants:
@@ -1015,7 +1035,7 @@ def main():
         plt.scatter([999], [0], color="green", label="Terminates above rail")
         plt.scatter([999], [0], color="red", label="Terminates below rail")
         plt.scatter([999], [0], color="blue", label="Breaks up")
-        plt.legend()
+        plt.legend(loc="lower right")
         plt.ylabel("Average y velocity")
         plt.xlabel("Average y position")
         plt.savefig("{}_phase_domain.png".format(initial_bubble_base), dpi=200)
