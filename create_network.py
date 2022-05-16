@@ -652,13 +652,33 @@ def create_sam_discriminator(input_frames):
     return model
 
 
+def create_dumb_network(input_frames, image_size=64, channels=3):
+    input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
+    x = layers.Flatten()(input_layer)
+    x = layers.Dense(10)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation(activation=activations.swish)(x)
+    x = layers.Dense(100)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation(activation=activations.swish)(x)
+    x = layers.Dense(100)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation(activation=activations.swish)(x)
+    x = layers.Dense(4096)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation(activation=activations.sigmoid)(x)
+    x = layers.Reshape((64, 64, 1))(x)
+    model = Model(input_layer, x, name='dumb')
+    return model
+
+
 def create_u_network(activation, input_frames,
                      image_size=64, channels=3, encode_size=2, kernel_size=3, inception=False, first_channels=32):
     input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
     saving_layers = []
     x = layers.Conv3D(first_channels*2, (input_frames, 1, 1), use_bias=False)(input_layer)
     x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU()(x)
+    x = layers.Activation(activation=activations.swish)(x)
     x = layers.Reshape((image_size, image_size, first_channels*2))(x)
     current_axis = image_size
     loops = 0
@@ -666,7 +686,7 @@ def create_u_network(activation, input_frames,
         loops += 1
         x = layers.Conv2D(first_channels*2**loops, kernel_size, strides=2, padding='same', use_bias=False)(x)
         x = layers.BatchNormalization()(x)
-        x = layers.LeakyReLU()(x)
+        x = layers.Activation(activation=activations.swish)(x)
         # x = layers.Conv2D(32, kernel_size, padding='same', activation=activation)(x)
         if inception:
             x = inception_cell_revive(x, channels)
@@ -675,14 +695,14 @@ def create_u_network(activation, input_frames,
         saving_layers.append(x)
     x = layers.Conv2D(first_channels*2**loops, 1, padding='same', use_bias=False)(x)
     x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU()(x)
+    x = layers.Activation(activation=activations.swish)(x)
 
     for loop in range(loops):
         x = layers.concatenate([saving_layers[loops - loop - 1], x], axis=3)
         # x = layers.UpSampling2D(2)(x)
         x = layers.Conv2DTranspose(first_channels*2**(loops - loop), kernel_size, strides=2, padding='same', use_bias=False)(x)
         x = layers.BatchNormalization()(x)
-        x = layers.LeakyReLU()(x)
+        x = layers.Activation(activation=activations.swish)(x)
     x = layers.Conv2D(1, 1, padding='same', activation='sigmoid')(x)
     # x = layers.Activation('sigmoid', dtype='float32')(x)
     # x = layers.Conv2D(1, 1, padding='same', activation='relu')(x)

@@ -452,14 +452,14 @@ def main():
     # print('Compute dtype: %s' % policy.compute_dtype)
     # print('Variable dtype: %s' % policy.variable_dtype)
     image_size = 64
-    image_frames = 2
+    image_frames = 4
     timestep = 5
     future_runs = 10
     num_after_points = 1
     resolution = 0.001
     # read_custom_data(image_frames, image_size, num_after_points, future_runs, timestep)
     # exit()
-    scenario = 0
+    scenario = 9
 
     if scenario < 10:
         # Weather
@@ -471,7 +471,7 @@ def main():
 
         # Bubble
         training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
-                                                      resolution, [12], num_after_points)
+                                                      resolution, [15], num_after_points)
 
         # Sun
         # obs, size, ref = SOHO_data.get_metadata([2001], [7], a.Instrument.eit, 195)
@@ -482,8 +482,8 @@ def main():
         # training_data = SOHO_data.generate_training_data(time_chains, 4, 128)
 
         lr_schedule = optimizers.schedules.ExponentialDecay(
-            initial_learning_rate=1e-3,
-            decay_steps=1000,
+            initial_learning_rate=1e-1,
+            decay_steps=10000000,
             decay_rate=0.5
         )
         if scenario == -1:
@@ -514,7 +514,21 @@ def main():
                           100,
                           "u-net",
                           future_runs, image_frames, num_after_points, image_size)
-            network.save("models/u_network_bubble")
+            network.save("models/u_network_GAN_bubble")
+        if scenario == 9:
+            # network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
+            # discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
+            network_optimizer = optimizers.Adam()
+            discriminator_optimizer = optimizers.Adam()
+
+            network = create_network.create_dumb_network(image_frames, image_size, channels=1)
+            discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
+            print(network.summary())
+            train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
+                          100,
+                          "dumb",
+                          future_runs, image_frames, num_after_points, image_size)
+            network.save("models/dumb_GAN_bubble")
         elif scenario == 1:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
@@ -562,9 +576,10 @@ def main():
                           future_runs, image_frames, num_after_points, image_size)
             network.save("models/transformer_network")
 
-    for sim in range(12, 13):
+    for sim in range(15, 16):
         # compare_sun("u_network_sun", image_frames, image_size)
-        evaluate_performance("u_network_bubble", image_frames, image_size, timestep, resolution, simulation=sim, test_range=1000)
+        evaluate_performance("u_network_GAN_bubble", image_frames, image_size, timestep, resolution,
+                             simulation=sim, test_range=400)
         # evaluate_weather("u_network", image_frames, image_size)
 
 
