@@ -1,3 +1,5 @@
+import datetime
+
 print('Importing basics...')
 import glob
 import time
@@ -102,6 +104,7 @@ def evaluate_weather(network_name, frames, size):
 
     data = np.load("Meterology_data/data8.npz")
     data_useful = np.zeros((np.shape(data["data"])[1], size, size, 1))
+
     data_useful[:, :, :, 0] = data["data"][0, :, 69:69 + size, 420:420 + size]
     data_useful = np.tanh(data_useful / 500)
     initial_frames = np.zeros((1, frames, size, size, 1))
@@ -124,6 +127,8 @@ def evaluate_weather(network_name, frames, size):
     for i in image_converts:
         images.append(i)
     imageio.mimsave("model_performance/{}_weather_composite.gif".format(network_name), images)
+    plt.imshow(final_data[-1])
+    plt.savefig("model_performance/{}_weather_composite_final.png".format(network_name), dpi=200)
     image_converts = final_data[:, :, :, 2] * 255
     image_converts = image_converts.astype(np.uint8)
     images = []
@@ -154,6 +159,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
             current_frames[:, frame] = current_frames[:, frame + 1]
         current_frames[:, frames - 1] = next_frame
         final_frames[loop] = np.arctanh(next_frame[0, :, :, 0]) * 20
+        # final_frames[loop] = next_frame[0, :, :, 0]
 
     # Getting the correct data
     max_data = len(glob.glob("Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/*".format(
@@ -168,6 +174,12 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
                     str(flipped), variant, resolution, simulation, i
                 ), image_size=size
         )[:, :, 1]) * 20)
+        # correct_frames.append(
+        #     dat_to_training.process_bmp(
+        #         "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
+        #             str(flipped), variant, resolution, simulation, i
+        #         ), image_size=size
+        # )[:, :, 1])
     num_correct_frames = len(correct_frames)
 
     # Making a composite of both
@@ -346,39 +358,41 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
 def compare_sun(network_name, frames, size):
     input_frames = np.zeros((1, frames, size, size, 1))
     sun_images = np.sort(glob.glob("sun_data/*"))
-    times = []
-    for file_ref in sun_images:
-        time_pos = file_ref.find(".")
-        times.append(float(file_ref[time_pos+1:])/100)
-    valid_found = False
-    start_time = times[0]
-    track_index = [0]
-    print(len(sun_images))
-    start = 1
-    for index, sun_time in enumerate(times[start:]):
-        if not valid_found:
-            current_time = sun_time
-            if len(track_index) == 0:
-                start_time = current_time
-                track_index.append(index - start)
-            elif len(track_index) == frames:
-                valid_found = True
-            else:
-                if 10 < current_time - start_time < 14:
-                    track_index.append(index - start)
-                    start_time = current_time
-                else:
-                    track_index = []
-
-    print(track_index)
-
-    for ii, i in enumerate(track_index):
-        print(sun_images[i])
-        input_frames[0, ii, :, :, 0] = SOHO_data.get_data(sun_images[i], size)
-
+    # times = []
+    # for file_ref in sun_images:
+    #     time_pos = file_ref.find(".")
+    #     times.append(float(file_ref[time_pos+1:])/100)
+    # valid_found = False
+    # start_time = times[0]
+    # track_index = [0]
+    # print(len(sun_images))
+    # start = 1
+    # for index, sun_time in enumerate(times[start:]):
+    #     if not valid_found:
+    #         current_time = sun_time
+    #         if len(track_index) == 0:
+    #             start_time = current_time
+    #             track_index.append(index - start)
+    #         elif len(track_index) == frames:
+    #             valid_found = True
+    #         else:
+    #             if 10 < current_time - start_time < 14:
+    #                 track_index.append(index - start)
+    #                 start_time = current_time
+    #             else:
+    #                 track_index = []
+    #
+    # print(track_index)
+    #
+    # for ii, i in enumerate(track_index):
+    #     print(sun_images[i])
+    #     input_frames[0, ii, :, :, 0] = SOHO_data.get_data(sun_images[i], size)
+    actual_input = [3, 4, 5, 6]
+    for i, index in enumerate(actual_input):
+        input_frames[0, i, :, :, 0] = SOHO_data.get_data(sun_images[index], size)
     network = models.load_model("models/{}".format(network_name))
-    next_frames = np.zeros((200, size, size, 1))
-    for i in range(200):
+    next_frames = np.zeros((196, size, size, 1))
+    for i in range(196):
         next_frames[i, :, :, :] = network(input_frames)
         for j in range(frames-1):
             input_frames[0, j, :, :, :] = input_frames[0, j+1, :, :, :]
@@ -389,7 +403,12 @@ def compare_sun(network_name, frames, size):
     images = []
     for i in image_converts:
         images.append(i)
-    imageio.mimsave("SOHO_predictions.gif", images)
+    imageio.mimsave("SOHO_predictions_basic.gif", images)
+    final_image = np.zeros((size, size, 3))
+    final_image[:, :, 1] = image_converts[-1, :, :, 0]
+    final_image[:, :, 2] = SOHO_data.get_data(sun_images[55], size)
+    plt.imshow(final_image)
+    plt.savefig("Final_SOHO_prediction_basic.png", dpi=200)
     # images = []
     # for i in image_converts[:, :, 2]:
     #     images.append(i)
@@ -445,6 +464,21 @@ def read_custom_data(frames, size, num_after_points, future_look, timestep, batc
     return testing_data
 
 
+def step_decay(epoch):
+    initial_rate = 1e-3
+    learn_rate = max(initial_rate * 0.1 ** (epoch//10), 1e-6)
+    return learn_rate
+
+
+class LearningRateStep(optimizers.schedules.LearningRateSchedule):
+    def __init__(self, i_lr):
+        self.initial_learning_rate = i_lr
+
+    def __call__(self, step):
+        epoch = step//1614
+        return self.initial_learning_rate * 0.1 ** (epoch//20)
+
+
 def main():
     # policy = mixed_precision.Policy('mixed_float16')
     # policy = mixed_precision.Policy('float32')
@@ -459,33 +493,55 @@ def main():
     resolution = 0.001
     # read_custom_data(image_frames, image_size, num_after_points, future_runs, timestep)
     # exit()
-    scenario = 9
-
+    scenario = 0
+    # tf.compat.v1.disable_eager_execution()
+    print(tf.executing_eagerly())
     if scenario < 10:
         # Weather
-        # dataset = np.load("Meterology_data/data8.npz")
-        # data = dataset["data"][:2, :, :, :]
-        # del dataset
-        # data = testing_weather.simplify_data(data, image_size, window_downscaling=1)
-        # training_data = testing_weather.extract_chain_info(data, image_frames, future_runs)
+        dataset = np.load("Meterology_data/data8.npz")
+        data = dataset["data"][:2, :, :, :]
+        del dataset
+        data = testing_weather.simplify_data(data, image_size, window_downscaling=1)
+        training_data = testing_weather.extract_chain_info(data, image_frames, future_runs)
 
         # Bubble
-        training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
-                                                      resolution, [15], num_after_points)
+        # training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
+        #                                               resolution, [15], num_after_points)
 
         # Sun
-        # obs, size, ref = SOHO_data.get_metadata([2001], [7], a.Instrument.eit, 195)
-        # mask, time_chains = SOHO_data.get_valid_data(4, 10, obs)
-        # print("Total data use {:.2f}Gb ({} files), {} training data items".format(
-        #     np.sum(size[mask[:] == 1]) / 1024, np.sum(mask), len(time_chains)))
+        # # obs, size, ref = SOHO_data.get_metadata([2001], [7], a.Instrument.eit, 195)
+        # solar_files = glob.glob("sun_data/*")
+        # solar_files = np.asarray(solar_files)
+        # solar_files = np.sort(solar_files)
+        # obs = []
+        # for file in solar_files:
+        #     date = file[12:]
+        #     year = int(date[:4])
+        #     month = int(date[4:6])
+        #     day = int(date[6:8])
+        #     hour = int(date[9:11])
+        #     minute = int(date[11:13])
+        #     second = int(date[13:15])
+        #     file_date = datetime.datetime(year, month, day, hour, minute, second)
+        #     og_date = datetime.datetime(1970, 1, 1, 0, 0, 0)
+        #     obs.append((file_date-og_date).total_seconds())
+        #     if year == 2001 and month == 6 and day == 1 and hour == 4:
+        #         print("{}:{}".format(minute, second))
+        #         print((file_date-og_date).total_seconds())
+        #
+        # mask, time_chains = SOHO_data.get_valid_data(image_frames, future_runs, obs)
+        # # print("Total data use {:.2f}Gb ({} files), {} training data items".format(
+        # #     np.sum(size[mask[:] == 1]) / 1024, np.sum(mask), len(time_chains)))
         # # SOHO_data.download_data(ref, mask)
-        # training_data = SOHO_data.generate_training_data(time_chains, 4, 128)
+        # print(time_chains)
+        # training_data = SOHO_data.generate_training_data(time_chains, image_frames, image_size)
 
-        lr_schedule = optimizers.schedules.ExponentialDecay(
-            initial_learning_rate=1e-1,
-            decay_steps=10000000,
-            decay_rate=0.5
-        )
+        # lr_schedule = optimizers.schedules.ExponentialDecay(
+        #     initial_learning_rate=1e-3,
+        #     decay_steps=100000,
+        #     decay_rate=0.5
+        # )
+        lr_schedule = LearningRateStep(1e-3)
         if scenario == -1:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
@@ -507,25 +563,25 @@ def main():
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
 
             network = create_network.create_u_network(layers.LeakyReLU(), image_frames, image_size, encode_size=10,
-                                                      kernel_size=5, channels=1, first_channels=8)
+                                                      kernel_size=5, channels=1, first_channels=16)
             discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
             print(network.summary())
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
                           100,
-                          "u-net",
+                          "u-net-weather",
                           future_runs, image_frames, num_after_points, image_size)
-            network.save("models/u_network_GAN_bubble")
+            network.save("models/u_network_GAN_weather")
         if scenario == 9:
             # network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             # discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
-            network_optimizer = optimizers.Adam()
-            discriminator_optimizer = optimizers.Adam()
+            network_optimizer = optimizers.Adam(epsilon=0.1)
+            discriminator_optimizer = optimizers.Adam(epsilon=0.1)
 
             network = create_network.create_dumb_network(image_frames, image_size, channels=1)
             discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
             print(network.summary())
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
-                          100,
+                          1000,
                           "dumb",
                           future_runs, image_frames, num_after_points, image_size)
             network.save("models/dumb_GAN_bubble")
@@ -536,7 +592,7 @@ def main():
             discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
             print(network.summary())
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
-                          50,
+                          100,
                           "basic",
                           future_runs, image_frames, num_after_points, image_size)
             network.save("models/basic_network")
@@ -576,11 +632,11 @@ def main():
                           future_runs, image_frames, num_after_points, image_size)
             network.save("models/transformer_network")
 
-    for sim in range(15, 16):
-        # compare_sun("u_network_sun", image_frames, image_size)
-        evaluate_performance("u_network_GAN_bubble", image_frames, image_size, timestep, resolution,
-                             simulation=sim, test_range=400)
-        # evaluate_weather("u_network", image_frames, image_size)
+    for sim in range(0, 16):
+        # compare_sun("u_network_GAN_sun", image_frames, image_size)
+        # evaluate_performance("u_network_GAN_bubble", image_frames, image_size, timestep, resolution,
+        #                      simulation=sim, test_range=400)
+        evaluate_weather("u_network_GAN_weather", image_frames, image_size)
 
 
 @tf.function

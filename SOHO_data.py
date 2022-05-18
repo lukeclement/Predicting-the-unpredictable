@@ -187,6 +187,7 @@ def get_valid_data(frames, future_look, observation_times,
     for chain in chains:
         for index in chain:
             validation_mask[index] = 1
+    print(chains)
     return validation_mask, time_chains
 
 
@@ -215,14 +216,16 @@ def download_data(references, validation_mask):
 
 
 def generate_training_data(time_chains, frames, image_size):
-    questions = np.zeros((len(time_chains), frames, image_size, image_size, 1))
-    answers = np.zeros((len(time_chains), 2, image_size, image_size, 1))
+    questions = np.zeros((len(time_chains), frames, image_size, image_size, 1), dtype=np.float32)
+    answers = np.zeros((len(time_chains), 2, image_size, image_size, 1), dtype=np.float32)
     for index, chain in enumerate(time_chains):
         for frame, time in enumerate(chain):
-            time_of_obs = datetime.fromtimestamp(time)
+            # print(time)
+            time_of_obs = datetime.fromtimestamp(time - 60*60)
+            # print(time_of_obs)
             data_string = "sun_data/efz{:04d}{:02d}{:02d}.{:02d}{:02d}{:02d}".format(
                 time_of_obs.year, time_of_obs.month, time_of_obs.day, time_of_obs.hour, time_of_obs.minute, time_of_obs.second)
-            print(data_string)
+            # print(data_string)
             if frame < frames:
                 questions[index, frame, :, :, 0] = get_data(data_string, image_size)
             else:
@@ -304,7 +307,7 @@ def get_data(item, image_size):
     output_maybe = np.asarray(mapped_item.data)
     size = np.shape(output_maybe)[0]
     output = skimage.measure.block_reduce(output_maybe, (size//image_size, size//image_size), np.mean)
-    output = np.tanh(output/2500)
+    output = np.tanh(output/1500)
     del mapped_item
     del output_maybe
     return output

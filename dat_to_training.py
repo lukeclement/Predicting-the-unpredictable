@@ -277,6 +277,7 @@ def generate_data(frames: int, size: int, timestep: int, future_look: int,
             except Exception as e:
                 print(e)
                 print("Somewhere, a file was missed. {}".format(step))
+                tracker += 1
     progress.close()
 
     print(np.max(questions))

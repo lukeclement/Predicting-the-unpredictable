@@ -665,9 +665,9 @@ def create_dumb_network(input_frames, image_size=64, channels=3):
     x = layers.BatchNormalization()(x)
     x = layers.Activation(activation=activations.swish)(x)
     x = layers.Dense(4096)(x)
+    x = layers.Reshape((64, 64, 1))(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation(activation=activations.sigmoid)(x)
-    x = layers.Reshape((64, 64, 1))(x)
     model = Model(input_layer, x, name='dumb')
     return model
 
