@@ -104,7 +104,7 @@ def evaluate_weather(network_name, frames, size):
     network = models.load_model("models/{}".format(network_name))
 
     data = np.load("Meterology_data/data8.npz")
-    data_useful = np.zeros((np.shape(data["data"])[1], size, size, 1))
+    data_useful = np.zeros((np.shape(data["data"])[1], 1*size + 0, 1*size + 0, 1))
 
     data_useful[:, :, :, 0] = data["data"][0, :, 320:320 + size, 320:320 + size]
     data_useful = np.tanh(data_useful / 1500)
@@ -216,8 +216,6 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     plt.savefig("model_performance/{}_{}_offsets_phase.png".format(network_name, simulation), dpi=200)
     plt.clf()
     # exit()
-    if True:
-        return
     starting_frames = np.zeros((1, frames, size, size, 1))
     for frame in range(frames):
         starting_frames[0, frame, :, :, 0] = dat_to_training.process_bmp(
@@ -313,7 +311,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
                bins=(18, min(composite_size, test_range)),
                range=((0.1, np.max(prediction_info)), (0, min(composite_size, test_range))))
     plt.colorbar()
-    # plt.savefig("model_performance/{}_{}_value_dist.png".format(network_name, simulation), dpi=250)
+    plt.savefig("model_performance/{}_{}_value_dist.png".format(network_name, simulation), dpi=250)
     plt.close()
     plt.xlabel("Pixel value")
     plt.ylabel("Frame number")
@@ -321,7 +319,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
                bins=(18, min(composite_size, num_correct_frames)),
                range=((0.1, np.max(correct_info)), (0, min(composite_size, num_correct_frames))))
     plt.colorbar()
-    # plt.savefig("model_performance/{}_value_dist.png".format(simulation), dpi=250)
+    plt.savefig("model_performance/{}_value_dist.png".format(simulation), dpi=250)
     plt.close()
     # Getting an estimate on 'noise'
     noise_correct = np.zeros(composite_size)
@@ -337,7 +335,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     plt.scatter(noise_frame, noise_prediction, label="Prediction")
     plt.scatter(noise_frame, noise_correct, label="Simulation")
     plt.legend()
-    # plt.savefig("model_performance/{}_{}_non-zero.png".format(network_name, simulation), dpi=250)
+    plt.savefig("model_performance/{}_{}_non-zero.png".format(network_name, simulation), dpi=250)
     plt.close()
 
     # Performing y-position stuff
@@ -360,7 +358,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     plt.plot(prediction_y_com, label="Prediction")
     plt.plot(correct_y_com, label="Simulation")
     plt.legend()
-    # plt.savefig("model_performance/{}_{}_y_position.png".format(network_name, simulation), dpi=250)
+    plt.savefig("model_performance/{}_{}_y_position.png".format(network_name, simulation), dpi=250)
     plt.close()
 
     # Velocity calculations
@@ -381,7 +379,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     plt.scatter(prediction_y_com, prediction_y_velocity, c=colours_p, label="Prediction")
     plt.legend()
     plt.grid()
-    # plt.savefig("model_performance/{}_{}_phase_space.png".format(network_name, simulation), dpi=250)
+    plt.savefig("model_performance/{}_{}_phase_space.png".format(network_name, simulation), dpi=250)
     plt.close()
 
     # Converting to a phase space
@@ -558,7 +556,7 @@ class LearningRateStep(optimizers.schedules.LearningRateSchedule):
         self.initial_learning_rate = i_lr
 
     def __call__(self, step):
-        epoch = step//1614
+        epoch = step//1296
         return self.initial_learning_rate * 0.1 ** (epoch//20)
 
 
@@ -568,28 +566,28 @@ def main():
     # mixed_precision.set_global_policy(policy)
     # print('Compute dtype: %s' % policy.compute_dtype)
     # print('Variable dtype: %s' % policy.variable_dtype)
-    image_size = 64
-    image_frames = 4
+    image_size = 128
+    image_frames = 1
     timestep = 5
     future_runs = 10
     num_after_points = 1
     resolution = 0.001
     # read_custom_data(image_frames, image_size, num_after_points, future_runs, timestep)
     # exit()
-    scenario = 10
+    scenario = 0
     # tf.compat.v1.disable_eager_execution()
     print(tf.executing_eagerly())
     if scenario < 10:
         # Weather
-        dataset = np.load("Meterology_data/data8.npz")
-        data = dataset["data"][:2, :, :, :]
-        del dataset
-        data = testing_weather.simplify_data(data, image_size, window_downscaling=1)
-        training_data = testing_weather.extract_chain_info(data, image_frames, future_runs)
+        # dataset = np.load("Meterology_data/data8.npz")
+        # data = dataset["data"][:2, :50, :, :]
+        # del dataset
+        # data = testing_weather.simplify_data(data, image_size, window_downscaling=1)
+        # training_data = testing_weather.extract_chain_info(data, image_frames, future_runs)
 
         # Bubble
-        # training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
-        #                                               resolution, [15], num_after_points)
+        training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
+                                                      resolution, [15], num_after_points)
 
         # Sun
         # # obs, size, ref = SOHO_data.get_metadata([2001], [7], a.Instrument.eit, 195)
@@ -618,7 +616,6 @@ def main():
         # # SOHO_data.download_data(ref, mask)
         # print(time_chains)
         # training_data = SOHO_data.generate_training_data(time_chains, image_frames, image_size)
-
         # lr_schedule = optimizers.schedules.ExponentialDecay(
         #     initial_learning_rate=1e-3,
         #     decay_steps=100000,
@@ -651,9 +648,9 @@ def main():
             print(network.summary())
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
                           100,
-                          "u-net-weather",
+                          "u-net-plus_bubble",
                           future_runs, image_frames, num_after_points, image_size)
-            network.save("models/u_network_GAN_weather")
+            network.save("models/u_network_GAN_bubble_BIG")
         if scenario == 9:
             # network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             # discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
@@ -675,10 +672,10 @@ def main():
             discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
             print(network.summary())
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
-                          100,
-                          "basic",
+                          50,
+                          "basic_weather",
                           future_runs, image_frames, num_after_points, image_size)
-            network.save("models/basic_network")
+            network.save("models/basic_network_BIG")
         elif scenario == 2:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
@@ -715,11 +712,11 @@ def main():
                           future_runs, image_frames, num_after_points, image_size)
             network.save("models/transformer_network")
 
-    for sim in range(3, 16):
-        # compare_sun("u_network_GAN_sun", image_frames, image_size)
-        evaluate_performance("basic_network_bubble", image_frames, image_size, timestep, resolution,
-                             simulation=sim, test_range=300)
-        # evaluate_weather("u_network_GAN_weather", image_frames, image_size)
+    for sim in range(0, 16):
+        # compare_sun("basic_network_sun", image_frames, image_size)
+        evaluate_performance("basic_network_BIG", image_frames, image_size, timestep, resolution,
+                             simulation=sim, test_range=400)
+        # evaluate_weather("basic_network_weather", image_frames, image_size)
 
 
 @tf.function

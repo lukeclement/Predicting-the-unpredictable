@@ -699,8 +699,9 @@ def create_u_network(activation, input_frames,
 
     for loop in range(loops):
         x = layers.concatenate([saving_layers[loops - loop - 1], x], axis=3)
+        # x = layers.Add()([saving_layers[loops - loop - 1], x])
         # x = layers.UpSampling2D(2)(x)
-        x = layers.Conv2DTranspose(first_channels*2**(loops - loop), kernel_size, strides=2, padding='same', use_bias=False)(x)
+        x = layers.Conv2DTranspose(first_channels*2**(loops - loop - 1), kernel_size, strides=2, padding='same', use_bias=False)(x)
         x = layers.BatchNormalization()(x)
         x = layers.Activation(activation=activations.swish)(x)
     x = layers.Conv2D(1, 1, padding='same', activation='sigmoid')(x)
