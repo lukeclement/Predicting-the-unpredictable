@@ -30,6 +30,7 @@ import create_network
 import loss_functions
 import dat_to_training
 import testing_weather
+import matplotlib.cm as cm
 
 
 def generate_weather(model, epoch, name, input_frames):
@@ -105,8 +106,8 @@ def evaluate_weather(network_name, frames, size):
     data = np.load("Meterology_data/data8.npz")
     data_useful = np.zeros((np.shape(data["data"])[1], size, size, 1))
 
-    data_useful[:, :, :, 0] = data["data"][0, :, 69:69 + size, 420:420 + size]
-    data_useful = np.tanh(data_useful / 500)
+    data_useful[:, :, :, 0] = data["data"][0, :, 320:320 + size, 320:320 + size]
+    data_useful = np.tanh(data_useful / 1500)
     initial_frames = np.zeros((1, frames, size, size, 1))
     initial_frames[0] = data_useful[:frames]
     rest_of_data = data_useful[frames:]
@@ -142,6 +143,81 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     network = models.load_model("models/{}".format(network_name))
 
     # Setting up the network's input
+    fig_matrix = 50
+    y_pos = []
+    y_vel = []
+    offset = np.linspace(-0.1, 0.1, fig_matrix ** 2)
+    plt.figure(figsize=(10, 7))
+    colours = cm.jet(np.linspace(0, 1, len(offset)))
+    final_bubbles = np.zeros((len(offset), size, size))
+    print("New")
+    for i, off in enumerate(offset):
+        starting_frames = np.zeros((1, frames, size, size, 1))
+        for frame in range(frames):
+            starting_frames[0, frame, :, :, 0] = dat_to_training.process_bmp(
+                "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
+                    str(flipped), variant, resolution, simulation, start_point + frame * timestep
+                ), image_size=size, adjustment=off
+            )[:, :, 1]
+        x_test, y_test = calculate_com(starting_frames[0, 0, :, :, 0])
+        # final_frames = np.zeros((test_range, size, size))
+        final_frames = []
+        current_frames = starting_frames
+        for loop in range(test_range):
+            next_frame = network(current_frames)
+            for frame in range(frames - 1):
+                current_frames[:, frame] = current_frames[:, frame + 1]
+            current_frames[:, frames - 1] = next_frame
+            if np.sum(next_frame[0, :, :, 0]) < 100:
+                break
+            final_frames.append(next_frame[0, :, :, 0])
+            # final_frames[loop] = next_frame[0, :, :, 0]
+        if len(final_frames) > 5:
+            final_frames = np.asarray(final_frames)
+            final_bubbles[i] = final_frames[-1]
+            prediction_x_com = []
+            prediction_y_com = []
+            for frame in range(len(final_frames)):
+                x, y = calculate_com(final_frames[frame])
+                prediction_x_com.append(x)
+                prediction_y_com.append(y)
+            plt.plot(prediction_y_com, color=colours[i])
+            y_pos.append(prediction_y_com)
+            y_vel.append(np.gradient(np.asarray(prediction_y_com), 5))
+            print("x = {:.04f}, y = {:.04f}, offset = {:.04f}, final_sum = {:.02f}, index = {}, length={}".format(
+                x_test, y_test, off, np.sum(final_frames[-1]), i, len(final_frames)))
+    x = np.linspace(0, test_range, 500)
+    plt.plot(x, np.zeros(500) + 0.31415, ls=':', color="black", label="Fixed points")
+    plt.plot(x, np.zeros(500), ls=':', color="black")
+    plt.plot(x, np.zeros(500) - 0.31415, ls=':', color="black")
+    plt.xlabel("Steps in prediction")
+    plt.ylabel("Average y position")
+    plt.legend()
+    plt.grid()
+    plt.xlim([0, test_range])
+    # plt.xlim([-0.33, 0.33])
+    plt.savefig("model_performance/{}_{}_offsets.png".format(network_name, simulation), dpi=200)
+    # plt.show()
+    plt.close()
+    big_image = np.zeros((size * fig_matrix, size * fig_matrix))
+    for i in range(0, fig_matrix):
+        for j in range(0, fig_matrix):
+            big_image[i*size:(i+1)*size, j*size:(j+1)*size] = final_bubbles[i * fig_matrix + j]
+            plt.plot([0, size*fig_matrix], [j*size, j*size], color="white")
+        plt.plot([i*size, i*size], [0, size*fig_matrix], color="white")
+    plt.imshow(big_image)
+    plt.axis("off")
+    plt.savefig("model_performance/{}_{}_offsets_endings.png".format(network_name, simulation), dpi=500)
+    plt.clf()
+    plt.figure(figsize=(30, 21))
+    for i, y in enumerate(y_pos):
+        plt.plot(y, y_vel[i], color=colours[i])
+    plt.grid()
+    plt.savefig("model_performance/{}_{}_offsets_phase.png".format(network_name, simulation), dpi=200)
+    plt.clf()
+    # exit()
+    if True:
+        return
     starting_frames = np.zeros((1, frames, size, size, 1))
     for frame in range(frames):
         starting_frames[0, frame, :, :, 0] = dat_to_training.process_bmp(
@@ -203,7 +279,14 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     images = []
     for i in image_converts:
         images.append(i)
-    imageio.mimsave("model_performance/{}_{}_composite.gif".format(network_name, simulation), images)
+    # imageio.mimsave("model_performance/{}_{}_composite.gif".format(network_name, simulation), images)
+
+    image_converts = np.tanh(composite_frames[:, :, :, 2]/20) * 255
+    image_converts = image_converts.astype(np.uint8)
+    images = []
+    for i in image_converts:
+        images.append(i)
+    # imageio.mimsave("model_performance/{}_{}_solo.gif".format(network_name, simulation), images)
 
     # For future use
     correct = composite_frames[:, :, :, 0]
@@ -230,7 +313,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
                bins=(18, min(composite_size, test_range)),
                range=((0.1, np.max(prediction_info)), (0, min(composite_size, test_range))))
     plt.colorbar()
-    plt.savefig("model_performance/{}_{}_value_dist.png".format(network_name, simulation), dpi=250)
+    # plt.savefig("model_performance/{}_{}_value_dist.png".format(network_name, simulation), dpi=250)
     plt.close()
     plt.xlabel("Pixel value")
     plt.ylabel("Frame number")
@@ -238,7 +321,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
                bins=(18, min(composite_size, num_correct_frames)),
                range=((0.1, np.max(correct_info)), (0, min(composite_size, num_correct_frames))))
     plt.colorbar()
-    plt.savefig("model_performance/{}_value_dist.png".format(simulation), dpi=250)
+    # plt.savefig("model_performance/{}_value_dist.png".format(simulation), dpi=250)
     plt.close()
     # Getting an estimate on 'noise'
     noise_correct = np.zeros(composite_size)
@@ -254,7 +337,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     plt.scatter(noise_frame, noise_prediction, label="Prediction")
     plt.scatter(noise_frame, noise_correct, label="Simulation")
     plt.legend()
-    plt.savefig("model_performance/{}_{}_non-zero.png".format(network_name, simulation), dpi=250)
+    # plt.savefig("model_performance/{}_{}_non-zero.png".format(network_name, simulation), dpi=250)
     plt.close()
 
     # Performing y-position stuff
@@ -277,7 +360,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     plt.plot(prediction_y_com, label="Prediction")
     plt.plot(correct_y_com, label="Simulation")
     plt.legend()
-    plt.savefig("model_performance/{}_{}_y_position.png".format(network_name, simulation), dpi=250)
+    # plt.savefig("model_performance/{}_{}_y_position.png".format(network_name, simulation), dpi=250)
     plt.close()
 
     # Velocity calculations
@@ -298,7 +381,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     plt.scatter(prediction_y_com, prediction_y_velocity, c=colours_p, label="Prediction")
     plt.legend()
     plt.grid()
-    plt.savefig("model_performance/{}_{}_phase_space.png".format(network_name, simulation), dpi=250)
+    # plt.savefig("model_performance/{}_{}_phase_space.png".format(network_name, simulation), dpi=250)
     plt.close()
 
     # Converting to a phase space
@@ -493,7 +576,7 @@ def main():
     resolution = 0.001
     # read_custom_data(image_frames, image_size, num_after_points, future_runs, timestep)
     # exit()
-    scenario = 0
+    scenario = 10
     # tf.compat.v1.disable_eager_execution()
     print(tf.executing_eagerly())
     if scenario < 10:
@@ -632,11 +715,11 @@ def main():
                           future_runs, image_frames, num_after_points, image_size)
             network.save("models/transformer_network")
 
-    for sim in range(0, 16):
+    for sim in range(3, 16):
         # compare_sun("u_network_GAN_sun", image_frames, image_size)
-        # evaluate_performance("u_network_GAN_bubble", image_frames, image_size, timestep, resolution,
-        #                      simulation=sim, test_range=400)
-        evaluate_weather("u_network_GAN_weather", image_frames, image_size)
+        evaluate_performance("basic_network_bubble", image_frames, image_size, timestep, resolution,
+                             simulation=sim, test_range=300)
+        # evaluate_weather("u_network_GAN_weather", image_frames, image_size)
 
 
 @tf.function

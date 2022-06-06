@@ -464,10 +464,10 @@ def create_training_data(
     # return questions_array, answers_array
 
 
-def process_bmp(filename, image_size, modifier=20):
+def process_bmp(filename, image_size, modifier=20, adjustment=0):
     x, y = np.load(filename)
     h, x_edge, y_edge = np.histogram2d(
-        x, y,
+        x + adjustment, y,
         range=[[-1, 1], [-1, 1]], bins=(image_size, image_size)
     )
     output_array = np.zeros((image_size, image_size, 3))

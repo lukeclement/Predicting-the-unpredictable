@@ -773,9 +773,13 @@ def main():
     # plot_data()
     max_runs = 300
     # initial_bubble_base = 11
-    num_interval = 11
+    num_interval = 3
     offsets = np.linspace(-0.01, 0.01, num_interval)
-    for b in range(0, 16):
+    bubs = [3, 5, 8, 11, 15]
+    avg_y_residuals = []
+    avg_y_overall_real = []
+    avg_y_overall_pred = []
+    for b in bubs:
         initial_bubble_base = b
         initial_bubble = creating_data_graph(frames, points, [initial_bubble_base], 3, -1)
         initial_bubble = initial_bubble[0]
@@ -863,8 +867,19 @@ def main():
                 plt.ylabel("y position")
                 plt.savefig("{}_final_diff.png".format(initial_bubble_base), dpi=200)
                 plt.clf()
+                avg_y_distances = []
+                ayr = []
+                ayp = []
+                for i in range(final_point):
+                    avg_y_real = np.mean(actual[i, :, 0, 0])
+                    avg_y_pred = np.mean(predicted[i, 0, :])
+                    ayr.append(avg_y_real)
+                    ayp.append(avg_y_pred)
+                    avg_y_distances.append(avg_y_pred - avg_y_real)
                 print("Ping")
-
+                avg_y_residuals.append(avg_y_distances)
+                avg_y_overall_real.append(ayr)
+                avg_y_overall_pred.append(ayp)
             bar.update(1)
         bar.close()
         colours = cm.cool(np.linspace(0, 1, len(bubble_variants)))
@@ -902,7 +917,7 @@ def main():
         plt.ylabel("Bubble circumference")
         plt.plot([0, max_runs], [4.2, 4.2], label="Prediction cutoff", ls='--', color='black')
         plt.legend()
-        plt.savefig("{}_circumference.png".format(initial_bubble_base), dpi=200)
+        # plt.savefig("{}_circumference.png".format(initial_bubble_base), dpi=200)
         plt.clf()
         colours = cm.cool(np.linspace(0, 1, len(bubble_variants)))
         index = 0
@@ -941,7 +956,7 @@ def main():
         plt.legend()
         plt.xlim([0, max_runs])
         # plt.show()
-        plt.savefig("{}_y_position.png".format(initial_bubble_base), dpi=200)
+        # plt.savefig("{}_y_position.png".format(initial_bubble_base), dpi=200)
         plt.clf()
         plt.ylim([-1, 1])
         plt.xlim([-1, 1])
@@ -951,7 +966,7 @@ def main():
                 plt.scatter(bubble_series[-1][0], bubble_series[-1][1], color=colours[ii])
             ii += 1
         plt.scatter(initial_bubble[-1, :, 0, 0], initial_bubble[-1, :, 0, 1], color='red')
-        plt.savefig("{}_final_position.png".format(initial_bubble_base), dpi=200)
+        # plt.savefig("{}_final_position.png".format(initial_bubble_base), dpi=200)
         plt.clf()
 
         y_vels = []
@@ -991,7 +1006,7 @@ def main():
         plt.xlabel("Average y position")
         plt.grid()
         plt.legend()
-        plt.savefig("{}_phase_space.png".format(initial_bubble_base), dpi=200)
+        # plt.savefig("{}_phase_space.png".format(initial_bubble_base), dpi=200)
         # plt.show()
         plt.clf()
 
@@ -1038,8 +1053,41 @@ def main():
         plt.legend(loc="lower right")
         plt.ylabel("Average y velocity")
         plt.xlabel("Average y position")
-        plt.savefig("{}_phase_domain.png".format(initial_bubble_base), dpi=200)
+        # plt.savefig("{}_phase_domain.png".format(initial_bubble_base), dpi=200)
         plt.clf()
+    colours = cm.cool(np.linspace(0, 1, len(bubs)))
+    for i, b in enumerate(bubs):
+        plt.plot(avg_y_residuals[i], color=colours[i], label="Simulation {} difference".format(b))
+    plt.ylabel("Average y position residual")
+    plt.xlabel("Steps in prediction")
+    plt.grid()
+    plt.legend()
+    plt.savefig("Overall_residuals.png", dpi=200)
+    plt.clf()
+    r = 0.031415
+    x = np.linspace(0, 250, 500)
+    # omega = np.pi / 15
+    position_alpha = 51.9
+    position_beta = 289.5
+    omega = np.pi * 2 / ((position_beta - position_alpha) / 8)
+    correction = -omega * position_alpha
+    y = r * np.cos((x + 0.2) * omega + correction)
+    # plt.plot(x, y, ls="--", color="black", label="Unstable periodic orbit")
+    plt.plot(x, np.zeros(500) + 0.31415, ls=':', color="black", label="Fixed points")
+    plt.plot(x, np.zeros(500), ls=':', color="black")
+    plt.plot(x, np.zeros(500) - 0.31415, ls=':', color="black")
+    colours = cm.cool(np.linspace(0, 1, len(bubs)))
+    colours_1 = cm.Wistia(np.linspace(0, 1, len(bubs)))
+    for i, b in enumerate(bubs):
+        plt.plot(avg_y_overall_pred[i], color=colours[i], label="Prediction {}".format(b))
+        plt.plot(avg_y_overall_real[i], color=colours_1[i], ls='--', label="Simulation {}".format(b))
+    plt.ylabel("Average y position")
+    plt.xlabel("Steps in prediction")
+    plt.grid()
+    plt.legend()
+    plt.xlim([0, 250])
+    plt.savefig("Overall_biggie.png", dpi=200)
+
 
 if __name__ == "__main__":
     main()
