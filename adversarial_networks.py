@@ -574,7 +574,7 @@ def main():
     resolution = 0.001
     # read_custom_data(image_frames, image_size, num_after_points, future_runs, timestep)
     # exit()
-    scenario = 0
+    scenario = 1
     # tf.compat.v1.disable_eager_execution()
     print(tf.executing_eagerly())
     if scenario < 10:
@@ -668,12 +668,13 @@ def main():
         elif scenario == 1:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
-            network = create_network.create_basic_network(layers.LeakyReLU(), image_frames, image_size, channels=1)
+            network = create_network.create_basic_network(layers.LeakyReLU(), image_frames, image_size, channels=1,
+                                                          start_channels=16, latent_dimensions=100)
             discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
             print(network.summary())
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
                           50,
-                          "basic_weather",
+                          "basic_BIG",
                           future_runs, image_frames, num_after_points, image_size)
             network.save("models/basic_network_BIG")
         elif scenario == 2:

@@ -321,24 +321,29 @@ def create_transformer_network(activation, input_frames, image_size, channels=3,
     return model
 
 
-def create_basic_network(activation, input_frames, image_size, channels=3, latent_dimensions=100):
+def create_basic_network(activation, input_frames, image_size, channels=3, latent_dimensions=100, start_channels=32):
     input_layer = layers.Input(shape=(input_frames, image_size, image_size, channels))
     layer_depth = -1
     frames = input_frames
     size = image_size
     x = input_layer
-    while frames * size * size > 100:
+    frames_ran = False
+    while max(frames, 1) * size * size > latent_dimensions:
         layer_depth += 1
         if frames > 1:
             x = layers.Conv3D(32*2**layer_depth, 5, strides=2, padding='same')(x)
             x = activation(x)
             frames = frames // 2
             size = size // 2
+            frames_ran = True
         else:
             if frames == 1:
-                x = layers.Reshape((size, size, 32*2**(layer_depth-1)))(x)
+                if frames_ran:
+                    x = layers.Reshape((size, size, int(start_channels*2**(layer_depth-1))))(x)
+                else:
+                    x = layers.Reshape((size, size, channels))(x)
                 frames = 0
-            x = layers.Conv2D(32*2**layer_depth, 5, strides=2, padding='same', use_bias=False)(x)
+            x = layers.Conv2D(start_channels*2**layer_depth, 5, strides=2, padding='same', use_bias=False)(x)
             x = layers.BatchNormalization()(x)
             x = activation(x)
             size = size // 2
@@ -350,7 +355,7 @@ def create_basic_network(activation, input_frames, image_size, channels=3, laten
     # x = layers.Reshape((8, 8, 32 * 2**layer_depth))(x)
     while size != image_size:
         layer_depth -= 1
-        x = layers.Conv2DTranspose(32*2**layer_depth, 5, strides=2, padding='same', use_bias=False)(x)
+        x = layers.Conv2DTranspose(start_channels*2**layer_depth, 5, strides=2, padding='same', use_bias=False)(x)
         x = layers.BatchNormalization()(x)
         x = activation(x)
         size = size * 2
