@@ -166,7 +166,7 @@ def convert_dat_files(variant_range, resolution=0.001):
     for simulation in simulation_names:
         dat_files = glob.glob("{}/b*.dat".format(simulation))
         tracking_index = 0
-        for inversion in [True, False]:
+        for inversion in [False]:
             for variant in range(variant_range[0], variant_range[1]+1):
                 if inversion:
                     print("File {}, flipped, shifted {} is now Simulation_{}_{}_{}_{}".format(
@@ -231,7 +231,7 @@ def generate_data(frames: int, size: int, timestep: int, future_look: int,
     all_simulations = glob.glob("Simulation_data_extrapolated/*")
     # All the simulations that will be transformed into data
     looking_for = []
-    for sim in range(0, 16):
+    for sim in range(0, 22):
         for flip in ["True", "False"]:
             for variant in variants:
                 if sim not in excluded_sims and ((flips_allowed and flip == "True") or flip == "False"):
@@ -285,6 +285,7 @@ def generate_data(frames: int, size: int, timestep: int, future_look: int,
     print(getsizeof(answers)/(1024**3))
     print(np.shape(questions))
     print(np.shape(answers))
+    print(np.max(questions))
     print("Turning into dataset...")
     testing_data = tf.data.Dataset.from_tensor_slices((questions, answers))
     print("Batching...")
@@ -442,6 +443,7 @@ def create_training_data(
     # print(normalisation_options)
     print(np.shape(questions_array_valid))
     print(np.shape(answers_array_valid))
+    print(np.maximum(questions_array))
     testing_data = tf.data.Dataset.from_tensor_slices((questions_array, answers_array))
     testing_data = testing_data.batch(batch_size).prefetch(tf.data.AUTOTUNE)
     validation_data = tf.data.Dataset.from_tensor_slices((questions_array_valid, answers_array_valid))
@@ -464,7 +466,7 @@ def create_training_data(
     # return questions_array, answers_array
 
 
-def process_bmp(filename, image_size, modifier=20, adjustment=0):
+def process_bmp(filename, image_size, modifier=15, adjustment=0):
     x, y = np.load(filename)
     h, x_edge, y_edge = np.histogram2d(
         x + adjustment, y,

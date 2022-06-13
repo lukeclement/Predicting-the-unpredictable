@@ -143,13 +143,15 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     network = models.load_model("models/{}".format(network_name))
 
     # Setting up the network's input
-    fig_matrix = 50
+    fig_matrix = 20
     y_pos = []
     y_vel = []
-    offset = np.linspace(-0.1, 0.1, fig_matrix ** 2)
+    # offset = np.linspace(-0.02, 0.01, fig_matrix ** 2)
+    offset = np.linspace(0.008125, 0.0081875, fig_matrix ** 2)
     plt.figure(figsize=(10, 7))
     colours = cm.jet(np.linspace(0, 1, len(offset)))
     final_bubbles = np.zeros((len(offset), size, size))
+    final_bubbles_gif = np.zeros((test_range, len(offset), size, size))
     print("New")
     for i, off in enumerate(offset):
         starting_frames = np.zeros((1, frames, size, size, 1))
@@ -175,6 +177,9 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
         if len(final_frames) > 5:
             final_frames = np.asarray(final_frames)
             final_bubbles[i] = final_frames[-1]
+            final_bubbles_gif[:len(final_frames), i] = final_frames
+            if len(final_frames) < test_range:
+                final_bubbles_gif[len(final_frames):, i] = np.zeros((size, size)) + final_frames[-1]
             prediction_x_com = []
             prediction_y_com = []
             for frame in range(len(final_frames)):
@@ -184,8 +189,9 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
             plt.plot(prediction_y_com, color=colours[i])
             y_pos.append(prediction_y_com)
             y_vel.append(np.gradient(np.asarray(prediction_y_com), 5))
-            print("x = {:.04f}, y = {:.04f}, offset = {:.04f}, final_sum = {:.02f}, index = {}, length={}".format(
-                x_test, y_test, off, np.sum(final_frames[-1]), i, len(final_frames)))
+            print("x = {:.04f}, y = {:.04f}, offset = {:.04f}, final y = {:.04f}, sum = {:.02f}, index = {}, length={}".format(
+                x_test, y_test, -off, prediction_y_com[len(final_frames)-1], np.sum(final_frames[-1]),
+                i, len(final_frames)))
     x = np.linspace(0, test_range, 500)
     plt.plot(x, np.zeros(500) + 0.31415, ls=':', color="black", label="Fixed points")
     plt.plot(x, np.zeros(500), ls=':', color="black")
@@ -209,6 +215,16 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     plt.axis("off")
     plt.savefig("model_performance/{}_{}_offsets_endings.png".format(network_name, simulation), dpi=500)
     plt.clf()
+    big_image = np.zeros((test_range, size * fig_matrix, size * fig_matrix))
+    for t in range(0, test_range):
+        for i in range(0, fig_matrix):
+            for j in range(0, fig_matrix):
+                big_image[t, i*size:(i+1)*size, j*size:(j+1)*size] = final_bubbles_gif[t, i * fig_matrix + j]
+    images = []
+    for i in big_image:
+        images.append(i)
+    imageio.mimsave("model_performance/{}_{}_offset_composite.gif".format(network_name, simulation), images)
+
     plt.figure(figsize=(30, 21))
     for i, y in enumerate(y_pos):
         plt.plot(y, y_vel[i], color=colours[i])
@@ -232,7 +248,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
         for frame in range(frames - 1):
             current_frames[:, frame] = current_frames[:, frame + 1]
         current_frames[:, frames - 1] = next_frame
-        final_frames[loop] = np.arctanh(next_frame[0, :, :, 0]) * 20
+        final_frames[loop] = np.arctanh(next_frame[0, :, :, 0]) * 15
         # final_frames[loop] = next_frame[0, :, :, 0]
 
     # Getting the correct data
@@ -247,7 +263,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
                 "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
                     str(flipped), variant, resolution, simulation, i
                 ), image_size=size
-        )[:, :, 1]) * 20)
+        )[:, :, 1]) * 15)
         # correct_frames.append(
         #     dat_to_training.process_bmp(
         #         "Simulation_data_extrapolated/Simulation_{}_{}_{}_{}/data_{}.npy".format(
@@ -272,19 +288,19 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
 
     # Saving as an image
 
-    image_converts = np.tanh(composite_frames/20) * 255
+    image_converts = np.tanh(composite_frames/15) * 255
     image_converts = image_converts.astype(np.uint8)
     images = []
     for i in image_converts:
         images.append(i)
-    # imageio.mimsave("model_performance/{}_{}_composite.gif".format(network_name, simulation), images)
+    imageio.mimsave("model_performance/{}_{}_composite.gif".format(network_name, simulation), images)
 
-    image_converts = np.tanh(composite_frames[:, :, :, 2]/20) * 255
+    image_converts = np.tanh(composite_frames[:, :, :, 2]/15) * 255
     image_converts = image_converts.astype(np.uint8)
     images = []
     for i in image_converts:
         images.append(i)
-    # imageio.mimsave("model_performance/{}_{}_solo.gif".format(network_name, simulation), images)
+    imageio.mimsave("model_performance/{}_{}_solo.gif".format(network_name, simulation), images)
 
     # For future use
     correct = composite_frames[:, :, :, 0]
@@ -566,15 +582,15 @@ def main():
     # mixed_precision.set_global_policy(policy)
     # print('Compute dtype: %s' % policy.compute_dtype)
     # print('Variable dtype: %s' % policy.variable_dtype)
-    image_size = 128
-    image_frames = 1
+    image_size = 64
+    image_frames = 4
     timestep = 5
     future_runs = 10
     num_after_points = 1
     resolution = 0.001
     # read_custom_data(image_frames, image_size, num_after_points, future_runs, timestep)
     # exit()
-    scenario = 1
+    scenario = 11
     # tf.compat.v1.disable_eager_execution()
     print(tf.executing_eagerly())
     if scenario < 10:
@@ -586,6 +602,7 @@ def main():
         # training_data = testing_weather.extract_chain_info(data, image_frames, future_runs)
 
         # Bubble
+        # dat_to_training.convert_dat_files([0, 0], resolution=resolution)
         training_data = dat_to_training.generate_data(image_frames, image_size, timestep, future_runs, [0], False,
                                                       resolution, [15], num_after_points)
 
@@ -713,10 +730,10 @@ def main():
                           future_runs, image_frames, num_after_points, image_size)
             network.save("models/transformer_network")
 
-    for sim in range(0, 16):
+    for sim in range(0, 1):
         # compare_sun("basic_network_sun", image_frames, image_size)
-        evaluate_performance("basic_network_BIG", image_frames, image_size, timestep, resolution,
-                             simulation=sim, test_range=400)
+        evaluate_performance("basic_network_bubble", image_frames, image_size, timestep, resolution,
+                             simulation=sim, test_range=400, start_point=10)
         # evaluate_weather("basic_network_weather", image_frames, image_size)
 
 
