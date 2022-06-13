@@ -147,7 +147,7 @@ def evaluate_performance(network_name, frames, size, timestep, resolution,
     y_pos = []
     y_vel = []
     # offset = np.linspace(-0.02, 0.01, fig_matrix ** 2)
-    offset = np.linspace(0.008125, 0.0081875, fig_matrix ** 2)
+    offset = np.linspace(0.00815625, 0.0081875, fig_matrix ** 2)
     plt.figure(figsize=(10, 7))
     colours = cm.jet(np.linspace(0, 1, len(offset)))
     final_bubbles = np.zeros((len(offset), size, size))
@@ -584,13 +584,13 @@ def main():
     # print('Variable dtype: %s' % policy.variable_dtype)
     image_size = 64
     image_frames = 4
-    timestep = 5
-    future_runs = 10
+    timestep = 1
+    future_runs = 50
     num_after_points = 1
     resolution = 0.001
     # read_custom_data(image_frames, image_size, num_after_points, future_runs, timestep)
     # exit()
-    scenario = 11
+    scenario = 1
     # tf.compat.v1.disable_eager_execution()
     print(tf.executing_eagerly())
     if scenario < 10:
@@ -686,14 +686,14 @@ def main():
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             network = create_network.create_basic_network(layers.LeakyReLU(), image_frames, image_size, channels=1,
-                                                          start_channels=16, latent_dimensions=100)
+                                                          start_channels=32, latent_dimensions=100)
             discriminator = create_network.create_discriminator(num_after_points + 1, image_size)
             print(network.summary())
             train_network(training_data, network, discriminator, network_optimizer, discriminator_optimizer,
                           50,
-                          "basic_BIG",
+                          "basic_high",
                           future_runs, image_frames, num_after_points, image_size)
-            network.save("models/basic_network_BIG")
+            network.save("models/basic_network_high")
         elif scenario == 2:
             network_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
             discriminator_optimizer = optimizers.Adam(learning_rate=lr_schedule, epsilon=0.1)
@@ -732,7 +732,7 @@ def main():
 
     for sim in range(0, 1):
         # compare_sun("basic_network_sun", image_frames, image_size)
-        evaluate_performance("basic_network_bubble", image_frames, image_size, timestep, resolution,
+        evaluate_performance("basic_network_high", image_frames, image_size, timestep, resolution,
                              simulation=sim, test_range=400, start_point=10)
         # evaluate_weather("basic_network_weather", image_frames, image_size)
 

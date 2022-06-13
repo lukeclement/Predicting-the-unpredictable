@@ -331,7 +331,7 @@ def create_basic_network(activation, input_frames, image_size, channels=3, laten
     while max(frames, 1) * size * size > latent_dimensions:
         layer_depth += 1
         if frames > 1:
-            x = layers.Conv3D(32*2**layer_depth, 5, strides=2, padding='same')(x)
+            x = layers.Conv3D(start_channels*2**layer_depth, 5, strides=2, padding='same')(x)
             x = activation(x)
             frames = frames // 2
             size = size // 2
